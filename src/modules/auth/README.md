@@ -45,3 +45,7 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 - Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min. Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
 - A sessão é criada numa transação serializável que confere se o usuário segue ativo e com o mesmo hash de senha (sem sessão residual após uma redefinição simultânea).
 - Em produção o cookie se chama `__Host-session` (Secure, Path=/, sem Domain).
+
+## Acesso rápido em desenvolvimento
+
+Com `next dev`, a tela de login lista os usuários ativos; clicar em um entra direto como ele (`dev-login.ts`). Fora de `NODE_ENV=development` a lista não aparece e a action responde 404.

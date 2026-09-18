@@ -41,7 +41,6 @@ O TechLab+  Fisio OrtoSport tem como principais objetivos:
 - melhorar a organização da clínica;
 - reduzir tarefas administrativas manuais;
 - facilitar o acompanhamento financeiro;
-- oferecer informações para apoio à gestão.
 
 ---
 
@@ -66,8 +65,6 @@ O TechLab+  Fisio OrtoSport tem como principais objetivos:
 - Visualização diária, semanal e mensal;
 - Reagendamento;
 - Cancelamento;
-- Controle de presença;
-- Identificação de faltas;
 - Bloqueio de horários;
 - Agenda por profissional.
 
@@ -96,13 +93,10 @@ Registro estruturado da avaliação inicial do paciente, permitindo armazenar in
 Permite definir e acompanhar o planejamento do tratamento:
 
 - objetivos;
-- condutas;
 - exercícios;
 - técnicas utilizadas;
-- frequência das sessões;
 - quantidade prevista de sessões;
 - reavaliações;
-- evolução dos objetivos.
 
 ---
 
@@ -112,13 +106,10 @@ Cada atendimento poderá possuir seu próprio registro contendo:
 
 - data e horário;
 - profissional responsável;
-- procedimentos realizados;
 - exercícios;
 - técnicas aplicadas;
 - observações;
-- resposta do paciente;
 - evolução clínica;
-- intercorrências;
 - próximos passos.
 
 ---
@@ -150,7 +141,6 @@ O histórico deverá permitir visualizar facilmente a progressão do tratamento.
 - Cadastro de profissionais;
 - Especialidades;
 - Dados profissionais;
-- Registro profissional;
 - Agenda individual;
 - Pacientes vinculados;
 - Histórico de atendimentos.
@@ -162,12 +152,9 @@ O histórico deverá permitir visualizar facilmente a progressão do tratamento.
 Planejado para contemplar:
 
 - cobrança de consultas e sessões;
-- pacotes de atendimento;
 - pagamentos;
 - formas de pagamento;
 - contas a receber;
-- descontos;
-- inadimplência;
 - fluxo financeiro;
 - relatórios.
 
@@ -178,14 +165,11 @@ Planejado para contemplar:
 O sistema poderá disponibilizar indicadores como:
 
 - quantidade de atendimentos;
-- pacientes ativos;
 - novos pacientes;
-- taxa de faltas;
 - sessões realizadas;
 - tratamentos concluídos;
 - faturamento;
 - produtividade por profissional;
-- evolução dos pacientes.
 
 ---
 
@@ -231,70 +215,20 @@ Responsável principalmente por:
 
 ## Segurança
 
-Por trabalhar com informações pessoais e clínicas, segurança deve ser tratada como requisito fundamental.
-
 O projeto deverá considerar:
 
 - autenticação segura;
 - autorização baseada em perfis;
-- controle de acesso aos prontuários;
-- proteção de dados sensíveis;
-- criptografia de comunicação;
-- auditoria de alterações;
-- logs de acesso;
-- backups;
-- proteção contra acessos indevidos;
-- boas práticas relacionadas à LGPD.
 
----
-
-## Auditoria
-
-Operações importantes deverão possuir rastreabilidade.
-
-Exemplo:
-
-```text
-Ação: alteração de evolução clínica
-
-Paciente: João da Silva
-Usuário: Dr. Fulano
-Data: 18/09/2026 14:32
-
-Campo:
-Observação clínica
-
-Valor anterior:
-...
-
-Novo valor:
-...
-```
-
-Nenhuma informação clínica relevante deverá ser alterada sem possibilidade de rastreamento.
 
 ---
 
 ## Stack sugerida
-
-### Frontend
-
-```text
-Next.js
 React
-TypeScript
+Next.js
 Tailwind CSS
-```
-
-### Backend
-
-```text
-NestJS
-Node.js
-TypeScript
-REST API
-OpenAPI
-```
+shadcn
+Prisma
 
 ### Banco de dados
 
@@ -312,86 +246,12 @@ pnpm
 
 ```text
 Jest
-Playwright
 ```
 
 ### Infraestrutura
 
 ```text
-Docker
-Docker Compose
-GitHub Actions
-```
-
----
-
-## Arquitetura inicial
-
-A aplicação poderá utilizar uma arquitetura de **monólito modular**, permitindo simplicidade operacional sem comprometer a organização do domínio.
-
-```text
-┌─────────────────────────────┐
-│          Frontend           │
-│        Next.js / React      │
-└──────────────┬──────────────┘
-               │
-               │ HTTPS / REST
-               ▼
-┌─────────────────────────────┐
-│            API              │
-│           NestJS            │
-│                             │
-│ ┌─────────────────────────┐ │
-│ │ Auth                    │ │
-│ │ Pacientes               │ │
-│ │ Agenda                  │ │
-│ │ Profissionais           │ │
-│ │ Avaliações              │ │
-│ │ Prontuário              │ │
-│ │ Sessões                 │ │
-│ │ Financeiro              │ │
-│ │ Relatórios              │ │
-│ └─────────────────────────┘ │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│         PostgreSQL          │
-└─────────────────────────────┘
-```
-
----
-
-## Estrutura sugerida do projeto
-
-```text
-TechLab+  Fisio OrtoSport/
-│
-├── apps/
-│   ├── web/
-│   │   └── Next.js
-│   │
-│   └── api/
-│       └── NestJS
-│
-├── packages/
-│   ├── contracts/
-│   ├── ui/
-│   ├── config/
-│   └── test-utils/
-│
-├── docs/
-│
-├── infra/
-│   ├── docker/
-│   └── scripts/
-│
-├── .github/
-│   └── workflows/
-│
-├── docker-compose.yml
-├── pnpm-workspace.yaml
-└── README.md
+Docker composer
 ```
 
 ---
@@ -427,7 +287,6 @@ Clínico
 ├── Planos terapêuticos
 ├── Sessões
 ├── Evoluções
-└── Alta
 
 Profissionais
 │
@@ -479,17 +338,6 @@ Evitar complexidade arquitetural sem necessidade real.
 
 Cada domínio deve possuir responsabilidades claras.
 
-### Segurança
-
-Dados pessoais e clínicos devem ser protegidos desde o início.
-
-### Rastreabilidade
-
-Alterações relevantes devem possuir histórico.
-
-### Testabilidade
-
-Regras de negócio importantes devem possuir testes automatizados.
 
 ### Escalabilidade gradual
 
@@ -506,24 +354,14 @@ Implementação
      ↓
 Testes unitários
      ↓
-Testes de integração
-     ↓
 Lint / TypeScript
      ↓
 Build
-     ↓
-Testes E2E
 ```
 
 Casos de teste devem contemplar, quando aplicável:
 
 - fluxo principal;
-- dados vazios;
-- dados inválidos;
-- limites;
-- permissões;
-- concorrência;
-- alto volume.
 
 ---
 
@@ -536,7 +374,6 @@ Casos de teste devem contemplar, quando aplicável:
 - [ ] Autenticação;
 - [ ] Usuários;
 - [ ] Perfis e permissões;
-- [ ] Auditoria básica.
 
 ### Fase 2 — Pacientes
 
@@ -552,7 +389,6 @@ Casos de teste devem contemplar, quando aplicável:
 - [ ] Agendamento;
 - [ ] Reagendamento;
 - [ ] Cancelamento;
-- [ ] Controle de presença.
 
 ### Fase 4 — Prontuário
 
@@ -561,13 +397,11 @@ Casos de teste devem contemplar, quando aplicável:
 - [ ] Registro de sessões;
 - [ ] Evoluções;
 - [ ] Reavaliação;
-- [ ] Alta.
 
 ### Fase 5 — Financeiro
 
 - [ ] Cobranças;
 - [ ] Pagamentos;
-- [ ] Pacotes;
 - [ ] Controle financeiro;
 - [ ] Relatórios.
 

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/modules/auth/dal";
+import { listDevUsers } from "@/modules/auth/dev-login";
 import { safeRedirectPath } from "@/modules/auth/redirect-path";
+import { DevUserPicker } from "./dev-user-picker";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Entrar — TechLab+ Fisio OrtoSport" };
@@ -11,6 +13,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
   const nextPath = safeRedirectPath(next);
   if (await getCurrentUser()) redirect(nextPath);
+  const devUsers = process.env.NODE_ENV === "development" ? await listDevUsers() : [];
 
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-16">
@@ -24,6 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </CardHeader>
         <CardContent>
           <LoginForm next={nextPath} />
+          <DevUserPicker users={devUsers} next={nextPath} />
         </CardContent>
       </Card>
     </main>

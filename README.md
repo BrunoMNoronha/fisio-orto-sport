@@ -261,12 +261,22 @@ Docker composer
 Pré-requisitos: Node.js 20.9+ (testado com 24), pnpm 11 e Docker.
 
 ```bash
-cp .env.example .env      # ajuste as variáveis se necessário
+cp .env.example .env      # ajuste as variáveis (inclusive SEED_ADMIN_*)
 pnpm install              # também gera o Prisma Client (postinstall)
 pnpm db:up                # sobe o PostgreSQL via Docker Compose
 pnpm db:migrate           # aplica as migrações do Prisma
-pnpm dev                  # http://localhost:3000
+pnpm db:seed              # cria o primeiro Administrador (idempotente)
+pnpm dev                  # http://localhost:3000 → /login
 ```
+
+Variáveis do `.env` (modelo em `.env.example`):
+
+| Variável | Uso |
+|---|---|
+| `POSTGRES_*`, `DATABASE_URL` | Banco local via Docker Compose |
+| `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Primeiro Administrador criado por `pnpm db:seed`. Senha com no mínimo 8 caracteres. Se o e-mail já existir, o seed não altera nada. |
+
+A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um token aleatório num cookie `httpOnly`, e o banco guarda só o hash dele. Detalhes em [`src/modules/auth/README.md`](src/modules/auth/README.md).
 
 | Script | Função |
 |---|---|
@@ -276,6 +286,7 @@ pnpm dev                  # http://localhost:3000
 | `pnpm test` | Jest + Testing Library |
 | `pnpm db:up` / `pnpm db:down` | Sobe/derruba o PostgreSQL local |
 | `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Migrações, geração do client e Prisma Studio |
+| `pnpm db:seed` | Cria o primeiro Administrador a partir do `.env` |
 
 ---
 
@@ -392,11 +403,11 @@ Casos de teste devem contemplar, quando aplicável:
 
 ### Fase 1 — Fundação
 
-- [ ] Estrutura inicial do projeto;
-- [ ] Banco de dados;
-- [ ] Autenticação;
-- [ ] Usuários;
-- [ ] Perfis e permissões;
+- [x] Estrutura inicial do projeto;
+- [x] Banco de dados;
+- [x] Autenticação;
+- [x] Usuários;
+- [x] Perfis e permissões;
 
 ### Fase 2 — Pacientes
 

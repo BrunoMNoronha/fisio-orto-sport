@@ -170,7 +170,8 @@ export function EditUserDialog({ user }: { user: UserRow }) {
           <DialogTitle>Editar usuário</DialogTitle>
           <DialogDescription>{user.email}</DialogDescription>
         </DialogHeader>
-        <form action={formAction} className="flex flex-col gap-4" noValidate>
+        {/* Remonta quando os dados mudam após a revalidação (campos não controlados). */}
+        <form key={`${user.name}|${user.role}`} action={formAction} className="flex flex-col gap-4" noValidate>
           <input type="hidden" name="id" value={user.id} />
           <FormError state={state} />
           <Field id={`${prefix}-nome`} label="Nome" errors={errors?.name}>

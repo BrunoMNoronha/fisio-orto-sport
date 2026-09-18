@@ -21,6 +21,8 @@ export function LoginForm({ next }: { next: string }) {
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">E-mail</Label>
         <Input
+          // Remonta ao receber o e-mail devolvido pela action (campo não controlado).
+          key={state?.email ?? ""}
           id="email"
           name="email"
           type="email"

@@ -118,6 +118,11 @@ const slotFields = {
 type Slot = { date: string; startTime: string; endTime: string };
 
 function checkSlot(value: Slot, ctx: z.RefinementCtx) {
+  // O superRefine pode ser executado mesmo quando os campos-base já têm
+  // erros. Não tente converter valores vazios ou inválidos em Date: além de
+  // não acrescentar uma validação útil, isso causava RangeError na action.
+  if (!isValidDate(value.date) || !TIME_RE.test(value.startTime) || !TIME_RE.test(value.endTime)) return;
+
   const startsAt = toInstant(value.date, value.startTime);
   const endsAt = toInstant(value.date, value.endTime);
   if (endsAt <= startsAt) {

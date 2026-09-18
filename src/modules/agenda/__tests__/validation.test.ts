@@ -80,6 +80,12 @@ describe("appointmentSchema", () => {
     expect(errorsOf(appointmentSchema.safeParse({ ...valid, startTime: "25:00" }))).toContain("startTime");
   });
 
+  it("recusa campos de data e horário vazios sem lançar exceção", () => {
+    const result = appointmentSchema.safeParse({ ...valid, date: "", startTime: "", endTime: "" });
+    expect(result.success).toBe(false);
+    expect(errorsOf(result)).toEqual(expect.arrayContaining(["date", "startTime", "endTime"]));
+  });
+
   it("recusa observação longa demais", () => {
     expect(errorsOf(appointmentSchema.safeParse({ ...valid, notes: "x".repeat(501) }))).toContain("notes");
   });

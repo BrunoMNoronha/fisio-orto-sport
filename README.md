@@ -256,6 +256,29 @@ Docker composer
 
 ---
 
+## Execução local
+
+Pré-requisitos: Node.js 20.9+ (testado com 24), pnpm 11 e Docker.
+
+```bash
+cp .env.example .env      # ajuste as variáveis se necessário
+pnpm install              # também gera o Prisma Client (postinstall)
+pnpm db:up                # sobe o PostgreSQL via Docker Compose
+pnpm db:migrate           # aplica as migrações do Prisma
+pnpm dev                  # http://localhost:3000
+```
+
+| Script | Função |
+|---|---|
+| `pnpm dev` / `pnpm build` / `pnpm start` | Desenvolvimento, build e servidor de produção |
+| `pnpm lint` | ESLint |
+| `pnpm typecheck` | Gera tipos de rotas do Next.js e roda `tsc --noEmit` |
+| `pnpm test` | Jest + Testing Library |
+| `pnpm db:up` / `pnpm db:down` | Sobe/derruba o PostgreSQL local |
+| `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Migrações, geração do client e Prisma Studio |
+
+---
+
 ## Domínios principais
 
 Uma possível divisão inicial dos módulos:

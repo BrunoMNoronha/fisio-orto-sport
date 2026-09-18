@@ -1,0 +1,18 @@
+// Schema Prisma do TechLab+ Fisio OrtoSport.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Modelo provisório da fundação (verificação do banco).
+// Será substituído pelos modelos de domínio a partir da Fase 1 — parte 2.
+model HealthCheck {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+}

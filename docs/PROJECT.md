@@ -1,0 +1,76 @@
+# Projeto — [CONFIRMADO] TechLab+ Fisio OrtoSport (Fonte: README.md)
+
+Use como **briefing e instrução permanente**. Preencha o conhecido, use `TBD` nas lacunas e não repita contexto já existente no repositório.
+
+## 1. Briefing
+
+- **Produto/problema/evidências:** [CONFIRMADO] Sistema web de gestão de clínica de fisioterapia que centraliza pacientes, agenda, avaliações, planos terapêuticos, sessões e evolução clínica, reduzindo processos manuais e informações descentralizadas. (Fonte: README.md, seção Sobre o projeto) | [DECISÃO PENDENTE] TBD — evidências concretas do problema (volume de atendimentos, ferramentas atuais, dores medidas) não informadas. (Fonte: Lacuna no levantamento)
+- **Objetivo/métricas:** [CONFIRMADO] Objetivos qualitativos: centralizar dados de pacientes, facilitar agenda, registrar avaliações, estruturar planos, acompanhar sessões e evolução, manter histórico completo e reduzir tarefas manuais. (Fonte: README.md, seção Objetivos) | [DECISÃO PENDENTE] TBD — métricas e alvos de sucesso não definidos. (Fonte: Lacuna no levantamento)
+- **Público/plataformas/interface:** [CONFIRMADO] Equipe interna de uma clínica única (Administrador, Recepção, Fisioterapeuta); plataforma web; sem multi-tenant. (Fonte: README.md, Perfis de acesso; resposta de Bruno em 2026-09-18) | [SUPOSIÇÃO] Interface web responsiva (uso em desktop e tablet/celular na clínica); aplicativo mobile e portal do paciente ficam fora do MVP. (Fonte: README.md, Fase 6 — Evoluções futuras)
+- **Responsáveis/decisores:** [CONFIRMADO] Bruno M Noronha é o mantenedor do repositório. (Fonte: Histórico git (autor dos commits)) | [DECISÃO PENDENTE] TBD — PO, responsável técnico e aprovadores formais não informados. (Fonte: Lacuna no levantamento)
+- **Fluxo/perfis/permissões:** [CONFIRMADO] Fluxo principal: cadastro do paciente → agendamento → avaliação inicial → plano terapêutico → sessões → evolução clínica → reavaliação (volta ao plano) ou alta. (Fonte: README.md, Fluxo principal) | [CONFIRMADO] Perfis: Administrador (acesso completo: usuários, configurações, profissionais, permissões); Recepção (pacientes, agenda, agendamentos, atividades administrativas); Fisioterapeuta (avaliações, prontuário, sessões, planos, evolução). (Fonte: README.md, Perfis de acesso) | [AMBIGUIDADE] Limites finos de acesso não definidos: a Recepção pode ver dados clínicos/prontuário? Fisioterapeuta vê apenas seus pacientes ou todos? TBD — matriz de permissões por perfil. (Fonte: README.md, Perfis de acesso (sem detalhamento)) Impacto: Afeta modelagem de autorização da Fase 1 e telas do prontuário.
+- **MVP / fora do MVP:** [CONFIRMADO] MVP = Fases 1 a 4 do roadmap: Fundação (estrutura, banco, autenticação, usuários, perfis e permissões), Pacientes (cadastro, consulta, edição, histórico, anamnese), Agenda (agenda por profissional, agendamento, reagendamento, cancelamento) e Prontuário (avaliação inicial, plano terapêutico, sessões, evoluções, reavaliação). (Fonte: README.md, Roadmap; resposta de Bruno em 2026-09-18) | [CONFIRMADO] Fora do MVP: Financeiro (Fase 5), Relatórios/indicadores e todas as evoluções da Fase 6 (notificações, WhatsApp, assinatura digital, portal do paciente, app mobile, teleatendimento, dashboards, IA). (Fonte: Resposta de Bruno em 2026-09-18; README.md, Roadmap) | [AMBIGUIDADE] Documentos/anexos do paciente, bloqueio de horários, visões dia/semana/mês e controle de presença aparecem em Funcionalidades/Domínios mas não nas tarefas das Fases 2–3. TBD — incluir ou não no MVP. (Fonte: README.md, Funcionalidades x Roadmap)
+- **Regras de negócio:** [CONFIRMADO] Plano terapêutico decorre da avaliação; sessões registram profissional, técnicas, exercícios e evolução; reavaliação retorna ao plano; tratamento termina em alta ou continuidade. (Fonte: README.md, Fluxo principal e Evolução clínica) | [DECISÃO PENDENTE] TBD — regras de conflito de horário, duração padrão de sessão, antecedência/motivo de cancelamento, e se registros clínicos podem ser editados após salvos (ou só via adendo). (Fonte: Lacuna no levantamento)
+- **Dados/privacidade/retenção:** [CONFIRMADO] O sistema trata dados pessoais e dados de saúde dos pacientes (anamnese, avaliações, evolução), categoria de dado pessoal sensível na LGPD. (Fonte: README.md, Pacientes e Avaliação; Lei 13.709/2018 art. 5º II e art. 11) | [RECOMENDAÇÃO] Aplicar mínimo necessário, controle de acesso por perfil, trilha de auditoria de acesso a dados clínicos (módulo Auditoria já previsto) e criptografia em trânsito. (Fonte: README.md, Domínios principais (Auditoria); LGPD art. 46) | [DECISÃO PENDENTE] TBD — prazo de retenção do prontuário e política de exclusão/anonimização; verificar norma COFFITO aplicável antes de definir. (Fonte: Lacuna no levantamento)
+- **Integrações/dependências:** [CONFIRMADO] Nenhuma integração externa no MVP; WhatsApp, assinatura digital e teleatendimento estão na Fase 6. (Fonte: README.md, Fase 6; escopo do MVP confirmado por Bruno) | [DECISÃO PENDENTE] TBD — provedor de e-mail (recuperação de senha) e armazenamento de anexos, caso entrem no MVP. (Fonte: Lacuna no levantamento)
+- **Segurança/performance/acessibilidade/observabilidade/disponibilidade:** [CONFIRMADO] Autenticação segura e autorização baseada em perfis. (Fonte: README.md, Segurança) | [RECOMENDAÇÃO] Usar WCAG 2.1 AA como referência de acessibilidade e registrar logs de auditoria em ações sobre dados clínicos. (Fonte: Boa prática; README.md, Auditoria) | [DECISÃO PENDENTE] TBD — metas de performance, disponibilidade, backup e observabilidade. (Fonte: Lacuna no levantamento)
+- **Restrições/prazo/custos:** [CONFIRMADO] Princípios: simplicidade, modularidade por domínio e escalabilidade gradual (infraestrutura só com necessidade comprovada). (Fonte: README.md, Princípios do projeto) | [DECISÃO PENDENTE] TBD — prazo, orçamento/custos de hospedagem e licença do código. (Fonte: Lacuna no levantamento; README.md, Licença)
+- **Repositório/diretório/branch:** [CONFIRMADO] Repositório git fisio-orto-sport, diretório local C:\Development\Projects\fisio-orto-sport, branch principal main com remote origin; contém apenas README.md e .gitignore. (Fonte: Inspeção do repositório em 2026-09-18) | [DECISÃO PENDENTE] TBD — ambiente de homologação/produção e alvo de deploy. (Fonte: Lacuna no levantamento)
+- **Stack/banco/infraestrutura:** [CONFIRMADO] Stack sugerida: React, Next.js, Tailwind CSS, shadcn/ui, Prisma, PostgreSQL, pnpm, Jest e Docker Compose. (Fonte: README.md, Stack sugerida) | [DECISÃO TÉCNICA] TypeScript com Next.js App Router, monólito modular organizado pelos domínios do README. (Fonte: Agente, com base no README.md) Justificativa: README exige etapa Lint/TypeScript e modularidade por domínio; App Router é o padrão atual do Next.js; monólito atende clínica única com menor custo. Reversível. | [DECISÃO PENDENTE] TBD — biblioteca de autenticação (ex.: Auth.js ou Better Auth), a decidir após pesquisa direcionada no prompt da Fase 1; hospedagem TBD. (Fonte: Lacuna no levantamento)
+- **Definição de pronto:** [CONFIRMADO] Toda funcionalidade relevante passa por testes unitários, lint/TypeScript e build, com testes do fluxo principal. (Fonte: README.md, Qualidade) | [RECOMENDAÇÃO] Por módulo do MVP: fluxo principal testado, permissões por perfil verificadas em teste e migrações Prisma aplicáveis em banco limpo. (Fonte: Proposta do agente)
+
+## 2. Operação e autonomia
+
+- **ChatGPT:** arquiteta, pesquisa, decide, planeja e orquestra. Produz tarefas, critérios de aceite e prompts; revisa evidências e conduz a entrega.
+- **Claude ou Antigravity:** executam os prompts. Antes de alterar, consultam repositório e documentação; ao final, sempre entregam o relatório obrigatório.
+- O ChatGPT não repete a implementação, salvo para revisar, corrigir ou quando solicitado.
+
+Antes de decisão relevante, analise o projeto e pesquise de forma direcionada em fontes confiáveis ou documentação oficial. Escolha a solução mais simples que atenda ao MVP com segurança, manutenção e custo adequados. Registre apenas decisões importantes.
+
+Prossiga sem confirmação em escolhas reversíveis ou de baixo risco. Consulte o usuário somente diante de conflito de negócio, obrigação jurídica/financeira, credencial indispensável, risco grave de segurança ou ação irreversível com possível perda de dados.
+
+Há autorização para editar arquivos, instalar dependências justificadas, criar branches, executar migrações seguras, fazer **commit, push, abrir/revisar/mesclar PR, deploy e publicação**. Preserve alterações existentes, valide antes de entregar e mantenha rollback quando aplicável. Nunca exponha segredos, reduza segurança ou execute ação destrutiva em dados reais sem proteção explícita.
+
+Em Node.js, use **pnpm**; não use npm sem solicitação expressa.
+
+## 3. Fluxo
+
+1. Verificar estado do repositório e ler somente arquivos relevantes.
+2. Pesquisar apenas incertezas materiais.
+3. Definir objetivo, escopo, aceite, riscos e validações.
+4. Gerar prompt curto e autocontido, referenciando arquivos em vez de copiar conteúdo extenso.
+5. Receber relatório; revisar diff e evidências; concentrar correções em **um único prompt**.
+6. Com os controles técnicos concluídos, finalizar Git, PR, merge e publicação sem nova confirmação.
+
+Sem solicitação expressa, **ignore homologação**. Validação técnica permanece obrigatória.
+
+## 4. Documentação, qualidade e revisão
+
+- Repositório é a fonte oficial. Prefira `docs/PROJECT.md`; crie outros documentos somente quando necessários.
+- Documente incrementalmente e atualize apenas o afetado.
+- Revise pelo risco e pelo diff; não reanalise todo o projeto a cada ciclo.
+- Execute controles aplicáveis: lint, tipagem, testes, build, migrações e segurança.
+- Teste caminho principal, bordas, vazio e alto volume quando pertinente.
+- Após correção, repita apenas verificações impactadas; use suíte completa antes de merge/deploy em mudança ampla ou crítica.
+- Use segundo agente revisor apenas em autenticação, autorização, pagamentos, dados sensíveis, segurança, migração destrutiva ou arquitetura crítica.
+- Não reabra decisão registrada sem nova evidência.
+
+## 5. Prompt e relatório
+
+Todo prompt deve conter:
+
+`contexto → objetivo → escopo/fora do escopo → arquivos → restrições/decisões → aceite → validações → Git/publicação → relatório`.
+
+Todo agente deve retornar:
+
+- **status:** concluído, parcial ou bloqueado;
+- **resultado:** resumo e arquivos alterados;
+- **decisões:** suposições e justificativas relevantes;
+- **validação:** comandos, testes, resultados e evidências;
+- **entrega:** branch, commit, PR, merge e deploy/publicação;
+- **pendências:** falhas, riscos, dívida técnica e fora do escopo;
+- **próxima ação:** somente se necessária.
+
+## 6. Primeira resposta
+
+Entregue: resumo; fatos, suposições e bloqueios; decisões/pesquisas iniciais; plano ou backlog mínimo priorizado; e primeiro prompt executor. Não aguarde confirmação sem bloqueio real. Preserve o MVP e elimine documentação, revisões e etapas que não contribuam diretamente para a entrega.

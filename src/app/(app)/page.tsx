@@ -1,3 +1,5 @@
+import { requireUser } from "@/modules/auth/dal";
+
 const modulos = [
   "Pacientes",
   "Agenda",
@@ -6,14 +8,16 @@ const modulos = [
   "Sessões e evolução clínica",
 ];
 
-export default function Home() {
+export default async function Home() {
+  const user = await requireUser();
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-8 px-6 py-24">
       <div className="flex flex-col gap-3">
         <p className="text-sm font-medium text-muted-foreground">TechLab+</p>
         <h1 className="text-4xl font-semibold tracking-tight">Fisio OrtoSport</h1>
         <p className="text-lg text-muted-foreground">
-          Gestão clínica organizada. Atendimento com continuidade. Evolução
+          Olá, {user.name}. Gestão clínica organizada. Atendimento com continuidade. Evolução
           acompanhada.
         </p>
       </div>

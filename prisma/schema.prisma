@@ -10,9 +10,34 @@ datasource db {
   provider = "postgresql"
 }
 
-// Modelo provisório da fundação (verificação do banco).
-// Será substituído pelos modelos de domínio a partir da Fase 1 — parte 2.
-model HealthCheck {
-  id        Int      @id @default(autoincrement())
+// Perfis de acesso. As permissões de cada perfil ficam em src/modules/auth/permissions.ts.
+enum Role {
+  ADMIN
+  RECEPCAO
+  FISIOTERAPEUTA
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  // Sempre gravado normalizado (trim + minúsculas).
+  email        String    @unique
+  passwordHash String
+  role         Role
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+// Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }

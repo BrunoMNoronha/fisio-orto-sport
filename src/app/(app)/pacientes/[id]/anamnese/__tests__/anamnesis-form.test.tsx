@@ -26,7 +26,7 @@ function setup(action = jest.fn().mockResolvedValue(undefined)) {
 }
 
 function section(name: RegExp) {
-  return screen.getByRole("heading", { level: 2, name, hidden: true }).closest("section")!;
+  return screen.getByRole("heading", { level: 3, name, hidden: true }).closest("section")!;
 }
 
 describe("AnamnesisForm em etapas", () => {

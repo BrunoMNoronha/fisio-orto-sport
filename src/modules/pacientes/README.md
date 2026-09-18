@@ -9,7 +9,7 @@ Cadastro e consulta cadastral de pacientes (Fase 2a). **Somente dados cadastrais
 | `validation.ts` | Schemas zod (mensagens em pt-BR), validação de CPF (dígitos verificadores), telefone, data de nascimento, regra do responsável legal e parâmetros da listagem. |
 | `queries.ts` (`server-only`) | `listPatients()` (busca por nome, filtro por situação, 20 por página, ordem por nome) e `getPatient()`. Ambas exigem `pacientes:ler` e usam `select` explícito, sem `include`. |
 | `actions.ts` | `createPatient`, `updatePatient` e `setPatientStatus` (inativar/reativar). Todas exigem `pacientes:gerir` no servidor. **Não há exclusão física.** |
-| `src/app/(app)/pacientes/**` | Listagem, ficha (`/pacientes/[id]`), criação (`/pacientes/novo`) e edição (`/pacientes/[id]/editar`). |
+| `src/app/(app)/pacientes/**` | Listagem, ficha, criação (`/pacientes/novo`) e edição (`/pacientes/[id]/editar`). A ficha tem cabeçalho-resumo e abas em `[id]/layout.tsx`: **Resumo** (dados cadastrais, próximos atendimentos e, só com `clinico:ler`, resumo da anamnese vigente), **Anamnese** (`clinico:ler`) e **Agendamentos** (`agenda:ler`). `getPatient()` usa `cache()` do React para o layout e a página não repetirem a consulta. |
 
 ## Regras
 

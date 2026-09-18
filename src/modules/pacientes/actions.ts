@@ -109,6 +109,7 @@ export async function setPatientStatus(_prev: PatientActionState, formData: Form
   if (!parsed.success) return { error: "Dados inválidos." };
 
   const { id, status } = parsed.data;
+  // UPDATE direto trava a linha; a anamnese usa FOR UPDATE no paciente (ver clinico/rules.ts).
   const result = await prisma.patient.updateMany({ where: { id }, data: { status, updatedById: actor.actorId } });
   if (result.count === 0) return NOT_FOUND;
 

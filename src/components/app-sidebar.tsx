@@ -34,8 +34,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { initials } from "@/lib/utils"
 import { logout } from "@/modules/auth/actions"
+import { initials } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { href: "/", label: "Início", icon: LayoutDashboardIcon, key: "inicio" },

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/modules/auth/dal";
 import { PAGE_SIZE, type ListPatientsParams } from "./validation";
@@ -48,11 +49,12 @@ export async function listPatients({ q, status, page }: ListPatientsParams) {
   return { items, total, page, pageSize: PAGE_SIZE, pageCount: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
 }
 
-export async function getPatient(id: string) {
+// `cache`: o layout da ficha e a página consultam o mesmo paciente na mesma requisição.
+export const getPatient = cache(async (id: string) => {
   await requirePermission("pacientes:ler");
   if (!id || id.length > 64) return null;
   return prisma.patient.findUnique({ where: { id }, select: PATIENT_DETAIL_SELECT });
-}
+});
 
 export type PatientListItem = Awaited<ReturnType<typeof listPatients>>["items"][number];
 export type PatientDetail = NonNullable<Awaited<ReturnType<typeof getPatient>>>;

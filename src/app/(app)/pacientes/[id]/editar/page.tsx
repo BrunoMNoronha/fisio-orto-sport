@@ -15,8 +15,8 @@ export default async function EditarPacientePage({ params }: PageProps<"/pacient
   if (!patient) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Editar paciente</h1>
+    <div className="w-full max-w-3xl flex flex-col gap-6">
+      <h2 className="text-xl font-semibold tracking-tight">Editar paciente</h2>
       <PatientForm
         action={updatePatient}
         initial={toFormValues(patient)}

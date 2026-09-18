@@ -31,6 +31,7 @@ import {
   getAppointment,
   listActivePatientOptions,
   listAgenda,
+  listPatientAppointments,
   listProfessionals,
 } from "../queries";
 
@@ -110,5 +111,40 @@ describe("opções", () => {
     prismaMock.patient.findMany.mockResolvedValue([]);
     await listActivePatientOptions();
     expect(prismaMock.patient.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "ATIVO" } }));
+  });
+});
+
+describe("listPatientAppointments", () => {
+  const now = new Date("2026-09-18T15:00:00.000Z");
+
+  it("próximos: a partir de agora, crescente, com limite e select administrativo", async () => {
+    await listPatientAppointments("p1", { upcoming: true, take: 3, now });
+    expect(requirePermission).toHaveBeenCalledWith("agenda:ler");
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith({
+      where: { patientId: "p1", startsAt: { gte: now } },
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      take: 3,
+      select: APPOINTMENT_LIST_SELECT,
+    });
+  });
+
+  it("anteriores: antes de agora, decrescente", async () => {
+    await listPatientAppointments("p1", { upcoming: false, now });
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith({
+      where: { patientId: "p1", startsAt: { lt: now } },
+      orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+      select: APPOINTMENT_LIST_SELECT,
+    });
+  });
+
+  it("id implausível não consulta o banco", async () => {
+    await expect(listPatientAppointments("x".repeat(65), { upcoming: true })).resolves.toEqual([]);
+    expect(prismaMock.appointment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("exige agenda:ler", async () => {
+    currentRole.current = null;
+    await expect(listPatientAppointments("p1", { upcoming: true })).rejects.toThrow();
+    expect(prismaMock.appointment.findMany).not.toHaveBeenCalled();
   });
 });

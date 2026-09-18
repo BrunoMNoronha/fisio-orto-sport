@@ -20,12 +20,12 @@ export default async function HistoricoAnamnesePage({ params }: PageProps<"/paci
   const base = `/pacientes/${patient.id}/anamnese`;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
+    <div className="w-full max-w-3xl flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <Link href={base} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Anamnese de {patient.fullName}
+          ← Anamnese
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Histórico de versões</h1>
+        <h2 className="text-xl font-semibold tracking-tight">Histórico de versões</h2>
       </div>
 
       {versions.length === 0 ? (

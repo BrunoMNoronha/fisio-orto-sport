@@ -22,7 +22,7 @@ function Section({ index, children }: { index: number; children: React.ReactNode
       aria-labelledby={headingId}
       className="flex flex-col gap-4 rounded-xl bg-card p-5 text-card-foreground ring-1 ring-foreground/10 sm:p-6"
     >
-      <h2 id={headingId} className="flex items-center gap-2.5 font-heading text-base font-semibold">
+      <h3 id={headingId} className="flex items-center gap-2.5 font-heading text-base font-semibold">
         <span
           aria-hidden
           className="flex size-6.5 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary"
@@ -30,7 +30,7 @@ function Section({ index, children }: { index: number; children: React.ReactNode
           {index + 1}
         </span>
         {title}
-      </h2>
+      </h3>
       <dl className="grid gap-4 md:grid-cols-2">{children}</dl>
     </section>
   );

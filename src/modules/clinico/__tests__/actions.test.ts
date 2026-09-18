@@ -16,7 +16,7 @@ jest.mock("@/modules/auth/dal", () => {
 });
 
 const tx = {
-  patient: { findUnique: jest.fn() },
+  $queryRaw: jest.fn(),
   anamnesis: { create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn(), deleteMany: jest.fn(), upsert: jest.fn() },
 };
 const prismaMock = {
@@ -69,7 +69,7 @@ let consoleSpies: jest.SpyInstance[];
 
 beforeEach(() => {
   jest.clearAllMocks();
-  tx.patient.findUnique.mockResolvedValue({ status: "ATIVO" });
+  tx.$queryRaw.mockResolvedValue([{ status: "ATIVO" }]);
   tx.anamnesis.create.mockResolvedValue({ id: "a1" });
   consoleSpies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
     jest.spyOn(console, level).mockImplementation(() => {}),
@@ -106,6 +106,10 @@ describe("createAnamnesisVersion", () => {
       painTypes: ["PONTADA", "IRRADIADA"],
     });
     expect(data.assessmentDate).toEqual(new Date("2026-09-01T00:00:00.000Z"));
+    // A linha do paciente é travada (FOR UPDATE) antes de gravar a versão.
+    const [sql] = tx.$queryRaw.mock.calls[0];
+    expect(sql.join("?")).toMatch(/FOR UPDATE/);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(tx.anamnesis.create.mock.invocationCallOrder[0]);
   });
 
   it("é append-only: nunca atualiza nem exclui versões", async () => {
@@ -143,7 +147,7 @@ describe("createAnamnesisVersion", () => {
 
   it("paciente inexistente gera estado controlado", async () => {
     as("ADMIN");
-    tx.patient.findUnique.mockResolvedValue(null);
+    tx.$queryRaw.mockResolvedValue([]);
     await expect(createAnamnesisVersion("p404", undefined, form(valid))).resolves.toEqual({
       error: "Paciente não encontrado.",
     });
@@ -160,7 +164,7 @@ describe("createAnamnesisVersion", () => {
 
   it("paciente inativo rejeita nova versão com mensagem em pt-BR", async () => {
     as("FISIOTERAPEUTA");
-    tx.patient.findUnique.mockResolvedValue({ status: "INATIVO" });
+    tx.$queryRaw.mockResolvedValue([{ status: "INATIVO" }]);
     const result = await createAnamnesisVersion("p1", undefined, form(valid));
     expect(result?.error).toMatch(/Paciente inativo não pode receber nova anamnese/);
     expectNoWrites();

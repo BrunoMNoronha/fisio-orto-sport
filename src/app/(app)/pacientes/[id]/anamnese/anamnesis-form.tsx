@@ -73,7 +73,7 @@ function StepSection({
       hidden={!active}
       className="flex flex-col gap-5 rounded-xl bg-card p-5 text-card-foreground ring-1 ring-foreground/10 sm:p-6"
     >
-      <h2
+      <h3
         id={headingId}
         ref={active ? headingRef : undefined}
         tabIndex={-1}
@@ -81,7 +81,7 @@ function StepSection({
       >
         <span className="sr-only">Etapa {index + 1}: </span>
         {step.title}
-      </h2>
+      </h3>
       {children}
     </section>
   );

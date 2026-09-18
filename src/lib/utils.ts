@@ -5,6 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Iniciais para avatar: primeira letra das duas primeiras palavras.
 export function initials(name: string) {
   return name
     .split(/\s+/)

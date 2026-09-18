@@ -149,7 +149,7 @@ model Anamnesis {
   habitsPhysicalActivity      String?    @db.VarChar(2000)
   painIntensity               Int?       @db.SmallInt
   painLocation                String?    @db.VarChar(200)
-  painTypes                   PainType[]
+  painTypes                   PainType[] @default([])
   functionalLimitations       String?    @db.VarChar(2000)
   patientGoals                String?    @db.VarChar(2000)
   clinicalNotes               String?    @db.VarChar(4000)

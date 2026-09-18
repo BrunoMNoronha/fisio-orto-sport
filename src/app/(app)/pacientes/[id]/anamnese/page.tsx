@@ -24,13 +24,10 @@ export default async function AnamnesePage({ params }: PageProps<"/pacientes/[id
   const base = `/pacientes/${patient.id}/anamnese`;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
+    <div className="w-full max-w-3xl flex flex-col gap-8">
       <div className="flex flex-col gap-3">
-        <Link href={`/pacientes/${patient.id}`} className="text-sm text-muted-foreground hover:text-foreground">
-          ← {patient.fullName}
-        </Link>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">Anamnese</h1>
+          <h2 className="text-xl font-semibold tracking-tight">Anamnese</h2>
           <div className="flex gap-3">
             {anamnesis && (
               <Link href={`${base}/historico`} className={buttonVariants({ variant: "outline" })}>

@@ -26,7 +26,7 @@ export default async function UsuariosPage() {
   const users = await listUsers();
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-10">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Usuários</h1>
@@ -38,11 +38,11 @@ export default async function UsuariosPage() {
       </div>
 
       {users.length === 0 ? (
-        <p className="rounded-lg border px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border bg-card shadow-xs px-4 py-8 text-center text-sm text-muted-foreground">
           Nenhum usuário cadastrado.
         </p>
       ) : (
-        <div className="rounded-lg border">
+        <div className="rounded-xl border bg-card shadow-xs">
           <Table>
             <TableHeader>
               <TableRow>
@@ -86,6 +86,6 @@ export default async function UsuariosPage() {
           </Table>
         </div>
       )}
-    </main>
+    </div>
   );
 }

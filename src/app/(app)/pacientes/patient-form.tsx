@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { PatientActionState } from "@/modules/pacientes/actions";
 import { isMinor } from "@/modules/pacientes/validation";
 
@@ -60,8 +61,6 @@ function birthDateIsMinor(value: string) {
   return !Number.isNaN(date.getTime()) && isMinor(date);
 }
 
-const textareaClass =
-  "min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30";
 
 // Campos controlados: os valores sobrevivem ao reset do formulário após uma validação com erro.
 export function PatientForm({
@@ -124,19 +123,18 @@ export function PatientForm({
         {text("email", "E-mail (opcional)", { type: "email" })}
         <div className="flex flex-col gap-2 sm:col-span-2">
           <Label htmlFor="paciente-address">Endereço (opcional)</Label>
-          <textarea
+          <Textarea
             {...a11y("paciente-address", errors?.address)}
             {...field("address")}
             maxLength={300}
             rows={2}
-            className={textareaClass}
           />
           <FieldError id="paciente-address-erro" messages={errors?.address} />
         </div>
       </fieldset>
 
       {(minor || errors?.guardianName || errors?.guardianPhone) && (
-        <fieldset className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+        <fieldset className="grid gap-4 rounded-xl border bg-card shadow-xs p-4 sm:grid-cols-2">
           <legend className="px-1 text-base font-medium">Responsável legal</legend>
           <p className="text-sm text-muted-foreground sm:col-span-2">
             Paciente menor de 18 anos: informe o nome e o telefone do responsável.
@@ -149,12 +147,11 @@ export function PatientForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="paciente-notes">Observações administrativas (opcional)</Label>
-        <textarea
+        <Textarea
           {...a11y("paciente-notes", errors?.notes)}
           {...field("notes")}
           maxLength={1000}
           rows={3}
-          className={textareaClass}
         />
         <p className="text-xs text-muted-foreground">Não registre informações clínicas aqui.</p>
         <FieldError id="paciente-notes-erro" messages={errors?.notes} />

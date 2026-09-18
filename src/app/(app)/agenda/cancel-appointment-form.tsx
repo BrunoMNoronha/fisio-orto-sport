@@ -11,7 +11,7 @@ export function CancelAppointmentForm({ id }: { id: string }) {
   const reasonError = state?.fieldErrors?.reason?.[0];
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-lg border p-4">
+    <form action={formAction} className="flex flex-col gap-3 rounded-xl border bg-card shadow-xs p-4">
       <input type="hidden" name="id" value={id} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="cancelar-motivo">Motivo do cancelamento (opcional)</Label>

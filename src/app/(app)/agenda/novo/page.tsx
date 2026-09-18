@@ -18,7 +18,7 @@ export default async function NovoAgendamentoPage({ searchParams }: PageProps<"/
   const patientId = firstParam(raw.patientId);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-10">
+    <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">Novo agendamento</h1>
       <AppointmentForm
         action={createAppointment}
@@ -35,6 +35,6 @@ export default async function NovoAgendamentoPage({ searchParams }: PageProps<"/
         cancelHref="/agenda"
         submitLabel="Agendar"
       />
-    </main>
+    </div>
   );
 }

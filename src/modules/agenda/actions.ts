@@ -1,0 +1,155 @@
+"use server";
+
+// Agendamentos. Cada action checa `agenda:gerir` no servidor, independentemente de a UI
+// esconder os botões. Não há exclusão física: o agendamento é cancelado.
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
+import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
+import {
+  AgendaRuleError,
+  CONFLICT_MESSAGE,
+  assertNoConflict,
+  assertPatientActive,
+  assertProfessionalAvailable,
+  isOverlapViolation,
+} from "./rules";
+import { appointmentSchema, cancelSchema, rescheduleSchema } from "./validation";
+
+export type AppointmentActionState =
+  | { ok?: boolean; message?: string; error?: string; fieldErrors?: FieldErrors }
+  | undefined;
+
+const AGENDA_PATH = "/agenda";
+const SLOT_FIELDS = ["professionalId", "date", "startTime", "endTime"];
+const NOT_FOUND: AppointmentActionState = { error: "Agendamento não encontrado." };
+const ALREADY_CANCELLED: AppointmentActionState = { error: "Agendamento cancelado não pode ser alterado." };
+
+async function guard(): Promise<{ actorId: string } | AppointmentActionState> {
+  try {
+    const actor = await assertPermission("agenda:gerir");
+    return { actorId: actor.id };
+  } catch (error) {
+    if (error instanceof AuthorizationError) return { error: "Acesso negado." };
+    throw error;
+  }
+}
+
+function isActor(value: unknown): value is { actorId: string } {
+  return typeof value === "object" && value !== null && "actorId" in value;
+}
+
+function entries(formData: FormData, keys: string[]) {
+  return Object.fromEntries(
+    keys.map((key) => {
+      const value = formData.get(key);
+      return [key, typeof value === "string" ? value : undefined];
+    }),
+  );
+}
+
+// Erros de regra viram resposta do formulário; o resto propaga.
+function ruleFailure(error: unknown): AppointmentActionState | null {
+  if (error instanceof AgendaRuleError) {
+    return error.field ? { fieldErrors: { [error.field]: [error.message] } } : { error: error.message };
+  }
+  if (isOverlapViolation(error)) return { fieldErrors: { startTime: [CONFLICT_MESSAGE] } };
+  return null;
+}
+
+export async function createAppointment(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = appointmentSchema.safeParse(entries(formData, ["patientId", ...SLOT_FIELDS, "notes"]));
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  const data = parsed.data;
+  let id: string;
+  try {
+    id = await prisma.$transaction(async (tx) => {
+      await assertPatientActive(tx, data.patientId);
+      await assertProfessionalAvailable(tx, data.professionalId);
+      await assertNoConflict(tx, data);
+      const created = await tx.appointment.create({
+        data: { ...data, createdById: actor.actorId, updatedById: actor.actorId },
+        select: { id: true },
+      });
+      return created.id;
+    });
+  } catch (error) {
+    const failure = ruleFailure(error);
+    if (failure) return failure;
+    throw error;
+  }
+  revalidatePath(AGENDA_PATH);
+  redirect(`${AGENDA_PATH}/${id}`);
+}
+
+export async function rescheduleAppointment(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = rescheduleSchema.safeParse(entries(formData, ["id", ...SLOT_FIELDS]));
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  const { id, ...slot } = parsed.data;
+  try {
+    const outcome = await prisma.$transaction(async (tx) => {
+      const current = await tx.appointment.findUnique({ where: { id }, select: { status: true } });
+      if (!current) return NOT_FOUND;
+      if (current.status !== "AGENDADO") return ALREADY_CANCELLED;
+      await assertProfessionalAvailable(tx, slot.professionalId);
+      await assertNoConflict(tx, slot, id);
+      await tx.appointment.update({ where: { id }, data: { ...slot, updatedById: actor.actorId }, select: { id: true } });
+      return null;
+    });
+    if (outcome) return outcome;
+  } catch (error) {
+    const failure = ruleFailure(error);
+    if (failure) return failure;
+    throw error;
+  }
+  revalidatePath(AGENDA_PATH);
+  revalidatePath(`${AGENDA_PATH}/${id}`);
+  redirect(`${AGENDA_PATH}/${id}`);
+}
+
+export async function cancelAppointment(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = cancelSchema.safeParse(entries(formData, ["id", "reason"]));
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  const { id, reason } = parsed.data;
+  // Só cancela o que ainda está AGENDADO; o registro é preservado.
+  const result = await prisma.appointment.updateMany({
+    where: { id, status: "AGENDADO" },
+    data: {
+      status: "CANCELADO",
+      cancelledAt: new Date(),
+      cancelReason: reason,
+      cancelledById: actor.actorId,
+      updatedById: actor.actorId,
+    },
+  });
+  if (result.count === 0) {
+    const exists = await prisma.appointment.findUnique({ where: { id }, select: { id: true } });
+    return exists ? { error: "Agendamento já está cancelado." } : NOT_FOUND;
+  }
+
+  revalidatePath(AGENDA_PATH);
+  revalidatePath(`${AGENDA_PATH}/${id}`);
+  return { ok: true, message: "Agendamento cancelado." };
+}

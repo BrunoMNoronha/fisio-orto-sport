@@ -18,18 +18,23 @@ enum Role {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  name            String
+  id                         String        @id @default(cuid())
+  name                       String
   // Sempre gravado normalizado (trim + minúsculas).
-  email           String    @unique
-  passwordHash    String
-  role            Role
-  active          Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  sessions        Session[]
-  patientsCreated Patient[] @relation("PatientCreatedBy")
-  patientsUpdated Patient[] @relation("PatientUpdatedBy")
+  email                      String        @unique
+  passwordHash               String
+  role                       Role
+  active                     Boolean       @default(true)
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+  sessions                   Session[]
+  patientsCreated            Patient[]     @relation("PatientCreatedBy")
+  patientsUpdated            Patient[]     @relation("PatientUpdatedBy")
+  // Agenda: o próprio usuário FISIOTERAPEUTA ativo é o profissional atendente.
+  appointmentsAsProfessional Appointment[] @relation("AppointmentProfessional")
+  appointmentsCreated        Appointment[] @relation("AppointmentCreatedBy")
+  appointmentsUpdated        Appointment[] @relation("AppointmentUpdatedBy")
+  appointmentsCancelled      Appointment[] @relation("AppointmentCancelledBy")
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -75,7 +80,42 @@ model Patient {
   updatedById          String
   createdBy            User          @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy            User          @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  appointments         Appointment[]
 
   @@index([fullName])
   @@index([status, fullName])
+}
+
+enum AppointmentStatus {
+  AGENDADO
+  CANCELADO
+}
+
+// Agendamento. Não há exclusão física: cancelar muda o status e preserva o registro.
+// Sobreposição para o mesmo profissional é barrada na action e, no banco, pela constraint
+// de exclusão "Appointment_no_overlap" (btree_gist, intervalo [início, fim), só AGENDADO).
+model Appointment {
+  id             String            @id @default(cuid())
+  patientId      String
+  professionalId String
+  startsAt       DateTime          @db.Timestamptz(3)
+  endsAt         DateTime          @db.Timestamptz(3)
+  status         AppointmentStatus @default(AGENDADO)
+  // Observação administrativa; nunca conteúdo clínico.
+  notes          String?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  cancelledById  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  createdById    String
+  updatedById    String
+  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  professional   User              @relation("AppointmentProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
+  createdBy      User              @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy      User              @relation("AppointmentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  cancelledBy    User?             @relation("AppointmentCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+
+  @@index([professionalId, startsAt])
+  @@index([patientId, startsAt])
 }

@@ -1,7 +1,9 @@
 "use client";
 
+import { AlertCircle, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { AnamnesisActionState } from "@/modules/clinico/actions";
 import { LIMITS, PAIN_TYPES, PAIN_TYPE_LABELS, type PainTypeValue } from "@/modules/clinico/validation";
+import { ANAMNESIS_STEPS, firstStepWithError, stepHasError, type AnamnesisStep } from "./anamnesis-steps";
+import { ChoiceChip } from "./choice-chip";
+import { PainScale } from "./pain-scale";
 
 type Action = (prev: AnamnesisActionState, formData: FormData) => Promise<AnamnesisActionState>;
 
@@ -29,6 +34,8 @@ export type AnamnesisFormValues = {
 
 type TextField = keyof AnamnesisFormValues;
 
+const LAST_STEP = ANAMNESIS_STEPS.length - 1;
+
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
   return (
@@ -46,7 +53,42 @@ function a11y(id: string, errors?: string[]) {
   } as const;
 }
 
-// Campos controlados: os valores sobrevivem ao reset do formulário após uma validação com erro.
+function StepSection({
+  step,
+  index,
+  active,
+  headingRef,
+  children,
+}: {
+  step: AnamnesisStep;
+  index: number;
+  active: boolean;
+  headingRef: React.Ref<HTMLHeadingElement>;
+  children: React.ReactNode;
+}) {
+  const headingId = `anamnese-etapa-${step.id}`;
+  return (
+    <section
+      aria-labelledby={headingId}
+      hidden={!active}
+      className="flex flex-col gap-5 rounded-xl bg-card p-5 text-card-foreground ring-1 ring-foreground/10 sm:p-6"
+    >
+      <h2
+        id={headingId}
+        ref={active ? headingRef : undefined}
+        tabIndex={-1}
+        className="font-heading text-base font-semibold outline-none"
+      >
+        <span className="sr-only">Etapa {index + 1}: </span>
+        {step.title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+// Formulário em etapas: todas as seções ficam montadas (as inativas com `hidden`), então um único
+// submit envia todos os campos. Campos controlados: os valores sobrevivem ao reset após erro.
 export function AnamnesisForm({
   action,
   initial,
@@ -61,7 +103,34 @@ export function AnamnesisForm({
   const [values, setValues] = useState(initial);
   const [painTypes, setPainTypes] = useState<PainTypeValue[]>(initialPainTypes);
   const [state, formAction, pending] = useActionState(action, undefined);
+  const [step, setStep] = useState(0);
+  const [handledState, setHandledState] = useState(state);
+  // Incrementado a cada troca de etapa pedida pelo usuário ou por erro: move o foco para a etapa.
+  const [focusRequest, setFocusRequest] = useState(0);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const errors = state?.fieldErrors;
+
+  // Nova resposta da action com erro de campo: leva à primeira etapa com problema.
+  if (state !== handledState) {
+    setHandledState(state);
+    const withError = firstStepWithError(state?.fieldErrors);
+    if (withError >= 0 && withError !== step) {
+      setStep(withError);
+      setFocusRequest((n) => n + 1);
+    }
+  }
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    headingRef.current?.focus({ preventScroll: true });
+    headingRef.current?.closest("form")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [focusRequest]);
+
+  function goTo(index: number) {
+    if (index === step) return;
+    setStep(index);
+    setFocusRequest((n) => n + 1);
+  }
 
   function field(name: TextField) {
     return {
@@ -72,12 +141,22 @@ export function AnamnesisForm({
     };
   }
 
-  function longText(name: Exclude<TextField, "assessmentDate" | "painIntensity">, label: string, rows = 3) {
+  function longText(
+    name: Exclude<TextField, "assessmentDate" | "painIntensity">,
+    label: string,
+    options: { rows?: number; placeholder?: string; className?: string } = {},
+  ) {
     const id = `anamnese-${name}`;
     return (
-      <div className="flex flex-col gap-2">
+      <div className={cn("flex flex-col gap-2", options.className)}>
         <Label htmlFor={id}>{label}</Label>
-        <Textarea {...a11y(id, errors?.[name])} {...field(name)} maxLength={LIMITS[name]} rows={rows} />
+        <Textarea
+          {...a11y(id, errors?.[name])}
+          {...field(name)}
+          maxLength={LIMITS[name]}
+          rows={options.rows ?? 3}
+          placeholder={options.placeholder}
+        />
         <FieldError id={`${id}-erro`} messages={errors?.[name]} />
       </div>
     );
@@ -89,111 +168,201 @@ export function AnamnesisForm({
     );
   }
 
+  function isFilled(target: AnamnesisStep) {
+    return target.fields.some((name) => (name === "painTypes" ? painTypes.length > 0 : values[name].trim() !== ""));
+  }
+
+  const next = ANAMNESIS_STEPS[step + 1];
+
   return (
-    <form action={formAction} className="flex flex-col gap-6" noValidate>
+    <form action={formAction} className="flex flex-col gap-5" noValidate>
       {state?.error && (
         <Alert variant="destructive" aria-live="polite">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex flex-col gap-2 sm:max-w-xs">
-        <Label htmlFor="anamnese-assessmentDate">Data da avaliação *</Label>
-        <Input
-          {...a11y("anamnese-assessmentDate", errors?.assessmentDate)}
-          {...field("assessmentDate")}
-          type="date"
-          required
-        />
-        <FieldError id="anamnese-assessmentDate-erro" messages={errors?.assessmentDate} />
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav aria-label="Etapas da anamnese" className="lg:sticky lg:top-20 lg:self-start">
+          <ol className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:rounded-xl lg:bg-card lg:p-3 lg:ring-1 lg:ring-foreground/10">
+            {ANAMNESIS_STEPS.map((item, index) => {
+              const active = index === step;
+              const hasError = stepHasError(item, errors);
+              const filled = !active && !hasError && isFilled(item);
+              return (
+                <li key={item.id} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => goTo(index)}
+                    aria-current={active ? "step" : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      active ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "flex size-6.5 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                        hasError
+                          ? "bg-destructive text-white"
+                          : active
+                            ? "bg-primary text-primary-foreground"
+                            : filled
+                              ? "bg-primary/15 text-primary"
+                              : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {hasError ? (
+                        <AlertCircle className="size-3.5" />
+                      ) : filled ? (
+                        <Check className="size-3.5" />
+                      ) : (
+                        index + 1
+                      )}
+                    </span>
+                    {item.title}
+                    {hasError && <span className="sr-only"> (com erro)</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <StepSection step={ANAMNESIS_STEPS[0]} index={0} active={step === 0} headingRef={headingRef}>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="anamnese-assessmentDate">Data da avaliação *</Label>
+                <Input
+                  {...a11y("anamnese-assessmentDate", errors?.assessmentDate)}
+                  {...field("assessmentDate")}
+                  type="date"
+                  required
+                />
+                <FieldError id="anamnese-assessmentDate-erro" messages={errors?.assessmentDate} />
+              </div>
+              {longText("chiefComplaint", "Queixa principal (nas palavras do paciente) *", {
+                rows: 2,
+                placeholder: "Ex.: dor no ombro direito ao elevar o braço há 3 meses",
+                className: "md:col-span-3",
+              })}
+              {longText("currentIllnessHistory", "História da doença atual (HDA)", {
+                rows: 5,
+                placeholder: "Início, evolução, fatores de melhora e piora, tratamentos anteriores",
+                className: "md:col-span-3",
+              })}
+            </div>
+          </StepSection>
+
+          <StepSection step={ANAMNESIS_STEPS[1]} index={1} active={step === 1} headingRef={headingRef}>
+            <div className="flex flex-col gap-2">
+              <PainScale
+                id="anamnese-painIntensity"
+                value={values.painIntensity}
+                onChange={(painIntensity) => setValues((current) => ({ ...current, painIntensity }))}
+                invalid={Boolean(errors?.painIntensity)}
+                describedBy={errors?.painIntensity ? "anamnese-painIntensity-erro" : undefined}
+              />
+              <FieldError id="anamnese-painIntensity-erro" messages={errors?.painIntensity} />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="anamnese-painLocation">Localização</Label>
+                <Input
+                  {...a11y("anamnese-painLocation", errors?.painLocation)}
+                  {...field("painLocation")}
+                  maxLength={LIMITS.painLocation}
+                  autoComplete="off"
+                  placeholder="Ex.: ombro direito, face anterior"
+                />
+                <FieldError id="anamnese-painLocation-erro" messages={errors?.painLocation} />
+              </div>
+            </div>
+            <div
+              role="group"
+              aria-labelledby="anamnese-painTypes-rotulo"
+              aria-describedby={errors?.painTypes ? "anamnese-painTypes-erro" : undefined}
+              className="flex flex-col gap-2"
+            >
+              <span id="anamnese-painTypes-rotulo" className="text-sm font-medium">
+                Característica (pode marcar mais de uma)
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {PAIN_TYPES.map((type) => (
+                  <ChoiceChip
+                    key={type}
+                    label={PAIN_TYPE_LABELS[type]}
+                    name="painTypes"
+                    value={type}
+                    checked={painTypes.includes(type)}
+                    onChange={(event) => togglePainType(type, event.target.checked)}
+                  />
+                ))}
+              </div>
+              <FieldError id="anamnese-painTypes-erro" messages={errors?.painTypes} />
+            </div>
+          </StepSection>
+
+          <StepSection step={ANAMNESIS_STEPS[2]} index={2} active={step === 2} headingRef={headingRef}>
+            <div className="grid gap-4 md:grid-cols-2">
+              {longText("personalPathologicalHistory", "Antecedentes pessoais e patológicos", {
+                rows: 4,
+                placeholder: "Doenças crônicas, fraturas, lesões prévias",
+                className: "md:col-span-2",
+              })}
+              {longText("surgeries", "Cirurgias", { placeholder: "Procedimento, ano, lado" })}
+              {longText("currentMedications", "Medicamentos em uso", { placeholder: "Nome, dose, frequência" })}
+              {longText("habitsPhysicalActivity", "Hábitos e atividade física", {
+                placeholder: "Atividade, frequência, ocupação, sono",
+                className: "md:col-span-2",
+              })}
+            </div>
+          </StepSection>
+
+          <StepSection step={ANAMNESIS_STEPS[3]} index={3} active={step === 3} headingRef={headingRef}>
+            <div className="grid gap-4 md:grid-cols-2">
+              {longText("functionalLimitations", "Limitações funcionais relatadas", {
+                rows: 4,
+                placeholder: "Atividades que o paciente não consegue ou tem dificuldade de realizar",
+              })}
+              {longText("patientGoals", "Objetivos do paciente", {
+                rows: 4,
+                placeholder: "O que o paciente espera alcançar com o tratamento",
+              })}
+              {longText("clinicalNotes", "Observações clínicas", { rows: 4, className: "md:col-span-2" })}
+            </div>
+          </StepSection>
+        </div>
       </div>
 
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-2 text-base font-medium">Queixa principal e história</legend>
-        {longText("chiefComplaint", "Queixa principal *", 2)}
-        {longText("currentIllnessHistory", "História da doença atual (HDA)", 5)}
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-2 text-base font-medium">Histórico clínico e cirúrgico</legend>
-        {longText("personalPathologicalHistory", "Antecedentes pessoais e patológicos")}
-        {longText("surgeries", "Cirurgias", 2)}
-        {longText("currentMedications", "Medicamentos em uso", 2)}
-        {longText("habitsPhysicalActivity", "Hábitos e atividade física", 2)}
-      </fieldset>
-
-      <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-2 text-base font-medium">Dor relatada</legend>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="anamnese-painIntensity">Intensidade (EVA 0–10)</Label>
-          <Input
-            {...a11y("anamnese-painIntensity", errors?.painIntensity)}
-            {...field("painIntensity")}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={10}
-            step={1}
-          />
-          <FieldError id="anamnese-painIntensity-erro" messages={errors?.painIntensity} />
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          Etapa {step + 1} de {ANAMNESIS_STEPS.length}
+          <span className="hidden sm:inline"> · Salvar cria uma nova versão; as anteriores ficam no histórico.</span>
+        </p>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+            Cancelar
+          </Link>
+          {step > 0 && (
+            <Button type="button" variant="outline" size="lg" onClick={() => goTo(step - 1)}>
+              <ChevronLeft data-icon="inline-start" />
+              Anterior
+            </Button>
+          )}
+          <Button type="submit" variant={step === LAST_STEP ? "default" : "outline"} size="lg" disabled={pending}>
+            {pending ? "Salvando…" : "Salvar anamnese"}
+          </Button>
+          {next && (
+            <Button type="button" size="lg" onClick={() => goTo(step + 1)}>
+              <span className="hidden sm:inline">Próxima etapa: </span>
+              {next.title}
+              <ChevronRight data-icon="inline-end" />
+            </Button>
+          )}
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="anamnese-painLocation">Localização</Label>
-          <Input
-            {...a11y("anamnese-painLocation", errors?.painLocation)}
-            {...field("painLocation")}
-            maxLength={LIMITS.painLocation}
-            autoComplete="off"
-          />
-          <FieldError id="anamnese-painLocation-erro" messages={errors?.painLocation} />
-        </div>
-        <div
-          role="group"
-          aria-labelledby="anamnese-painTypes-rotulo"
-          aria-describedby={errors?.painTypes ? "anamnese-painTypes-erro" : undefined}
-          className="flex flex-col gap-2 sm:col-span-2"
-        >
-          <span id="anamnese-painTypes-rotulo" className="text-sm font-medium">
-            Tipo (pode marcar mais de um)
-          </span>
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            {PAIN_TYPES.map((type) => (
-              <label key={type} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="painTypes"
-                  value={type}
-                  checked={painTypes.includes(type)}
-                  onChange={(event) => togglePainType(type, event.target.checked)}
-                  className="size-4 accent-primary"
-                />
-                {PAIN_TYPE_LABELS[type]}
-              </label>
-            ))}
-          </div>
-          <FieldError id="anamnese-painTypes-erro" messages={errors?.painTypes} />
-        </div>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-2 text-base font-medium">Limitações e objetivos</legend>
-        {longText("functionalLimitations", "Limitações funcionais relatadas")}
-        {longText("patientGoals", "Objetivos do paciente")}
-      </fieldset>
-
-      {longText("clinicalNotes", "Observações clínicas")}
-
-      <p className="text-xs text-muted-foreground">
-        Salvar cria uma nova versão. As versões anteriores permanecem inalteradas no histórico.
-      </p>
-
-      <div className="flex gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Salvando…" : "Salvar anamnese"}
-        </Button>
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
-          Cancelar
-        </Link>
       </div>
     </form>
   );

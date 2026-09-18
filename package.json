@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:integration": "tsx --conditions=react-server --test test/integration/*.integration.ts",
     "postinstall": "prisma generate",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

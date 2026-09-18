@@ -172,3 +172,37 @@ export function parseAgendaFilter(
 export function filterBounds({ from, to }: AgendaFilter) {
   return { gte: toInstant(from, "00:00"), lt: toInstant(addDays(to, 1), "00:00") };
 }
+
+export const AGENDA_VIEWS = ["dia", "semana", "lista"] as const;
+export type AgendaView = (typeof AGENDA_VIEWS)[number];
+
+export function isValidTime(value: string) {
+  return TIME_RE.test(value);
+}
+
+// Segunda-feira da semana que contém `date` (semana de segunda a domingo).
+export function startOfWeek(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return addDays(date, -((weekday + 6) % 7));
+}
+
+// Visão da agenda a partir da URL. Dia e semana derivam o período de `date`; a lista usa de/até.
+// Valores inválidos caem no padrão (visão do dia de hoje).
+export function parseAgendaView(
+  raw: { view?: string; date?: string; professionalId?: string; from?: string; to?: string },
+  now = new Date(),
+): { view: AgendaView; date: string; today: string; filter: AgendaFilter } {
+  const today = toLocalDate(now);
+  const view = AGENDA_VIEWS.find((v) => v === raw.view) ?? "dia";
+  const date = raw.date && isValidDate(raw.date) ? raw.date : today;
+  const base = parseAgendaFilter({ professionalId: raw.professionalId, from: raw.from, to: raw.to }, now);
+  const professional = base.professionalId ? { professionalId: base.professionalId } : {};
+
+  if (view === "dia") return { view, date, today, filter: { ...professional, from: date, to: date } };
+  if (view === "semana") {
+    const monday = startOfWeek(date);
+    return { view, date, today, filter: { ...professional, from: monday, to: addDays(monday, 6) } };
+  }
+  return { view, date, today, filter: base };
+}

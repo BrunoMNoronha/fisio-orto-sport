@@ -46,6 +46,23 @@ export async function getAppointment(id: string) {
   return prisma.appointment.findUnique({ where: { id }, select: APPOINTMENT_DETAIL_SELECT });
 }
 
+// Agendamentos de um paciente (inclui cancelados), para a ficha. Só dados administrativos.
+// `upcoming`: a partir de `now`, em ordem crescente; caso contrário, anteriores em ordem decrescente.
+export async function listPatientAppointments(
+  patientId: string,
+  { upcoming, take, now = new Date() }: { upcoming: boolean; take?: number; now?: Date },
+) {
+  await requirePermission("agenda:ler");
+  if (!patientId || patientId.length > 64) return [];
+  const direction = upcoming ? ("asc" as const) : ("desc" as const);
+  return prisma.appointment.findMany({
+    where: { patientId, startsAt: upcoming ? { gte: now } : { lt: now } },
+    orderBy: [{ startsAt: direction }, { id: direction }],
+    ...(take ? { take } : {}),
+    select: APPOINTMENT_LIST_SELECT,
+  });
+}
+
 // Profissionais aptos a atender: fisioterapeutas ativos.
 export async function listProfessionals() {
   await requirePermission("agenda:ler");

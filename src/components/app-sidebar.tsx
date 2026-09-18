@@ -35,6 +35,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { logout } from "@/modules/auth/actions"
+import { initials } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { href: "/", label: "Início", icon: LayoutDashboardIcon, key: "inicio" },
@@ -44,15 +45,6 @@ const NAV_ITEMS = [
 ] as const
 
 export type NavKey = (typeof NAV_ITEMS)[number]["key"]
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("")
-}
 
 export function AppSidebar({
   allowed,

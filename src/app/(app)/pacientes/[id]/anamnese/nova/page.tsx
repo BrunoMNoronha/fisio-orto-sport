@@ -5,6 +5,7 @@ import { requirePermission } from "@/modules/auth/dal";
 import { createAnamnesisVersion } from "@/modules/clinico/actions";
 import { getCurrentAnamnesis, type AnamnesisDetail } from "@/modules/clinico/queries";
 import { getPatient } from "@/modules/pacientes/queries";
+import { formatDate } from "../../../format";
 import { AnamnesisForm, type AnamnesisFormValues } from "../anamnesis-form";
 
 export const metadata: Metadata = { title: "Nova anamnese — TechLab+ Fisio OrtoSport" };
@@ -45,12 +46,19 @@ export default async function NovaAnamnesePage({ params }: PageProps<"/pacientes
   const current = await getCurrentAnamnesis(patient.id);
 
   return (
-    <div className="w-full max-w-3xl flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <Link href={base} className="text-sm text-muted-foreground hover:text-foreground">
-          ← Anamnese
-        </Link>
-        <h2 className="text-xl font-semibold tracking-tight">{current ? "Nova versão da anamnese" : "Registrar anamnese"}</h2>
+    <div className="flex w-full flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <Link href={base} className="text-sm text-muted-foreground hover:text-foreground">
+            ← Anamnese
+          </Link>
+          <h2 className="text-xl font-semibold tracking-tight">
+            {current ? "Nova versão da anamnese" : "Registrar anamnese"}
+          </h2>
+        </div>
+        {current && (
+          <p className="text-sm text-muted-foreground">Baseada na versão de {formatDate(current.assessmentDate)}</p>
+        )}
       </div>
       <AnamnesisForm
         action={createAnamnesisVersion.bind(null, patient.id)}

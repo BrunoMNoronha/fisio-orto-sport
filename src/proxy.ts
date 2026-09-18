@@ -2,8 +2,8 @@
 // anônimo para /login. A validação real (sessão no banco, usuário ativo, perfil) fica na DAL
 // (src/modules/auth/dal.ts), chamada em cada página, Server Action e Route Handler.
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE } from "@/modules/auth/cookie-name";
 
-const SESSION_COOKIE = "session";
 const PUBLIC_PATHS = ["/login"];
 
 export function proxy(request: NextRequest) {

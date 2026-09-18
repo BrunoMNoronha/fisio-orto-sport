@@ -2,8 +2,10 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
+import { SESSION_COOKIE } from "./cookie-name";
 
-export const SESSION_COOKIE = "session";
+export { SESSION_COOKIE };
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 horas
 
 export function hashToken(token: string) {
@@ -11,10 +13,28 @@ export function hashToken(token: string) {
 }
 
 // Define cookie: só pode ser chamada em Server Action ou Route Handler.
-export async function createSession(userId: string) {
+// Cria a sessão só se o usuário continuar ativo e com o mesmo hash de senha verificado
+// (numa transação serializável), para que uma redefinição de senha ou desativação
+// concorrente não deixe uma sessão nova para trás. Devolve false se o estado mudou.
+export async function createSession(userId: string, verifiedPasswordHash: string): Promise<boolean> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  await prisma.session.create({ data: { tokenHash: hashToken(token), userId, expiresAt } });
+
+  const created = await prisma.$transaction(
+    async (tx) => {
+      const user = await tx.user.findFirst({
+        where: { id: userId, active: true, passwordHash: verifiedPasswordHash },
+        select: { id: true },
+      });
+      if (!user) return false;
+      // Aproveita para limpar sessões expiradas do próprio usuário.
+      await tx.session.deleteMany({ where: { userId, expiresAt: { lte: new Date() } } });
+      await tx.session.create({ data: { tokenHash: hashToken(token), userId, expiresAt } });
+      return true;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+  if (!created) return false;
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -24,6 +44,7 @@ export async function createSession(userId: string) {
     path: "/",
     expires: expiresAt,
   });
+  return true;
 }
 
 // Remove cookie: só pode ser chamada em Server Action ou Route Handler.

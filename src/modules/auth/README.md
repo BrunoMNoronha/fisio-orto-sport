@@ -37,4 +37,11 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 
 ## Fora do escopo (por ora)
 
-Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/SSO, 2FA, limite de tentativas de login e trilha de auditoria de acesso.
+Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/SSO, 2FA e trilha de auditoria de acesso.
+
+## Proteções do login
+
+- Mensagem genérica e scrypt contra hash fictício (sem enumeração de contas por conteúdo ou tempo).
+- Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min. Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
+- A sessão é criada numa transação serializável que confere se o usuário segue ativo e com o mesmo hash de senha (sem sessão residual após uma redefinição simultânea).
+- Em produção o cookie se chama `__Host-session` (Secure, Path=/, sem Domain).

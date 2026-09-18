@@ -24,6 +24,10 @@ jest.mock("@/lib/db", () => ({
   },
 }));
 
+jest.mock("@/generated/prisma/client", () => ({
+  Prisma: { TransactionIsolationLevel: { Serializable: "Serializable" } },
+}));
+
 // `cache` do React memoriza por renderização; nos testes cada chamada deve consultar de novo.
 jest.mock("react", () => ({ ...jest.requireActual("react"), cache: <T,>(fn: T) => fn }));
 

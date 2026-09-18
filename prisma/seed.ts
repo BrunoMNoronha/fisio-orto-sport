@@ -26,6 +26,12 @@ if (!env.success) {
 }
 
 const { DATABASE_URL, SEED_ADMIN_EMAIL, SEED_ADMIN_NAME, SEED_ADMIN_PASSWORD } = env.data;
+
+// Recusa os valores de exemplo do .env.example.
+if (SEED_ADMIN_PASSWORD === "troque-esta-senha" || SEED_ADMIN_EMAIL === "admin@example.com") {
+  console.error("Troque SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD no .env (os valores de exemplo não são aceitos).");
+  process.exit(1);
+}
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: DATABASE_URL }) });
 
 async function main() {

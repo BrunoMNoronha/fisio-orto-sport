@@ -38,6 +38,8 @@ export async function verifyPassword(password: string, stored: string): Promise<
 }
 
 // Hash descartável usado quando o usuário não existe ou está inativo, para igualar o tempo do login.
+// Criado sob demanda uma única vez; getDummyHash() é chamado também no carregamento do módulo de
+// login (actions.ts), para que a primeira tentativa não seja mais lenta.
 let dummyHash: Promise<string> | undefined;
 export function getDummyHash() {
   dummyHash ??= hashPassword(randomBytes(16).toString("hex"));

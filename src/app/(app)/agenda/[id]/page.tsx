@@ -32,7 +32,7 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
   const cancelledBy = appointment.cancelledBy ? ` por ${appointment.cancelledBy.name}` : "";
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-10">
+    <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <Link href="/agenda" className="text-sm text-muted-foreground hover:text-foreground">
           ← Agenda
@@ -78,6 +78,6 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
       </dl>
 
       {canManage && active && <CancelAppointmentForm id={id} />}
-    </main>
+    </div>
   );
 }

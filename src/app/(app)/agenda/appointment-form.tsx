@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { AppointmentActionState } from "@/modules/agenda/actions";
 
@@ -38,8 +39,6 @@ function a11y(id: string, errors?: string[]) {
   } as const;
 }
 
-const textareaClass =
-  "min-h-20 w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30";
 
 // Criação (com paciente e observação) ou reagendamento (paciente fixo; muda horário e profissional).
 export function AppointmentForm({
@@ -130,12 +129,11 @@ export function AppointmentForm({
       {patients && (
         <div className="flex flex-col gap-2">
           <Label htmlFor="agendamento-notes">Observação administrativa (opcional)</Label>
-          <textarea
+          <Textarea
             {...a11y("agendamento-notes", errors?.notes)}
             {...field("notes")}
             maxLength={500}
             rows={3}
-            className={textareaClass}
           />
           <p className="text-xs text-muted-foreground">Não registre informações clínicas aqui.</p>
           <FieldError id="agendamento-notes-erro" messages={errors?.notes} />

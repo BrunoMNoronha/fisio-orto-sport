@@ -40,7 +40,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
   if (filter.professionalId) newQuery.set("professionalId", filter.professionalId);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-10">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Agenda</h1>
@@ -53,7 +53,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
         )}
       </div>
 
-      <form role="search" method="get" className="flex flex-wrap items-end gap-3">
+      <form role="search" method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">
         <div className="flex min-w-56 flex-1 flex-col gap-2">
           <Label htmlFor="agenda-profissional">Profissional</Label>
           <NativeSelect
@@ -84,7 +84,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
       </form>
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border bg-card shadow-xs px-4 py-8 text-center text-sm text-muted-foreground">
           Nenhum agendamento no período.
         </p>
       ) : (
@@ -92,7 +92,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
           {groups.map(([day, dayItems]) => (
             <section key={day} className="flex flex-col gap-2">
               <h2 className="text-sm font-medium capitalize">{formatDay(dayItems[0].startsAt)}</h2>
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-xl border bg-card shadow-xs">
                 {dayItems.map((item) => {
                   const cancelled = item.status === "CANCELADO";
                   return (
@@ -113,6 +113,6 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
           ))}
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,49 +1,36 @@
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { logout } from "@/modules/auth/actions";
+import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { AppSidebar, type NavKey } from "@/components/app-sidebar";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { requireUser } from "@/modules/auth/dal";
 import { ROLE_LABELS, can } from "@/modules/auth/permissions";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
+  const allowed: NavKey[] = ["inicio"];
+  if (can(user.role, "pacientes:ler")) allowed.push("pacientes");
+  if (can(user.role, "agenda:ler")) allowed.push("agenda");
+  if (can(user.role, "usuarios:ler")) allowed.push("usuarios");
+
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <nav aria-label="Principal" className="flex items-center gap-4">
-            <Link href="/" className="font-semibold tracking-tight">
-              Fisio OrtoSport
-            </Link>
-            {can(user.role, "pacientes:ler") && (
-              <Link href="/pacientes" className="text-sm text-muted-foreground hover:text-foreground">
-                Pacientes
-              </Link>
-            )}
-            {can(user.role, "agenda:ler") && (
-              <Link href="/agenda" className="text-sm text-muted-foreground hover:text-foreground">
-                Agenda
-              </Link>
-            )}
-            {can(user.role, "usuarios:ler") && (
-              <Link href="/usuarios" className="text-sm text-muted-foreground hover:text-foreground">
-                Usuários
-              </Link>
-            )}
-          </nav>
-          <div className="flex items-center gap-3">
-            <span className="text-sm">{user.name}</span>
-            <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
-            <form action={logout}>
-              <Button type="submit" variant="outline" size="sm">
-                Sair
-              </Button>
-            </form>
+    <SidebarProvider>
+      <AppSidebar
+        allowed={allowed}
+        user={{ name: user.name, email: user.email, roleLabel: ROLE_LABELS[user.role] }}
+      />
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b bg-background/80 px-4 backdrop-blur">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 data-vertical:h-4" />
+          <AppBreadcrumb />
+          <div className="ml-auto">
+            <ModeToggle />
           </div>
-        </div>
-      </header>
-      {children}
-    </div>
+        </header>
+        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 md:p-6">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

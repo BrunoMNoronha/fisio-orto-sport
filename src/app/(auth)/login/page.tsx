@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { HeartPulseIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/modules/auth/dal";
 import { listDevUsers } from "@/modules/auth/dev-login";
@@ -16,9 +17,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const devUsers = process.env.NODE_ENV === "development" ? await listDevUsers() : [];
 
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-16">
-      <Card className="w-full max-w-sm">
+    <main className="flex flex-1 items-center justify-center bg-[radial-gradient(ellipse_at_top,var(--color-accent),transparent_60%)] px-4 py-16">
+      <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
+          <div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <HeartPulseIcon className="size-5" />
+          </div>
           <p className="text-sm font-medium text-muted-foreground">TechLab+</p>
           <CardTitle>
             <h1 className="text-2xl font-semibold tracking-tight">Fisio OrtoSport</h1>

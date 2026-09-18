@@ -2,7 +2,7 @@
 
 import { AlertCircle, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -11,7 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { AnamnesisActionState } from "@/modules/clinico/actions";
 import { LIMITS, PAIN_TYPES, PAIN_TYPE_LABELS, type PainTypeValue } from "@/modules/clinico/validation";
-import { ANAMNESIS_STEPS, firstStepWithError, stepHasError, type AnamnesisStep } from "./anamnesis-steps";
+import {
+  ANAMNESIS_STEPS,
+  firstFieldWithError,
+  stepHasError,
+  type AnamnesisField,
+  type AnamnesisStep,
+} from "./anamnesis-steps";
 import { ChoiceChip } from "./choice-chip";
 import { PainScale } from "./pain-scale";
 
@@ -35,6 +41,20 @@ export type AnamnesisFormValues = {
 type TextField = keyof AnamnesisFormValues;
 
 const LAST_STEP = ANAMNESIS_STEPS.length - 1;
+
+const DISCARD_MESSAGE = "Descartar as alterações não salvas desta anamnese?";
+
+// Radios e checkboxes não têm id único: foca o marcado ou o primeiro do grupo.
+function fieldElement(form: HTMLFormElement | null, field: AnamnesisField) {
+  if (!form) return null;
+  if (field === "painIntensity")
+    return (
+      form.querySelector<HTMLElement>("input[name=painIntensity]:checked") ??
+      form.querySelector<HTMLElement>("input[name=painIntensity]")
+    );
+  if (field === "painTypes") return form.querySelector<HTMLElement>("input[name=painTypes]");
+  return form.querySelector<HTMLElement>(`#anamnese-${field}`);
+}
 
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
@@ -88,7 +108,7 @@ function StepSection({
 }
 
 // Formulário em etapas: todas as seções ficam montadas (as inativas com `hidden`), então um único
-// submit envia todos os campos. Campos controlados: os valores sobrevivem ao reset após erro.
+// submit envia todos os campos. Campos controlados: os valores sobrevivem a um erro de validação.
 export function AnamnesisForm({
   action,
   initial,
@@ -105,31 +125,85 @@ export function AnamnesisForm({
   const [state, formAction, pending] = useActionState(action, undefined);
   const [step, setStep] = useState(0);
   const [handledState, setHandledState] = useState(state);
-  // Incrementado a cada troca de etapa pedida pelo usuário ou por erro: move o foco para a etapa.
-  const [focusRequest, setFocusRequest] = useState(0);
+  // Cada resposta da action remonta o alerta geral, para que um erro repetido seja anunciado de novo.
+  const [responseSeq, setResponseSeq] = useState(0);
+  // Pedido de foco (troca de etapa ou erro): `field` foca o campo; sem ele, o título da etapa.
+  const [focusRequest, setFocusRequest] = useState<{ seq: number; field?: AnamnesisField }>({ seq: 0 });
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const errors = state?.fieldErrors;
 
-  // Nova resposta da action com erro de campo: leva à primeira etapa com problema.
+  // Nova resposta da action com erro de campo: abre a etapa e foca o primeiro campo inválido.
   if (state !== handledState) {
     setHandledState(state);
-    const withError = firstStepWithError(state?.fieldErrors);
-    if (withError >= 0 && withError !== step) {
-      setStep(withError);
-      setFocusRequest((n) => n + 1);
+    setResponseSeq((n) => n + 1);
+    const invalid = firstFieldWithError(state?.fieldErrors);
+    if (invalid) {
+      setStep(invalid.step);
+      setFocusRequest((current) => ({ seq: current.seq + 1, field: invalid.field }));
     }
   }
 
   useEffect(() => {
-    if (!focusRequest) return;
+    if (!focusRequest.seq) return;
+    const target = focusRequest.field && fieldElement(formRef.current, focusRequest.field);
+    if (target) {
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
     headingRef.current?.focus({ preventScroll: true });
     headingRef.current?.closest("form")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [focusRequest]);
 
+  const dirty =
+    (Object.keys(initial) as TextField[]).some((name) => values[name] !== initial[name]) ||
+    painTypes.join() !== initialPainTypes.join();
+
+  // Alterações não salvas: avisa ao fechar/recarregar a aba e ao seguir qualquer link (navegação no
+  // cliente não dispara beforeunload). Desligado durante o envio; o redirect após salvar desmonta o form.
+  useEffect(() => {
+    if (!dirty || pending) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const guardLinks = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (link.getAttribute("target") === "_blank") return;
+      if (window.confirm(DISCARD_MESSAGE)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("beforeunload", warn);
+    document.addEventListener("click", guardLinks, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", guardLinks, true);
+    };
+  }, [dirty, pending]);
+
   function goTo(index: number) {
     if (index === step) return;
     setStep(index);
-    setFocusRequest((n) => n + 1);
+    setFocusRequest((current) => ({ seq: current.seq + 1 }));
+  }
+
+  // Enter em campo de linha única avança de etapa em vez de enviar; só na última etapa ele envia.
+  function handleKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing || step === LAST_STEP) return;
+    if (!(event.target instanceof HTMLInputElement)) return;
+    event.preventDefault();
+    goTo(step + 1);
+  }
+
+  // Envio via onSubmit (e não `action` no form): o `<form action>` do React reseta o form após a
+  // resposta, o que desmarca radios e checkboxes controlados e faria o próximo envio perder dados.
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    startTransition(() => formAction(data));
   }
 
   function field(name: TextField) {
@@ -169,18 +243,24 @@ export function AnamnesisForm({
   }
 
   function isFilled(target: AnamnesisStep) {
-    return target.fields.some((name) => (name === "painTypes" ? painTypes.length > 0 : values[name].trim() !== ""));
+    return (target.filledBy ?? target.fields).some((name) =>
+      name === "painTypes" ? painTypes.length > 0 : values[name].trim() !== "",
+    );
   }
 
   const next = ANAMNESIS_STEPS[step + 1];
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
-      {state?.error && (
-        <Alert variant="destructive" aria-live="polite">
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-5" noValidate>
+      {/* Região viva sempre montada: só o conteúdo muda, para o leitor de tela anunciar o erro. */}
+      {/* Vazia, anula o gap do form sem sair da árvore de acessibilidade (display: none não serve). */}
+      <div id="anamnese-erro-geral" role="alert" aria-atomic="true" className="empty:-mb-5">
+        {state?.error && (
+          <Alert key={responseSeq} variant="destructive" role="none">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        )}
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav aria-label="Etapas da anamnese" className="lg:sticky lg:top-20 lg:self-start">

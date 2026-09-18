@@ -121,4 +121,10 @@ describe("sem dados clínicos", () => {
       for (const key of Object.keys(select)) expect(ALLOWED_FIELDS).toContain(key);
     }
   });
+
+  it("nunca incluem a relação de anamneses", () => {
+    for (const select of [PATIENT_LIST_SELECT, PATIENT_DETAIL_SELECT]) {
+      expect(select).not.toHaveProperty("anamneses");
+    }
+  });
 });

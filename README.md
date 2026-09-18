@@ -415,7 +415,7 @@ Casos de teste devem contemplar, quando aplicável:
 - [x] Consulta;
 - [x] Edição;
 - [ ] Histórico;
-- [ ] Anamnese.
+- [x] Anamnese.
 
 ### Fase 3 — Agenda
 

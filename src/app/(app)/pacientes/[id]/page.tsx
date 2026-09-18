@@ -24,6 +24,8 @@ function Item({ label, value }: { label: string; value: React.ReactNode }) {
 export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
   const actor = await requirePermission("pacientes:ler");
   const canManage = can(actor.role, "pacientes:gerir");
+  // Recepção não vê nem o atalho para dados clínicos; a rota também exige `clinico:ler`.
+  const canReadClinical = can(actor.role, "clinico:ler");
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
@@ -90,6 +92,18 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           <Item label="Observações" value={patient.notes} />
         </dl>
       </section>
+
+      {canReadClinical && (
+        <section aria-labelledby="clinico" className="flex flex-col gap-4">
+          <h2 id="clinico" className="text-base font-medium">Prontuário</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-xs">
+            <p className="text-sm text-muted-foreground">Anamnese com histórico de versões.</p>
+            <Link href={`/pacientes/${patient.id}/anamnese`} className={buttonVariants({ variant: "outline" })}>
+              Abrir anamnese
+            </Link>
+          </div>
+        </section>
+      )}
 
       <p className="text-xs text-muted-foreground">
         Cadastrado em {patient.createdAt.toLocaleString("pt-BR")} · atualizado em{" "}

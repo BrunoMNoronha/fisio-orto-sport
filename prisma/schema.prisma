@@ -35,6 +35,7 @@ model User {
   appointmentsCreated        Appointment[] @relation("AppointmentCreatedBy")
   appointmentsUpdated        Appointment[] @relation("AppointmentUpdatedBy")
   appointmentsCancelled      Appointment[] @relation("AppointmentCancelledBy")
+  anamnesesAuthored          Anamnesis[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -81,6 +82,7 @@ model Patient {
   createdBy            User          @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy            User          @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   appointments         Appointment[]
+  anamneses            Anamnesis[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -118,4 +120,44 @@ model Appointment {
 
   @@index([professionalId, startsAt])
   @@index([patientId, startsAt])
+}
+
+enum PainType {
+  PONTADA
+  QUEIMACAO
+  PESO
+  IRRADIADA
+}
+
+// Anamnese (dado clínico sensível, protegido por `clinico:*`). Versionamento append-only:
+// cada salvamento cria uma nova linha imutável; não há update nem exclusão.
+// Versão vigente: maior createdAt, desempate pelo maior id. assessmentDate é a data clínica
+// informada e não define a versão vigente. authorNameSnapshot preserva a assinatura histórica.
+// CHECKs manuais na migração (não representados aqui): painIntensity entre 0 e 10 e
+// chiefComplaint não vazia.
+model Anamnesis {
+  id                          String     @id @default(cuid())
+  patientId                   String
+  authorId                    String
+  authorNameSnapshot          String     @db.VarChar(120)
+  assessmentDate              DateTime   @db.Date
+  chiefComplaint              String     @db.VarChar(500)
+  currentIllnessHistory       String?    @db.VarChar(4000)
+  personalPathologicalHistory String?    @db.VarChar(4000)
+  surgeries                   String?    @db.VarChar(2000)
+  currentMedications          String?    @db.VarChar(2000)
+  habitsPhysicalActivity      String?    @db.VarChar(2000)
+  painIntensity               Int?       @db.SmallInt
+  painLocation                String?    @db.VarChar(200)
+  painTypes                   PainType[]
+  functionalLimitations       String?    @db.VarChar(2000)
+  patientGoals                String?    @db.VarChar(2000)
+  clinicalNotes               String?    @db.VarChar(4000)
+  createdAt                   DateTime   @default(now()) @db.Timestamptz(3)
+  patient                     Patient    @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  author                      User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([patientId])
+  @@index([patientId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([authorId])
 }

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation"
 import {
   CalendarDaysIcon,
   ChevronsUpDownIcon,
-  HeartPulseIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   UserRoundCogIcon,
   UsersIcon,
 } from "lucide-react"
+import { BrandMark, BrandWordmark } from "@/components/brand-logo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -63,12 +63,12 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <HeartPulseIcon className="size-4" />
-              </div>
+              <BrandMark className="size-8 shrink-0" />
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Fisio OrtoSport</span>
-                <span className="truncate text-xs text-muted-foreground">TechLab+</span>
+                <BrandWordmark className="truncate text-base" />
+                <span className="truncate text-[0.65rem] tracking-wide text-muted-foreground uppercase">
+                  Fisioterapia especializada
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

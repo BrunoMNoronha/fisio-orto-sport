@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { HeartPulseIcon } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/modules/auth/dal";
 import { listDevUsers } from "@/modules/auth/dev-login";
@@ -20,12 +20,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <main className="flex flex-1 items-center justify-center bg-[radial-gradient(ellipse_at_top,var(--color-accent),transparent_60%)] px-4 py-16">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
-          <div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <HeartPulseIcon className="size-5" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">TechLab+</p>
+          <BrandLogo className="mb-4" />
           <CardTitle>
-            <h1 className="text-2xl font-semibold tracking-tight">Fisio OrtoSport</h1>
+            <h1 className="sr-only">Fisio OrtoSport</h1>
+            <span className="text-lg font-semibold">Acesse sua conta</span>
           </CardTitle>
           <CardDescription>Entre com seu e-mail e senha.</CardDescription>
         </CardHeader>

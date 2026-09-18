@@ -21,6 +21,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 Pacientes
               </Link>
             )}
+            {can(user.role, "agenda:ler") && (
+              <Link href="/agenda" className="text-sm text-muted-foreground hover:text-foreground">
+                Agenda
+              </Link>
+            )}
             {can(user.role, "usuarios:ler") && (
               <Link href="/usuarios" className="text-sm text-muted-foreground hover:text-foreground">
                 Usuários

@@ -8,7 +8,7 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 |---|---|
 | `validation.ts` | Schemas zod (mensagens em pt-BR), conversão data/hora ↔ instante no fuso da clínica, filtro da listagem e `overlaps()`. |
 | `rules.ts` (`server-only`) | Regras executadas na transação: paciente ativo, profissional apto e ausência de conflito; detecção da violação da constraint do banco. |
-| `queries.ts` (`server-only`) | `listAgenda()`, `getAppointment()` e `listProfessionals()` exigem `agenda:ler`; `listActivePatientOptions()` exige `agenda:gerir`. `select` explícito; do paciente só `id` e `fullName`. |
+| `queries.ts` (`server-only`) | `listAgenda()`, `getAppointment()`, `listProfessionals()` e `listPatientAppointments()` (próximos ou anteriores de um paciente, para a ficha) exigem `agenda:ler`; `listActivePatientOptions()` exige `agenda:gerir`. `select` explícito; do paciente só `id` e `fullName`. |
 | `actions.ts` | `createAppointment`, `rescheduleAppointment` e `cancelAppointment`. Todas exigem `agenda:gerir` no servidor. **Não há exclusão física.** |
 | `src/app/(app)/agenda/**` | Agenda (`/agenda`), detalhe (`/agenda/[id]`), novo (`/agenda/novo`) e reagendar (`/agenda/[id]/reagendar`). |
 
@@ -21,7 +21,7 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 - **Conflito**: um profissional não pode ter dois agendamentos `AGENDADO` sobrepostos. Intervalo semiaberto `[início, fim)`: 09:00–10:00 e 10:00–11:00 não conflitam. Checado na action (dentro de `$transaction`) e garantido no banco pela constraint de exclusão `Appointment_no_overlap` (extensão `btree_gist`, `WHERE status = 'AGENDADO'`), que barra corridas entre requisições simultâneas; a violação vira a mesma mensagem de conflito.
 - **Reagendar** altera data, horário e/ou profissional do mesmo registro e repete as validações de profissional e conflito (ignorando o próprio agendamento). Agendamento cancelado não pode ser reagendado. O paciente não muda.
 - **Cancelar** muda o status para `CANCELADO` e registra `cancelledAt`, `cancelledById` e motivo **opcional**. O registro continua consultável e deixa de ocupar o horário. Não há regra de antecedência.
-- **Listagem**: filtro por profissional (opcional) e período `de`/`até` (padrão: 7 dias a partir de hoje; máximo 31 dias). Inclui cancelados, marcados como tal.
+- **Visões** (`/agenda?view=dia|semana|lista&date=YYYY-MM-DD&professionalId=`; `parseAgendaView()`): **dia** (padrão, hoje) em grade com uma coluna por fisioterapeuta ativo, faixa 07:00–20:00 ampliada se houver agendamento fora dela e linha do horário atual; **semana** de segunda a domingo, cada dia leva à visão do dia; **lista** com período `from`/`to` (padrão: 7 dias a partir de hoje; máximo 31 dias). Todas incluem cancelados, marcados como tal. Na grade do dia, quem tem `agenda:gerir` clica num horário vazio para abrir `/agenda/novo` com data, profissional e início (`start=HH:MM`) preenchidos; o fim continua informado à mão.
 - **Autoria**: `createdById`/`updatedById` (FK `Restrict`). Não é trilha de auditoria.
 - A lista de pacientes no formulário traz até 500 pacientes ativos, por nome.
 
@@ -34,4 +34,4 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 
 ## Fora do escopo (por ora)
 
-Conflito por paciente (o mesmo paciente em dois profissionais no mesmo horário não é barrado), bloqueio de horários e horário de funcionamento, controle de presença, visão mensal/calendário, recorrência, notificações e lembretes, busca de pacientes no formulário (substituir a lista quando o volume crescer).
+Conflito por paciente (o mesmo paciente em dois profissionais no mesmo horário não é barrado), bloqueio de horários e horário de funcionamento, controle de presença, visão mensal, recorrência, notificações e lembretes, busca de pacientes no formulário (substituir a lista quando o volume crescer).

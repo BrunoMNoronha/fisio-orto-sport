@@ -3,9 +3,12 @@ import {
   appointmentSchema,
   cancelSchema,
   filterBounds,
+  isValidTime,
   overlaps,
   parseAgendaFilter,
+  parseAgendaView,
   rescheduleSchema,
+  startOfWeek,
   toInstant,
   toLocalDate,
   toLocalTime,
@@ -147,5 +150,58 @@ describe("parseAgendaFilter", () => {
       gte: new Date("2026-09-21T03:00:00.000Z"),
       lt: new Date("2026-09-22T03:00:00.000Z"),
     });
+  });
+});
+
+describe("parseAgendaView", () => {
+  const now = new Date("2026-09-18T15:00:00.000Z"); // sexta-feira
+
+  it("padrão: visão do dia de hoje", () => {
+    expect(parseAgendaView({}, now)).toEqual({
+      view: "dia",
+      date: "2026-09-18",
+      today: "2026-09-18",
+      filter: { from: "2026-09-18", to: "2026-09-18" },
+    });
+  });
+
+  it("dia: período é a própria data, com profissional", () => {
+    const result = parseAgendaView({ view: "dia", date: "2026-09-21", professionalId: "f1" }, now);
+    expect(result.filter).toEqual({ professionalId: "f1", from: "2026-09-21", to: "2026-09-21" });
+  });
+
+  it("semana: de segunda a domingo da semana da data", () => {
+    expect(parseAgendaView({ view: "semana", date: "2026-09-18" }, now).filter).toEqual({
+      from: "2026-09-14",
+      to: "2026-09-20",
+    });
+    expect(parseAgendaView({ view: "semana", date: "2026-09-20" }, now).filter.from).toBe("2026-09-14");
+    expect(parseAgendaView({ view: "semana", date: "2026-09-21" }, now).filter.from).toBe("2026-09-21");
+  });
+
+  it("lista: usa de/até com as regras do filtro", () => {
+    expect(parseAgendaView({ view: "lista", from: "2026-09-01", to: "2026-09-05" }, now).filter).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-05",
+    });
+  });
+
+  it("valores inválidos caem no padrão", () => {
+    const result = parseAgendaView({ view: "mes", date: "2026-02-30" }, now);
+    expect(result.view).toBe("dia");
+    expect(result.date).toBe("2026-09-18");
+  });
+});
+
+describe("startOfWeek e isValidTime", () => {
+  it("segunda-feira da semana", () => {
+    expect(startOfWeek("2026-09-14")).toBe("2026-09-14");
+    expect(startOfWeek("2026-10-01")).toBe("2026-09-28");
+  });
+
+  it("valida HH:MM", () => {
+    expect(isValidTime("08:00")).toBe(true);
+    expect(isValidTime("24:00")).toBe(false);
+    expect(isValidTime("8:00")).toBe(false);
   });
 });

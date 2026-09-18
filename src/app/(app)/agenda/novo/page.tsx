@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requirePermission } from "@/modules/auth/dal";
 import { createAppointment } from "@/modules/agenda/actions";
 import { listActivePatientOptions, listProfessionals } from "@/modules/agenda/queries";
-import { isValidDate, toLocalDate } from "@/modules/agenda/validation";
+import { isValidDate, isValidTime, toLocalDate } from "@/modules/agenda/validation";
 import { firstParam } from "@/modules/pacientes/validation";
 import { AppointmentForm } from "../appointment-form";
 
@@ -16,6 +16,7 @@ export default async function NovoAgendamentoPage({ searchParams }: PageProps<"/
   const date = firstParam(raw.date);
   const professionalId = firstParam(raw.professionalId);
   const patientId = firstParam(raw.patientId);
+  const start = firstParam(raw.start);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
@@ -26,7 +27,7 @@ export default async function NovoAgendamentoPage({ searchParams }: PageProps<"/
           patientId: patients.some((p) => p.id === patientId) ? (patientId ?? "") : "",
           professionalId: professionals.some((p) => p.id === professionalId) ? (professionalId ?? "") : "",
           date: date && isValidDate(date) ? date : toLocalDate(new Date()),
-          startTime: "",
+          startTime: start && isValidTime(start) ? start : "",
           endTime: "",
           notes: "",
         }}

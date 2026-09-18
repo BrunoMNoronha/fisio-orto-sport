@@ -25,7 +25,7 @@ export default async function VersaoAnamnesePage({
   if (!version) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
+    <div className="w-full max-w-3xl flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <Link
           href={`/pacientes/${patient.id}/anamnese/historico`}
@@ -34,7 +34,7 @@ export default async function VersaoAnamnesePage({
           ← Histórico de versões
         </Link>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Versão da anamnese</h1>
+          <h2 className="text-xl font-semibold tracking-tight">Versão da anamnese</h2>
           <Badge variant={current?.id === version.id ? "secondary" : "outline"}>
             {current?.id === version.id ? "Vigente" : "Anterior"}
           </Badge>

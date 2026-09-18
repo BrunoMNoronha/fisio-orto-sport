@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
+import { AlertTriangleIcon, ArrowRightIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { listPatientAppointments } from "@/modules/agenda/queries";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
+import { getCurrentAnamnesis } from "@/modules/clinico/queries";
+import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
 import { getPatient } from "@/modules/pacientes/queries";
-import { PATIENT_STATUS_LABELS, formatCpf, formatPhone } from "@/modules/pacientes/validation";
+import { formatCpf, formatPhone } from "@/modules/pacientes/validation";
+import { formatDateTime, formatDay, formatTime } from "../../agenda/format";
 import { formatAge, formatDate } from "../format";
-import { ToggleStatusButton } from "../toggle-status-button";
 
 export const metadata: Metadata = { title: "Paciente — TechLab+ Fisio OrtoSport" };
 
@@ -21,94 +26,195 @@ function Item({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+function painColor(value: number) {
+  if (value >= 7) return "text-destructive";
+  if (value >= 4) return "text-amber-600 dark:text-amber-400";
+  return "text-primary";
+}
+
 export default async function PacientePage({ params }: PageProps<"/pacientes/[id]">) {
   const actor = await requirePermission("pacientes:ler");
-  const canManage = can(actor.role, "pacientes:gerir");
-  // Recepção não vê nem o atalho para dados clínicos; a rota também exige `clinico:ler`.
+  // Recepção não vê o resumo clínico; as queries clínicas também exigem `clinico:ler`.
   const canReadClinical = can(actor.role, "clinico:ler");
+  const canReadAgenda = can(actor.role, "agenda:ler");
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
 
+  const active = patient.status === "ATIVO";
+  const canRegisterAnamnesis = can(actor.role, "clinico:gerir") && active;
+  const [upcoming, anamnesis] = await Promise.all([
+    canReadAgenda ? listPatientAppointments(patient.id, { upcoming: true, take: 20 }) : null,
+    canReadClinical ? getCurrentAnamnesis(patient.id) : null,
+  ]);
+  const nextAppointments = upcoming?.filter((item) => item.status === "AGENDADO").slice(0, 3) ?? [];
   const hasGuardian = Boolean(patient.guardianName || patient.guardianPhone);
+  const base = `/pacientes/${patient.id}`;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
-      <div className="flex flex-col gap-3">
-        <Link href="/pacientes" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Pacientes
-        </Link>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{patient.fullName}</h1>
-            <Badge variant={patient.status === "ATIVO" ? "secondary" : "outline"}>
-              {PATIENT_STATUS_LABELS[patient.status]}
-            </Badge>
-          </div>
-          {canManage && (
-            <div className="flex items-start gap-3">
-              <Link href={`/pacientes/${patient.id}/editar`} className={buttonVariants({ variant: "outline" })}>
-                Editar
-              </Link>
-              <ToggleStatusButton id={patient.id} status={patient.status} />
-            </div>
-          )}
-        </div>
+    <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div className="flex flex-col gap-4 lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados pessoais e contato</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <Item
+                label="Data de nascimento"
+                value={`${formatDate(patient.birthDate)} (${formatAge(patient.birthDate)})`}
+              />
+              <Item label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
+              <Item label="Telefone" value={formatPhone(patient.phone)} />
+              <Item label="E-mail" value={patient.email} />
+              <div className="sm:col-span-2">
+                <Item label="Endereço" value={patient.address} />
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+
+        {hasGuardian && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Responsável legal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <Item label="Nome" value={patient.guardianName} />
+                <Item label="Telefone" value={patient.guardianPhone ? formatPhone(patient.guardianPhone) : null} />
+                <Item label="Parentesco ou relação" value={patient.guardianRelationship} />
+              </dl>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Observações administrativas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-line">{patient.notes || "—"}</p>
+          </CardContent>
+        </Card>
+
+        <p className="text-xs text-muted-foreground">
+          Cadastrado em {formatDateTime(patient.createdAt)} · atualizado em {formatDateTime(patient.updatedAt)}
+        </p>
       </div>
 
-      <section aria-labelledby="dados-pessoais" className="flex flex-col gap-4">
-        <h2 id="dados-pessoais" className="text-base font-medium">Dados pessoais</h2>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <Item label="Data de nascimento" value={`${formatDate(patient.birthDate)} (${formatAge(patient.birthDate)})`} />
-          <Item label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
-        </dl>
-      </section>
+      <div className="flex flex-col gap-4">
+        {canReadAgenda && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Próximos atendimentos</CardTitle>
+              <CardAction>
+                <Link
+                  href={`${base}/agendamentos`}
+                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Ver todos <ArrowRightIcon className="size-3.5" />
+                </Link>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              {nextAppointments.length === 0 ? (
+                <p className="rounded-lg bg-muted/60 px-3 py-4 text-center text-sm text-muted-foreground">
+                  Nenhum atendimento agendado.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {nextAppointments.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={`/agenda/${item.id}`}
+                        className="flex flex-col rounded-lg bg-muted/60 px-3 py-2 text-sm transition-colors hover:bg-muted"
+                      >
+                        <span className="font-medium first-letter:uppercase">{formatDay(item.startsAt)}</span>
+                        <span className="text-muted-foreground">
+                          {formatTime(item.startsAt)}–{formatTime(item.endsAt)} · {item.professional.name}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-      <section aria-labelledby="contato" className="flex flex-col gap-4">
-        <h2 id="contato" className="text-base font-medium">Contato</h2>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <Item label="Telefone" value={formatPhone(patient.phone)} />
-          <Item label="E-mail" value={patient.email} />
-          <div className="sm:col-span-2">
-            <Item label="Endereço" value={patient.address} />
-          </div>
-        </dl>
-      </section>
-
-      {hasGuardian && (
-        <section aria-labelledby="responsavel" className="flex flex-col gap-4">
-          <h2 id="responsavel" className="text-base font-medium">Responsável legal</h2>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Item label="Nome" value={patient.guardianName} />
-            <Item label="Telefone" value={patient.guardianPhone ? formatPhone(patient.guardianPhone) : null} />
-            <Item label="Parentesco ou relação" value={patient.guardianRelationship} />
-          </dl>
-        </section>
-      )}
-
-      <section aria-labelledby="observacoes" className="flex flex-col gap-4">
-        <h2 id="observacoes" className="text-base font-medium">Observações administrativas</h2>
-        <dl>
-          <Item label="Observações" value={patient.notes} />
-        </dl>
-      </section>
-
-      {canReadClinical && (
-        <section aria-labelledby="clinico" className="flex flex-col gap-4">
-          <h2 id="clinico" className="text-base font-medium">Prontuário</h2>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 shadow-xs">
-            <p className="text-sm text-muted-foreground">Anamnese com histórico de versões.</p>
-            <Link href={`/pacientes/${patient.id}/anamnese`} className={buttonVariants({ variant: "outline" })}>
-              Abrir anamnese
-            </Link>
-          </div>
-        </section>
-      )}
-
-      <p className="text-xs text-muted-foreground">
-        Cadastrado em {patient.createdAt.toLocaleString("pt-BR")} · atualizado em{" "}
-        {patient.updatedAt.toLocaleString("pt-BR")}
-      </p>
+        {canReadClinical && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Anamnese</CardTitle>
+              {anamnesis && (
+                <CardDescription>
+                  {formatDate(anamnesis.assessmentDate)} · {anamnesis.authorNameSnapshot}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {anamnesis ? (
+                <>
+                  <dl>
+                    <Item label="Queixa principal" value={anamnesis.chiefComplaint} />
+                  </dl>
+                  {anamnesis.painIntensity !== null && (
+                    <div className="flex items-end gap-4 rounded-lg bg-muted/60 p-3">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-muted-foreground">Dor (EVA)</span>
+                        <span className={cn("text-2xl font-semibold tabular-nums", painColor(anamnesis.painIntensity))}>
+                          {anamnesis.painIntensity}/10
+                        </span>
+                      </div>
+                      {(anamnesis.painLocation || anamnesis.painTypes.length > 0) && (
+                        <div className="flex min-w-0 flex-col text-sm">
+                          <span className="truncate">{anamnesis.painLocation}</span>
+                          <span className="text-muted-foreground">
+                            {anamnesis.painTypes.map((type) => PAIN_TYPE_LABELS[type]).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {(anamnesis.surgeries || anamnesis.currentMedications) && (
+                    <div className="flex flex-col gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <AlertTriangleIcon className="size-4 text-amber-600 dark:text-amber-400" />
+                        Atenção
+                      </span>
+                      {anamnesis.currentMedications && (
+                        <p className="line-clamp-3">
+                          <span className="text-muted-foreground">Medicamentos: </span>
+                          {anamnesis.currentMedications}
+                        </p>
+                      )}
+                      {anamnesis.surgeries && (
+                        <p className="line-clamp-3">
+                          <span className="text-muted-foreground">Cirurgias: </span>
+                          {anamnesis.surgeries}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <Link href={`${base}/anamnese`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    Ver anamnese completa
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">Nenhuma anamnese registrada.</p>
+                  {canRegisterAnamnesis && (
+                    <Link href={`${base}/anamnese/nova`} className={buttonVariants({ size: "sm" })}>
+                      Registrar anamnese
+                    </Link>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

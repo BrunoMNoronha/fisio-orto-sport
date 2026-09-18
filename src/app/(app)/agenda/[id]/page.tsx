@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
 import { getAppointment } from "@/modules/agenda/queries";
-import { APPOINTMENT_STATUS_LABELS } from "@/modules/agenda/validation";
+import { APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
 import { CancelAppointmentForm } from "../cancel-appointment-form";
-import { formatDateTime, formatDay, formatTime } from "../format";
+import { agendaHref, formatDateTime, formatDay, formatTime } from "../format";
 
 export const metadata: Metadata = { title: "Agendamento — TechLab+ Fisio OrtoSport" };
 
@@ -42,40 +43,60 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
             <h1 className="text-2xl font-semibold tracking-tight">Agendamento</h1>
             <Badge variant={active ? "secondary" : "outline"}>{APPOINTMENT_STATUS_LABELS[appointment.status]}</Badge>
           </div>
-          {canManage && active && (
-            <Link href={`/agenda/${id}/reagendar`} className={buttonVariants({ variant: "outline" })}>
-              Reagendar
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={agendaHref({
+                view: "dia",
+                date: toLocalDate(appointment.startsAt),
+                professionalId: appointment.professional.id,
+              })}
+              className={buttonVariants({ variant: "ghost" })}
+            >
+              Ver na agenda do dia
             </Link>
-          )}
+            {canManage && active && (
+              <Link href={`/agenda/${id}/reagendar`} className={buttonVariants({ variant: "outline" })}>
+                Reagendar
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-2">
-        <Item
-          label="Paciente"
-          value={
-            <Link href={`/pacientes/${appointment.patient.id}`} className="underline-offset-4 hover:underline">
-              {appointment.patient.fullName}
-            </Link>
-          }
-        />
-        <Item label="Profissional" value={appointment.professional.name} />
-        <Item label="Data" value={formatDay(appointment.startsAt)} />
-        <Item label="Horário" value={`${formatTime(appointment.startsAt)} – ${formatTime(appointment.endsAt)}`} />
-        <div className="sm:col-span-2">
-          <Item label="Observação administrativa" value={appointment.notes} />
-        </div>
-        {!active && (
-          <>
+      <Card>
+        <CardContent className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-semibold first-letter:uppercase">{formatDay(appointment.startsAt)}</p>
+            <p className="text-2xl font-semibold tabular-nums text-primary">
+              {formatTime(appointment.startsAt)} – {formatTime(appointment.endsAt)}
+            </p>
+          </div>
+          <dl className="grid gap-4 sm:grid-cols-2">
             <Item
-              label="Cancelado em"
-              value={appointment.cancelledAt ? `${formatDateTime(appointment.cancelledAt)}${cancelledBy}` : null}
+              label="Paciente"
+              value={
+                <Link href={`/pacientes/${appointment.patient.id}`} className="underline-offset-4 hover:underline">
+                  {appointment.patient.fullName}
+                </Link>
+              }
             />
-            <Item label="Motivo do cancelamento" value={appointment.cancelReason} />
-          </>
-        )}
-        <Item label="Criado por" value={`${appointment.createdBy.name} em ${formatDateTime(appointment.createdAt)}`} />
-      </dl>
+            <Item label="Profissional" value={appointment.professional.name} />
+            <div className="sm:col-span-2">
+              <Item label="Observação administrativa" value={appointment.notes} />
+            </div>
+            {!active && (
+              <>
+                <Item
+                  label="Cancelado em"
+                  value={appointment.cancelledAt ? `${formatDateTime(appointment.cancelledAt)}${cancelledBy}` : null}
+                />
+                <Item label="Motivo do cancelamento" value={appointment.cancelReason} />
+              </>
+            )}
+            <Item label="Criado por" value={`${appointment.createdBy.name} em ${formatDateTime(appointment.createdAt)}`} />
+          </dl>
+        </CardContent>
+      </Card>
 
       {canManage && active && <CancelAppointmentForm id={id} />}
     </div>

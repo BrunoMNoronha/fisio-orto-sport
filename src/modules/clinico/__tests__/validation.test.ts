@@ -79,6 +79,11 @@ describe("anamnesisSchema", () => {
 });
 
 describe("anamnesisFormEntries", () => {
+  it("sem tipo de dor marcado, painTypes vira lista vazia (nunca null)", () => {
+    const entries = anamnesisFormEntries(new FormData());
+    expect(entries.painTypes).toEqual([]);
+  });
+
   it("lê painTypes com getAll e ignora campos de autoria enviados pelo cliente", () => {
     const data = new FormData();
     data.set("chiefComplaint", "Queixa");

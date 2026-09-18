@@ -18,16 +18,18 @@ enum Role {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
+  id              String    @id @default(cuid())
+  name            String
   // Sempre gravado normalizado (trim + minúsculas).
-  email        String    @unique
-  passwordHash String
-  role         Role
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
+  email           String    @unique
+  passwordHash    String
+  role            Role
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sessions        Session[]
+  patientsCreated Patient[] @relation("PatientCreatedBy")
+  patientsUpdated Patient[] @relation("PatientUpdatedBy")
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -40,4 +42,40 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+enum PatientStatus {
+  ATIVO
+  INATIVO
+}
+
+// Cadastro do paciente: SOMENTE dados cadastrais e de contato. Dados clínicos (anamnese,
+// avaliações, sessões) ficam em entidades próprias, protegidas por `clinico:*`.
+// Não há exclusão física; futuras relações com Patient devem usar onDelete: Restrict.
+model Patient {
+  id                   String        @id @default(cuid())
+  fullName             String
+  birthDate            DateTime      @db.Date
+  // Só os 11 dígitos. Único quando informado (o Postgres aceita vários NULL).
+  cpf                  String?       @unique
+  // Só dígitos (DDD + número).
+  phone                String
+  email                String?
+  address              String?
+  status               PatientStatus @default(ATIVO)
+  // Observações administrativas; nunca conteúdo clínico.
+  notes                String?
+  // Responsável legal: obrigatório (nome e telefone) para menores de 18 anos; nulo para adultos.
+  guardianName         String?
+  guardianPhone        String?
+  guardianRelationship String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  createdById          String
+  updatedById          String
+  createdBy            User          @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy            User          @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([fullName])
+  @@index([status, fullName])
 }

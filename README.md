@@ -411,9 +411,9 @@ Casos de teste devem contemplar, quando aplicável:
 
 ### Fase 2 — Pacientes
 
-- [ ] Cadastro;
-- [ ] Consulta;
-- [ ] Edição;
+- [x] Cadastro;
+- [x] Consulta;
+- [x] Edição;
 - [ ] Histórico;
 - [ ] Anamnese.
 

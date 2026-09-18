@@ -1,10 +1,10 @@
-# TechLab+  Fisio-OrtoSport
+# TechLab+  Fisio OrtoSport
 
 > Sistema web para gestão de clínicas de fisioterapia, centralizando pacientes, agenda, avaliações, planos terapêuticos, sessões, evolução clínica e financeiro em uma única plataforma.
 
 ## Sobre o projeto
 
-O **TechLab+  Fisio-OrtoSport** é uma plataforma desenvolvida para simplificar e organizar a rotina de clínicas e profissionais de fisioterapia.
+O **TechLab+  Fisio OrtoSport** é uma plataforma desenvolvida para simplificar e organizar a rotina de clínicas e profissionais de fisioterapia.
 
 O sistema busca reduzir processos manuais e informações descentralizadas, oferecendo uma visão integrada de toda a jornada do paciente:
 
@@ -30,7 +30,7 @@ Além do acompanhamento clínico, a plataforma poderá centralizar atividades ad
 
 ## Objetivos
 
-O TechLab+  Fisio-OrtoSport tem como principais objetivos:
+O TechLab+  Fisio OrtoSport tem como principais objetivos:
 
 - centralizar as informações dos pacientes;
 - facilitar o gerenciamento da agenda;
@@ -191,7 +191,7 @@ O sistema poderá disponibilizar indicadores como:
 
 ## Perfis de acesso
 
-O TechLab+  Fisio-OrtoSport deverá possuir controle de acesso baseado em perfis.
+O TechLab+  Fisio OrtoSport deverá possuir controle de acesso baseado em perfis.
 
 ### Administrador
 
@@ -365,7 +365,7 @@ A aplicação poderá utilizar uma arquitetura de **monólito modular**, permiti
 ## Estrutura sugerida do projeto
 
 ```text
-TechLab+  Fisio-OrtoSport/
+TechLab+  Fisio OrtoSport/
 │
 ├── apps/
 │   ├── web/
@@ -602,6 +602,6 @@ A licença do projeto deverá ser definida antes da distribuição ou disponibil
 
 ---
 
-# TechLab+  Fisio-OrtoSport
+# TechLab+  Fisio OrtoSport
 
 **Gestão clínica organizada. Atendimento com continuidade. Evolução acompanhada.**

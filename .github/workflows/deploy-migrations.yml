@@ -1,0 +1,49 @@
+name: deploy-migrations
+
+# A publicação em si é feita pela integração nativa Vercel <-> GitHub a cada push
+# na `main`. Este workflow cuida apenas das migrações do Prisma no banco de produção.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "prisma/schema.prisma"
+      - "prisma/migrations/**"
+      - ".github/workflows/deploy-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Nunca duas migrações simultâneas no mesmo banco.
+concurrency:
+  group: prisma-migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: prisma migrate deploy (produção)
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Aplicar migrações
+        run: pnpm exec prisma migrate deploy
+        env:
+          # Connection string DIRETA do Neon (sem `-pooler`): o pooler não suporta
+          # os advisory locks usados pelo `prisma migrate deploy`.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

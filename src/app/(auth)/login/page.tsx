@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/modules/auth/dal";
 import { listDevUsers } from "@/modules/auth/dev-login";
+import { isBootstrapOpen } from "@/modules/auth/first-user/queries";
 import { safeRedirectPath } from "@/modules/auth/redirect-path";
 import { DevUserPicker } from "./dev-user-picker";
 import { LoginForm } from "./login-form";
@@ -14,6 +15,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { next } = await searchParams;
   const nextPath = safeRedirectPath(next);
   if (await getCurrentUser()) redirect(nextPath);
+  // Banco sem nenhum usuário: não há como entrar, então manda criar a conta inicial.
+  if (await isBootstrapOpen()) redirect("/primeiro-acesso");
   const devUsers = process.env.NODE_ENV === "development" ? await listDevUsers() : [];
 
   return (

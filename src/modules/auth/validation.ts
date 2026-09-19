@@ -53,6 +53,10 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(PASSWORD_MAX),
 });
 
+// Cadastro do primeiro usuário (bootstrap). O perfil não vem do formulário: é sempre
+// ADMIN, definido no servidor. Sem CREFITO — um Administrador não é fisioterapeuta.
+export const firstUserSchema = z.object({ name, email, password });
+
 export const createUserSchema = z.object({ name, email, role, crefito, password }).transform(applyCrefitoRule);
 export const updateUserSchema = z.object({ id, name, role, crefito }).transform(applyCrefitoRule);
 export const setUserActiveSchema = z.object({

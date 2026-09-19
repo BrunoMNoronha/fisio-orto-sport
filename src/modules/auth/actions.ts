@@ -1,9 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { clientIp } from "./client-ip";
 import { getDummyHash, verifyPassword } from "./password";
 import { loginAttemptsByIp, loginFailuresByEmail } from "./rate-limit";
 import { safeRedirectPath } from "./redirect-path";
@@ -18,11 +18,6 @@ void getDummyHash();
 const GENERIC_LOGIN_ERROR = "E-mail ou senha inválidos.";
 // Mesma mensagem para qualquer e-mail, exista ou não (não revela contas).
 const TOO_MANY_ATTEMPTS = "Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.";
-
-async function clientIp() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "desconhecido";
-}
 
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const rawEmail = formData.get("email");

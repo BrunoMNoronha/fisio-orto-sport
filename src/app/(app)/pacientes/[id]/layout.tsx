@@ -31,6 +31,7 @@ export default async function PacienteLayout({ children, params }: LayoutProps<"
     ...(can(actor.role, "agenda:ler")
       ? [{ href: `/pacientes/${patient.id}/agendamentos`, label: "Agendamentos" }]
       : []),
+    { href: `/pacientes/${patient.id}/documentos`, label: "Documentos" },
   ];
 
   return (

@@ -143,3 +143,44 @@
     @apply tracking-tight;
   }
 }
+
+/* Documentos para impressão (/impressao/**): folha A4 sempre clara, independente do tema.
+   @page sem margem suprime cabeçalho/rodapé do navegador; a margem vem do padding da folha,
+   repetido em cada página com box-decoration-break. */
+.documento {
+  width: 210mm;
+  min-height: 296mm; /* 1 mm de folga: evita página em branco por arredondamento */
+  color-scheme: light;
+  --brand-navy: oklch(0.32 0.12 268);
+  --brand-blue: oklch(0.63 0.15 250);
+  --brand-green: oklch(0.62 0.17 145);
+  --muted-foreground: oklch(0.45 0.02 260);
+  --border: oklch(0.2 0 0);
+  background: white;
+  color: oklch(0.15 0 0);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Documento que deve caber exatamente em uma folha (ex.: cartão de frequência). */
+.documento-folha-unica {
+  height: 296mm;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    background: white !important;
+  }
+  .documento {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

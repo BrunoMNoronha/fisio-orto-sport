@@ -61,6 +61,8 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 
 ## Fase 5 — Financeiro
 
+**Status: PLANEJADO PARA FASE POSTERIOR**
+
 - [ ] Cobranças;
 - [ ] Pagamentos;
 - [ ] Controle financeiro;

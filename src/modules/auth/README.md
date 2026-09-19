@@ -12,7 +12,8 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `password.ts` | Hash de senha com scrypt (`node:crypto`, N=2^15, r=8, p=1, salt de 16 bytes). |
 | `validation.ts` | Schemas zod (senha com 8 a 128 caracteres, e-mail normalizado). |
 | `safeguards.ts` | Regras puras: ninguém desativa ou rebaixa a si mesmo, e ninguém remove o último Administrador ativo. |
-| `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração) e `logout`. |
+| `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração), `logout` e `setupFirstAdmin` (primeiro acesso). |
+| `setup.ts` (`server-only`) | `hasAnyUser()`: diz se a tabela de usuários já tem alguém (decide login × primeiro acesso). |
 | `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
 | `src/proxy.ts` | Checagem **otimista** (presença do cookie). Não substitui a DAL. |
@@ -54,6 +55,14 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 - Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min. Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
 - A sessão é criada numa transação serializável que confere se o usuário segue ativo e com o mesmo hash de senha (sem sessão residual após uma redefinição simultânea).
 - Em produção o cookie se chama `__Host-session` (Secure, Path=/, sem Domain).
+
+## Primeiro acesso (tabela de usuários vazia)
+
+- Enquanto **não existe nenhum usuário**, `/login` mostra o formulário de cadastro (`setup-form.tsx`) no lugar do de login. O acesso rápido de desenvolvimento também some, porque não haveria quem listar.
+- `setupFirstAdmin` cria o usuário com perfil **ADMIN** (nome, e-mail e senha; mesma política de senha do cadastro comum) e já abre a sessão, redirecionando para o `?next=` validado.
+- A action **não exige autenticação** — não há quem autentique no primeiro acesso. A única barreira é a tabela estar vazia, reconferida com `count()` **dentro de uma transação serializável** antes do `create`, para que duas requisições simultâneas não criem dois administradores. `P2002` (e-mail já criado por outra requisição) e o conflito de serialização `P2034` são tratados sem vazar detalhes.
+- Depois do primeiro usuário, a tela volta ao login normal e novos usuários passam a ser criados só em `/usuarios` (`usuarios:gerir`).
+- **Risco aceito**: entre o deploy e o primeiro cadastro, quem alcançar `/login` cria o Administrador. Em ambiente exposto, faça o primeiro acesso logo após o deploy (ou rode o seed antes de publicar).
 
 ## Acesso rápido em desenvolvimento
 

@@ -34,7 +34,7 @@ export default async function TermoConsentimentoPage({
     : null;
 
   return (
-    <Sheet className="flex flex-col gap-4">
+    <Sheet className="flex flex-col gap-3 p-[12mm] text-[9.5pt] leading-[1.35]">
       <DocumentHeader
         title={
           <>
@@ -56,7 +56,7 @@ export default async function TermoConsentimentoPage({
         <FillField label="CREFITO" value={physio?.crefito} />
       </div>
 
-      <ol className="flex flex-col gap-2.5 text-justify">
+      <ol className="flex flex-col gap-1.5 text-justify">
         {TERMO_SECTIONS.map((section, index) => (
           <li key={section.title} className="break-inside-avoid">
             <h2 className="font-bold uppercase">
@@ -71,9 +71,9 @@ export default async function TermoConsentimentoPage({
         ))}
       </ol>
 
-      <p className="mt-2">Brasília/DF, {longDate(new Date())}.</p>
+      <p className="mt-1">Brasília/DF, {longDate(new Date())}.</p>
 
-      <div className="mt-auto grid grid-cols-2 gap-16 pt-10">
+      <div className="mt-auto grid grid-cols-2 gap-16 pt-8">
         <SignatureLine label="Paciente / Responsável" />
         <SignatureLine
           label="Fisioterapeuta"

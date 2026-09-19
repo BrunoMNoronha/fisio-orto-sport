@@ -7,7 +7,7 @@ export function Sheet({ className, children }: { className?: string; children: R
   return (
     <article
       className={cn(
-        "documento mx-auto w-[210mm] min-h-[297mm] p-[14mm] text-[10.5pt] leading-snug shadow-lg print:shadow-none",
+        "documento mx-auto p-[14mm] text-[10.5pt] leading-snug shadow-lg print:shadow-none",
         className,
       )}
     >

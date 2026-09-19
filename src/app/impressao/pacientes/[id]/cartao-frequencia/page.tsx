@@ -44,7 +44,7 @@ function Card({ name }: { name: string }) {
       <BrandLogo className="justify-center [&_img]:size-10 [&_span.text-3xl]:text-2xl" />
       <FillField label="NOME" value={name} className="mt-1" />
       <FillField label="CONVÊNIO" />
-      <div className="mt-1 grid grid-cols-[1.15fr_1fr] gap-[2mm]">
+      <div className="mt-1 grid grid-cols-2 gap-[2mm]">
         <SessionsTable from={1} />
         <SessionsTable from={11} />
       </div>
@@ -68,7 +68,7 @@ export default async function CartaoFrequenciaPage({ params }: PageProps<"/impre
 
   // Folha com 4 cartões iguais (2×2), separados pelo tracejado de corte.
   return (
-    <Sheet className="h-[297mm] overflow-hidden p-[8mm]">
+    <Sheet className="documento-folha-unica p-[8mm]">
       <div className="grid h-full grid-cols-2 grid-rows-2">
         {Array.from({ length: COPIES }, (_, i) => (
           <div

@@ -415,15 +415,18 @@ Casos de teste devem contemplar, quando aplicável:
 - [x] Consulta;
 - [x] Edição;
 - [ ] Histórico;
-- [x] Anamnese;
+- [x] Anamnese subjetiva versionada;
 - [x] Cadastro complementar da ficha (sexo, profissão e CREFITO do fisioterapeuta).
+- [x] Documentos de impressão (termo, cartão de frequência e ficha de anamnese), gerados sem armazenamento.
 
 ### Fase 3 — Agenda
 
-- [ ] Agenda dos profissionais;
-- [ ] Agendamento;
-- [ ] Reagendamento;
-- [ ] Cancelamento;
+- [x] Agenda dos profissionais por período;
+- [x] Agendamento;
+- [x] Reagendamento;
+- [x] Cancelamento;
+- [x] Visões dia, semana e lista;
+- [ ] Bloqueio de horários, horário de funcionamento, presença e visão mensal;
 
 ### Fase 4 — Prontuário
 
@@ -456,10 +459,10 @@ Casos de teste devem contemplar, quando aplicável:
 ## Status
 
 ```text
-🚧 Em desenvolvimento
+🚧 Em desenvolvimento — Fases 1 e 2 implementadas; primeira fatia da Fase 3 implementada; Fase 4 planejada.
 ```
 
-O projeto encontra-se em fase inicial de definição e implementação.
+O roadmap detalhado, separado por status e responsabilidade, está em [`docs/project/roadmap.md`](docs/project/roadmap.md). O briefing modular está em [`docs/PROJECT.md`](docs/PROJECT.md).
 
 Os requisitos e a arquitetura poderão evoluir conforme necessidades reais da operação forem identificadas.
 

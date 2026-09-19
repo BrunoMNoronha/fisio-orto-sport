@@ -45,3 +45,6 @@ const WINDOW_MS = 15 * 60 * 1000;
 // Falhas por e-mail (força bruta numa conta) e tentativas por IP (varredura e custo do scrypt).
 export const loginFailuresByEmail = new RateLimiter(5, WINDOW_MS);
 export const loginAttemptsByIp = new RateLimiter(30, WINDOW_MS);
+// Cadastro do primeiro usuário: a rota só existe com o banco vazio, mas o hash da senha
+// é caro, então limitamos as tentativas por IP do mesmo jeito.
+export const firstUserAttemptsByIp = new RateLimiter(10, WINDOW_MS);

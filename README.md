@@ -320,7 +320,17 @@ Opcional, recomendado: criar o Environment `production` no GitHub com *required 
 
 ### Primeiro administrador
 
-Depois da primeira migração, rode o seed uma vez apontando para o Neon (não é feito automaticamente):
+Há dois caminhos, e ambos são fechados assim que existir qualquer usuário no banco.
+
+**1. Pela web (`/primeiro-acesso`)** — recomendado em produção. Enquanto não houver nenhum
+usuário cadastrado, `/login` redireciona para essa tela; a conta criada nela é sempre
+**Administrador** e o acesso já entra logado. Depois disso a rota responde 404.
+
+> Enquanto o banco estiver vazio, quem acessar a URL vira Administrador. Faça o cadastro
+> logo após o primeiro deploy. Detalhes e o motivo da decisão em
+> [`src/modules/auth/README.md`](src/modules/auth/README.md).
+
+**2. Por linha de comando (`pnpm db:seed`)** — útil em ambiente local e automação:
 
 ```bash
 DATABASE_URL="<connection string direta do Neon>" \
@@ -328,7 +338,7 @@ SEED_ADMIN_NAME="..." SEED_ADMIN_EMAIL="..." SEED_ADMIN_PASSWORD="..." \
 pnpm db:seed
 ```
 
-Sem isso não há usuário para autenticar em produção. O seed é idempotente: se o e-mail já existir, nada é alterado.
+O seed é idempotente: se o e-mail já existir, nada é alterado.
 
 > O schema `neon_auth` presente no banco foi criado pelo Neon Auth e **não é usado** por esta aplicação, que tem autenticação própria. As migrações do Prisma operam apenas no schema `public`.
 

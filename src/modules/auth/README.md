@@ -13,6 +13,8 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `validation.ts` | Schemas zod (senha com 8 a 128 caracteres, e-mail normalizado). |
 | `safeguards.ts` | Regras puras: ninguém desativa ou rebaixa a si mesmo, e ninguém remove o último Administrador ativo. |
 | `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração) e `logout`. |
+| `first-user/` | Cadastro do primeiro usuário (bootstrap). `queries.ts` diz se a regra ainda vale; `actions.ts` cria o Administrador inicial. |
+| `client-ip.ts` (`server-only`) | IP do cliente (`x-forwarded-for`) usado pelos limites de tentativa. |
 | `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
 | `src/proxy.ts` | Checagem **otimista** (presença do cookie). Não substitui a DAL. |
@@ -43,6 +45,26 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 - **Único quando informado** (`@unique`; vários `NULL` são aceitos). A duplicidade responde "Já existe um usuário com este CREFITO." sem ecoar o valor. A action distingue o P2002 do CREFITO do P2002 do e-mail procurando `crefito` em `error.meta`, formato conferido contra o PostgreSQL real em `test/integration/cadastro-complementar.integration.ts`.
 - Fisioterapeutas cadastrados antes da 2c ficam com `NULL`, e a lista de usuários mostra "CREFITO não informado". Editar um deles exige informar o CREFITO.
 - Quem edita: só `usuarios:gerir` (Administrador), com a matriz inalterada. A anamnese **não** guarda o CREFITO na assinatura (append-only inalterado).
+
+## Primeiro usuário (bootstrap)
+
+Um sistema recém-implantado não tem nenhuma conta, e não há cadastro público. Para não
+depender de acesso ao servidor, **enquanto a tabela `User` estiver vazia** a rota pública
+`/primeiro-acesso` permite criar a conta inicial, sempre com perfil **ADMIN**.
+
+- **A regra se encerra sozinha.** Bastando existir um usuário — ativo ou não — a rota
+  responde 404 e a action recusa qualquer tentativa. Não há como reabri-la pela aplicação.
+- **O perfil não vem do formulário.** É fixado no servidor; um `role` enviado no POST é ignorado.
+- **A checagem que vale é a da transação.** A contagem e a criação rodam juntas numa transação
+  `Serializable`, então dois cadastros simultâneos não criam dois Administradores. A checagem
+  da página serve só para não exibir o formulário à toa.
+- **`/login` redireciona para lá** quando não há nenhum usuário, já que ninguém conseguiria entrar.
+- **Limite de 10 tentativas por IP a cada 15 min** (`firstUserAttemptsByIp`), pelo custo do scrypt.
+- O `pnpm db:seed` continua válido e faz a mesma coisa por linha de comando. Os dois convivem:
+  quem rodar primeiro fecha o outro.
+
+**Risco aceito:** entre o primeiro deploy e o cadastro, quem acessar a URL vira Administrador.
+A decisão foi não exigir token de setup; a mitigação é cadastrar a conta logo após publicar.
 
 ## Fora do escopo (por ora)
 

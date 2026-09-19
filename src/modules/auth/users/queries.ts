@@ -6,7 +6,7 @@ export async function listUsers() {
   await requirePermission("usuarios:ler");
   return prisma.user.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
-    select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, crefito: true, active: true, createdAt: true },
   });
 }
 

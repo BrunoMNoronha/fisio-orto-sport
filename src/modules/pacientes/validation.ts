@@ -8,6 +8,18 @@ export const PATIENT_STATUS_LABELS: Record<PatientStatusValue, string> = {
   INATIVO: "Inativo",
 };
 
+// Opções de sexo definidas pela clínica (Fase 2c).
+export const SEXES = ["FEMININO", "MASCULINO", "NAO_INFORMADO"] as const;
+export type SexValue = (typeof SEXES)[number];
+
+export const SEX_LABELS: Record<SexValue, string> = {
+  FEMININO: "Feminino",
+  MASCULINO: "Masculino",
+  NAO_INFORMADO: "Não informado",
+};
+
+export const OCCUPATION_MAX = 120;
+
 export const ADULT_AGE = 18;
 export const PAGE_SIZE = 20;
 
@@ -136,6 +148,9 @@ const patientFields = z.object({
     .min(2, { error: "O nome deve ter pelo menos 2 caracteres." })
     .max(120, { error: "O nome deve ter no máximo 120 caracteres." }),
   birthDate,
+  // Obrigatório em criação e edição; "Não informado" é uma opção explícita.
+  sex: z.enum(SEXES, { error: "Selecione o sexo." }),
+  occupation: optionalText(OCCUPATION_MAX, "A profissão"),
   cpf,
   phone: phone("telefone"),
   email,

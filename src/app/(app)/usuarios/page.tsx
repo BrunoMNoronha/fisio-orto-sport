@@ -64,7 +64,14 @@ export default async function UsuariosPage() {
                       <span className="block text-xs text-muted-foreground sm:hidden">{user.email}</span>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
-                    <TableCell>{ROLE_LABELS[user.role]}</TableCell>
+                    <TableCell>
+                      {ROLE_LABELS[user.role]}
+                      {user.role === "FISIOTERAPEUTA" && (
+                        <span className="block text-xs text-muted-foreground">
+                          {user.crefito ? `CREFITO ${user.crefito}` : "CREFITO não informado"}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={user.active ? "secondary" : "outline"}>
                         {user.active ? "Ativo" : "Inativo"}

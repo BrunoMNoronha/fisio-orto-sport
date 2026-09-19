@@ -34,13 +34,21 @@ jest.mock("@/generated/prisma/client", () => ({
     TransactionIsolationLevel: { Serializable: "Serializable" },
     PrismaClientKnownRequestError: class extends Error {
       code = "";
+      meta?: Record<string, unknown>;
     },
   },
 }));
 
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
 
+import { Prisma } from "@/generated/prisma/client";
 import { createUser, resetPassword, setUserActive, updateUser } from "../users/actions";
+
+function uniqueError(meta: Record<string, unknown>) {
+  const error = new Prisma.PrismaClientKnownRequestError("erro", { code: "P2002", clientVersion: "test" });
+  Object.assign(error, { code: "P2002", meta });
+  return error;
+}
 
 function form(data: Record<string, string>) {
   const fd = new FormData();
@@ -98,6 +106,54 @@ describe("ADMIN", () => {
     const result = await createUser(undefined, form({ ...newUser, password: "123" }));
     expect(result?.fieldErrors?.password?.[0]).toMatch(/8 caracteres/);
     expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it("cria fisioterapeuta com CREFITO normalizado", async () => {
+    const result = await createUser(undefined, form({ ...newUser, role: "FISIOTERAPEUTA", crefito: " 123456-f " }));
+    expect(result).toMatchObject({ ok: true });
+    expect(prismaMock.user.create.mock.calls[0][0].data).toMatchObject({ role: "FISIOTERAPEUTA", crefito: "123456-F" });
+  });
+
+  it("recusa fisioterapeuta sem CREFITO, na criação e na edição, sem tocar no banco", async () => {
+    const created = await createUser(undefined, form({ ...newUser, role: "FISIOTERAPEUTA" }));
+    expect(created?.fieldErrors?.crefito).toEqual(["Informe o CREFITO do fisioterapeuta."]);
+    const updated = await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "" }));
+    expect(updated?.fieldErrors?.crefito).toEqual(["Informe o CREFITO do fisioterapeuta."]);
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("descarta o CREFITO em outros perfis (ex.: ao deixar de ser fisioterapeuta)", async () => {
+    tx.user.findUnique.mockResolvedValue({ id: "f1", role: "FISIOTERAPEUTA", active: true });
+    tx.user.count.mockResolvedValue(1);
+    const result = await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "RECEPCAO", crefito: "123456-F" }));
+    expect(result).toMatchObject({ ok: true });
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: "f1" },
+      data: { name: "Fisio", role: "RECEPCAO", crefito: null },
+    });
+  });
+
+  it("CREFITO duplicado vira erro de campo sem ecoar o valor; e-mail duplicado segue no e-mail", async () => {
+    const physio = { ...newUser, role: "FISIOTERAPEUTA", crefito: "999999-F" };
+    prismaMock.user.create.mockRejectedValueOnce(uniqueError({ target: ["crefito"] }));
+    const duplicated = await createUser(undefined, form(physio));
+    expect(duplicated).toEqual({ fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } });
+    expect(JSON.stringify(duplicated)).not.toContain("999999");
+
+    prismaMock.user.create.mockRejectedValueOnce(uniqueError({ target: ["email"] }));
+    expect(await createUser(undefined, form(physio))).toEqual({
+      fieldErrors: { email: ["Já existe um usuário com este e-mail."] },
+    });
+
+    tx.user.findUnique.mockResolvedValue({ id: "f1", role: "FISIOTERAPEUTA", active: true });
+    tx.user.count.mockResolvedValue(1);
+    tx.user.update.mockRejectedValueOnce(
+      uniqueError({ driverAdapterError: { cause: { constraint: { fields: ["crefito"] } } } }),
+    );
+    expect(
+      await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "999999-F" })),
+    ).toEqual({ fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } });
   });
 
   it("não deixa o admin desativar a si mesmo", async () => {

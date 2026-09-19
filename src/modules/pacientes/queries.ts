@@ -17,6 +17,8 @@ export const PATIENT_DETAIL_SELECT = {
   id: true,
   fullName: true,
   birthDate: true,
+  sex: true,
+  occupation: true,
   cpf: true,
   phone: true,
   email: true,

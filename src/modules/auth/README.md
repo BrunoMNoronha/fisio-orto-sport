@@ -13,7 +13,7 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `validation.ts` | Schemas zod (senha com 8 a 128 caracteres, e-mail normalizado). |
 | `safeguards.ts` | Regras puras: ninguém desativa ou rebaixa a si mesmo, e ninguém remove o último Administrador ativo. |
 | `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração) e `logout`. |
-| `users/actions.ts` | Criar, editar (nome e perfil), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
+| `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
 | `src/proxy.ts` | Checagem **otimista** (presença do cookie). Não substitui a DAL. |
 
@@ -34,6 +34,15 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `agenda:ler` | ✓ | ✓ | ✓ |
 | `agenda:gerir` | ✓ | ✓ | — |
 | `clinico:ler` / `clinico:gerir` | ✓ | — | ✓ (todos os pacientes) |
+
+## CREFITO do fisioterapeuta (Fase 2c)
+
+- O CREFITO é do **profissional**, e o profissional é o próprio `User` com perfil `FISIOTERAPEUTA` (não há tabela de profissionais). Por isso fica em `User.crefito`, nunca em `Patient`.
+- **Obrigatório** ao criar ou editar um usuário `FISIOTERAPEUTA`. Nos demais perfis é descartado (gravado `null`), inclusive quando o usuário deixa de ser fisioterapeuta.
+- **Formato**: texto curto normalizado, com espaços nas pontas removidos, internos colapsados e letras em maiúsculas. Até 20 caracteres (`VarChar(20)`), sem validação de padrão.
+- **Único quando informado** (`@unique`; vários `NULL` são aceitos). A duplicidade responde "Já existe um usuário com este CREFITO." sem ecoar o valor. A action distingue o P2002 do CREFITO do P2002 do e-mail procurando `crefito` em `error.meta`, formato conferido contra o PostgreSQL real em `test/integration/cadastro-complementar.integration.ts`.
+- Fisioterapeutas cadastrados antes da 2c ficam com `NULL`, e a lista de usuários mostra "CREFITO não informado". Editar um deles exige informar o CREFITO.
+- Quem edita: só `usuarios:gerir` (Administrador), com a matriz inalterada. A anamnese **não** guarda o CREFITO na assinatura (append-only inalterado).
 
 ## Fora do escopo (por ora)
 

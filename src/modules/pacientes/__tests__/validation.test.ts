@@ -21,6 +21,8 @@ function isoYearsAgo(years: number, dayOffset = 0) {
 const adult = {
   fullName: "  Maria Teste  ",
   birthDate: "1990-05-10",
+  sex: "FEMININO",
+  occupation: "",
   cpf: "",
   phone: "(11) 98765-4321",
   email: "",
@@ -186,6 +188,28 @@ describe("demais campos", () => {
   it("status aceita apenas ATIVO ou INATIVO", () => {
     expect(setPatientStatusSchema.safeParse({ id: "p1", status: "INATIVO" }).success).toBe(true);
     expect(setPatientStatusSchema.safeParse({ id: "p1", status: "EXCLUIDO" }).success).toBe(false);
+  });
+});
+
+describe("sexo e profissão (Fase 2c)", () => {
+  it("sexo é obrigatório e aceita só as opções da clínica", () => {
+    for (const sex of ["FEMININO", "MASCULINO", "NAO_INFORMADO"]) {
+      expect(patientSchema.parse({ ...adult, sex }).sex).toBe(sex);
+    }
+    expect(errorsOf({ ...adult, sex: "" }).sex).toBe("Selecione o sexo.");
+    expect(errorsOf({ ...adult, sex: undefined }).sex).toBe("Selecione o sexo.");
+    expect(errorsOf({ ...adult, sex: "OUTRO" }).sex).toBe("Selecione o sexo.");
+    expect(updatePatientSchema.safeParse({ ...adult, id: "p1", sex: "" }).success).toBe(false);
+  });
+
+  it("profissão é opcional, aparada e limitada a 120 caracteres", () => {
+    expect(patientSchema.parse(adult).occupation).toBeNull();
+    expect(patientSchema.parse({ ...adult, occupation: undefined }).occupation).toBeNull();
+    expect(patientSchema.parse({ ...adult, occupation: "  Professora  " }).occupation).toBe("Professora");
+    expect(patientSchema.parse({ ...adult, occupation: "x".repeat(120) }).occupation).toHaveLength(120);
+    expect(errorsOf({ ...adult, occupation: "x".repeat(121) }).occupation).toBe(
+      "A profissão deve ter no máximo 120 caracteres.",
+    );
   });
 });
 

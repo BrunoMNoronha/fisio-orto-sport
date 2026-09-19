@@ -29,6 +29,8 @@ const ALLOWED_FIELDS = [
   "id",
   "fullName",
   "birthDate",
+  "sex",
+  "occupation",
   "cpf",
   "phone",
   "email",
@@ -112,6 +114,14 @@ describe("getPatient", () => {
   it("id inválido não consulta o banco", async () => {
     expect(await getPatient("x".repeat(65))).toBeNull();
     expect(prismaMock.patient.findUnique).not.toHaveBeenCalled();
+  });
+});
+
+describe("cadastro complementar (Fase 2c)", () => {
+  it("a ficha traz sexo e profissão; a listagem não", () => {
+    expect(PATIENT_DETAIL_SELECT).toMatchObject({ sex: true, occupation: true });
+    expect(PATIENT_LIST_SELECT).not.toHaveProperty("sex");
+    expect(PATIENT_LIST_SELECT).not.toHaveProperty("occupation");
   });
 });
 

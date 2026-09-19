@@ -16,6 +16,9 @@ export function toFormValues(patient: PatientDetail): PatientFormValues {
   return {
     fullName: patient.fullName,
     birthDate: patient.birthDate.toISOString().slice(0, 10),
+    // Cadastros anteriores à Fase 2c não têm sexo: a edição exige escolher.
+    sex: patient.sex ?? "",
+    occupation: patient.occupation ?? "",
     cpf: patient.cpf ?? "",
     phone: patient.phone,
     email: patient.email ?? "",

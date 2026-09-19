@@ -11,7 +11,7 @@ import { can } from "@/modules/auth/permissions";
 import { getCurrentAnamnesis } from "@/modules/clinico/queries";
 import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
 import { getPatient } from "@/modules/pacientes/queries";
-import { formatCpf, formatPhone } from "@/modules/pacientes/validation";
+import { SEX_LABELS, formatCpf, formatPhone } from "@/modules/pacientes/validation";
 import { formatDateTime, formatDay, formatTime } from "../../agenda/format";
 import { formatAge, formatDate } from "../format";
 
@@ -64,6 +64,8 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
                 label="Data de nascimento"
                 value={`${formatDate(patient.birthDate)} (${formatAge(patient.birthDate)})`}
               />
+              <Item label="Sexo" value={patient.sex ? SEX_LABELS[patient.sex] : null} />
+              <Item label="Profissão" value={patient.occupation} />
               <Item label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
               <Item label="Telefone" value={formatPhone(patient.phone)} />
               <Item label="E-mail" value={patient.email} />

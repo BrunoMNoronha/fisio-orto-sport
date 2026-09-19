@@ -48,4 +48,4 @@ A Recepção não vê o atalho na ficha do paciente, é redirecionada para `/ace
 
 ## Fora do escopo (por ora)
 
-Exame físico, objetivos terapêuticos, conduta/plano, sessões, evolução e reavaliação (Fase 4); sexo, profissão e CREFITO (Fase 2c, decisão pendente); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+Exame físico, objetivos terapêuticos, conduta/plano, sessões, evolução e reavaliação (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.

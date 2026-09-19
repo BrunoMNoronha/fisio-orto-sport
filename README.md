@@ -415,7 +415,8 @@ Casos de teste devem contemplar, quando aplicável:
 - [x] Consulta;
 - [x] Edição;
 - [ ] Histórico;
-- [x] Anamnese.
+- [x] Anamnese;
+- [x] Cadastro complementar da ficha (sexo, profissão e CREFITO do fisioterapeuta).
 
 ### Fase 3 — Agenda
 

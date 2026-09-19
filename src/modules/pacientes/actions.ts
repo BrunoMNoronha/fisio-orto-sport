@@ -18,6 +18,8 @@ const PATIENTS_PATH = "/pacientes";
 const PATIENT_FIELDS = [
   "fullName",
   "birthDate",
+  "sex",
+  "occupation",
   "cpf",
   "phone",
   "email",

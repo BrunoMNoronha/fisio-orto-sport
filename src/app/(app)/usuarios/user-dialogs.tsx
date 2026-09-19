@@ -24,9 +24,9 @@ import {
   updateUser,
   type UserActionState,
 } from "@/modules/auth/users/actions";
-import { PASSWORD_MIN } from "@/modules/auth/validation";
+import { CREFITO_MAX, PASSWORD_MIN, type FieldErrors } from "@/modules/auth/validation";
 
-type UserRow = { id: string; name: string; email: string; role: Role; active: boolean };
+type UserRow = { id: string; name: string; email: string; role: Role; crefito: string | null; active: boolean };
 type Action = (prev: UserActionState, formData: FormData) => Promise<UserActionState>;
 
 // Envolve a action para fechar o diálogo quando ela conclui com sucesso.
@@ -78,12 +78,23 @@ function FormError({ state }: { state: UserActionState }) {
   );
 }
 
-function RoleSelect({ id, defaultValue, errors }: { id: string; defaultValue?: Role; errors?: string[] }) {
+function RoleSelect({
+  id,
+  value,
+  onChange,
+  errors,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  errors?: string[];
+}) {
   return (
     <NativeSelect
       id={id}
       name="role"
-      defaultValue={defaultValue ?? ""}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
       required
       aria-invalid={errors ? true : undefined}
       aria-describedby={errors ? `${id}-erro` : undefined}
@@ -98,6 +109,41 @@ function RoleSelect({ id, defaultValue, errors }: { id: string; defaultValue?: R
         </NativeSelectOption>
       ))}
     </NativeSelect>
+  );
+}
+
+// Perfil e CREFITO: o CREFITO só aparece (e só é exigido pelo servidor) para Fisioterapeuta.
+function RoleAndCrefitoFields({
+  prefix,
+  defaultRole,
+  defaultCrefito,
+  errors,
+}: {
+  prefix: string;
+  defaultRole?: Role;
+  defaultCrefito?: string | null;
+  errors?: FieldErrors;
+}) {
+  const [role, setRole] = useState<string>(defaultRole ?? "");
+  return (
+    <>
+      <Field id={`${prefix}-perfil`} label="Perfil" errors={errors?.role}>
+        <RoleSelect id={`${prefix}-perfil`} value={role} onChange={setRole} errors={errors?.role} />
+      </Field>
+      {role === "FISIOTERAPEUTA" && (
+        <Field id={`${prefix}-crefito`} label="CREFITO" errors={errors?.crefito}>
+          <Input
+            {...inputA11y(`${prefix}-crefito`, errors?.crefito)}
+            name="crefito"
+            defaultValue={defaultCrefito ?? ""}
+            maxLength={CREFITO_MAX}
+            autoComplete="off"
+            placeholder="Ex.: 123456-F"
+            required
+          />
+        </Field>
+      )}
+    </>
   );
 }
 
@@ -131,9 +177,7 @@ export function CreateUserDialog() {
           <Field id="novo-email" label="E-mail" errors={errors?.email}>
             <Input {...inputA11y("novo-email", errors?.email)} name="email" type="email" autoComplete="off" required />
           </Field>
-          <Field id="novo-perfil" label="Perfil" errors={errors?.role}>
-            <RoleSelect id="novo-perfil" errors={errors?.role} />
-          </Field>
+          <RoleAndCrefitoFields prefix="novo" errors={errors} />
           <Field id="novo-senha" label="Senha inicial" errors={errors?.password}>
             <Input
               {...inputA11y("novo-senha", errors?.password)}
@@ -171,15 +215,18 @@ export function EditUserDialog({ user }: { user: UserRow }) {
           <DialogDescription>{user.email}</DialogDescription>
         </DialogHeader>
         {/* Remonta quando os dados mudam após a revalidação (campos não controlados). */}
-        <form key={`${user.name}|${user.role}`} action={formAction} className="flex flex-col gap-4" noValidate>
+        <form key={`${user.name}|${user.role}|${user.crefito ?? ""}`} action={formAction} className="flex flex-col gap-4" noValidate>
           <input type="hidden" name="id" value={user.id} />
           <FormError state={state} />
           <Field id={`${prefix}-nome`} label="Nome" errors={errors?.name}>
             <Input {...inputA11y(`${prefix}-nome`, errors?.name)} name="name" defaultValue={user.name} required />
           </Field>
-          <Field id={`${prefix}-perfil`} label="Perfil" errors={errors?.role}>
-            <RoleSelect id={`${prefix}-perfil`} defaultValue={user.role} errors={errors?.role} />
-          </Field>
+          <RoleAndCrefitoFields
+            prefix={prefix}
+            defaultRole={user.role}
+            defaultCrefito={user.crefito}
+            errors={errors}
+          />
           <DialogFooter>
             <Button type="submit" disabled={pending}>
               {pending ? "Salvando…" : "Salvar"}

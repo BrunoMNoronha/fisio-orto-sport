@@ -290,6 +290,50 @@ A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um
 
 ---
 
+## Deploy
+
+Produção roda na **Vercel**, com banco **PostgreSQL gerenciado no Neon** (`sa-east-1`).
+
+### Fluxo
+
+Todo push na `main` dispara, em paralelo:
+
+1. **Build e publicação na Vercel** — via integração nativa Vercel ↔ GitHub. Não há token da Vercel no repositório; a configuração fica em [`vercel.json`](vercel.json) (framework, `pnpm install --frozen-lockfile`, `pnpm build`). O Prisma Client é gerado pelo `postinstall`.
+2. **Migrações do banco** — workflow [`deploy-migrations`](.github/workflows/deploy-migrations.yml), que roda `prisma migrate deploy` quando `prisma/schema.prisma` ou `prisma/migrations/**` mudam. Também pode ser disparado manualmente (`workflow_dispatch`).
+
+Outras branches continuam gerando Preview Deployments na Vercel; produção sai apenas da `main`.
+
+> **Migrações destrutivas exigem duas etapas.** O deploy e a migração disparam no mesmo push, sem ordem garantida entre si. Migrações aditivas são seguras. Para remover ou renomear coluna/tabela: primeiro um push com a migração aditiva e o código compatível com os dois formatos; depois outro push com a migração de remoção.
+
+### Configuração exigida (uma vez)
+
+| Onde | Variável | Valor |
+|---|---|---|
+| Vercel → Settings → Environment Variables (Production) | `DATABASE_URL` | Connection string **pooled** do Neon (host com `-pooler`, `sslmode=require`) |
+| GitHub → Settings → Secrets and variables → Actions | `DATABASE_URL` | Connection string **direta** do Neon (sem `-pooler`) — o pooler não suporta os advisory locks do `prisma migrate deploy` |
+
+Na Vercel, conecte o repositório e mantenha a *Production Branch* em `main`.
+
+A `DATABASE_URL` precisa existir em Production **antes do primeiro deploy**: `src/lib/db.ts` lança erro na criação do Prisma Client sem ela, e o build falha na prerenderização.
+
+Opcional, recomendado: criar o Environment `production` no GitHub com *required reviewers*, para aprovar cada migração antes de ela ser aplicada.
+
+### Primeiro administrador
+
+Depois da primeira migração, rode o seed uma vez apontando para o Neon (não é feito automaticamente):
+
+```bash
+DATABASE_URL="<connection string direta do Neon>" \
+SEED_ADMIN_NAME="..." SEED_ADMIN_EMAIL="..." SEED_ADMIN_PASSWORD="..." \
+pnpm db:seed
+```
+
+Sem isso não há usuário para autenticar em produção. O seed é idempotente: se o e-mail já existir, nada é alterado.
+
+> O schema `neon_auth` presente no banco foi criado pelo Neon Auth e **não é usado** por esta aplicação, que tem autenticação própria. As migrações do Prisma operam apenas no schema `public`.
+
+---
+
 ## Domínios principais
 
 Uma possível divisão inicial dos módulos:

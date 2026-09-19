@@ -24,14 +24,37 @@ const name = z
 const role = z.enum(ROLES, { error: "Selecione um perfil válido." });
 const id = z.string().min(1).max(64);
 
+export const CREFITO_MAX = 20;
+
+// CREFITO: texto curto normalizado (espaços nas pontas removidos, espaços internos
+// colapsados, maiúsculas), sem validação de padrão. Vazio vira null.
+const crefito = z
+  .string()
+  .optional()
+  .transform((value) => (value ?? "").trim().replace(/\s+/g, " ").toUpperCase())
+  .pipe(z.string().max(CREFITO_MAX, { error: `O CREFITO deve ter no máximo ${CREFITO_MAX} caracteres.` }))
+  .transform((value) => (value ? value : null));
+
+// Fisioterapeuta precisa informar o CREFITO; nos demais perfis ele é descartado.
+function applyCrefitoRule<T extends { role: (typeof ROLES)[number]; crefito: string | null }>(
+  data: T,
+  ctx: z.RefinementCtx,
+): T {
+  if (data.role !== "FISIOTERAPEUTA") return { ...data, crefito: null };
+  if (!data.crefito) {
+    ctx.addIssue({ code: "custom", path: ["crefito"], message: "Informe o CREFITO do fisioterapeuta." });
+  }
+  return data;
+}
+
 // No login não aplicamos a política de senha: a resposta é sempre a mensagem genérica.
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().min(1).max(254),
   password: z.string().min(1).max(PASSWORD_MAX),
 });
 
-export const createUserSchema = z.object({ name, email, role, password });
-export const updateUserSchema = z.object({ id, name, role });
+export const createUserSchema = z.object({ name, email, role, crefito, password }).transform(applyCrefitoRule);
+export const updateUserSchema = z.object({ id, name, role, crefito }).transform(applyCrefitoRule);
 export const setUserActiveSchema = z.object({
   id,
   active: z.enum(["true", "false"]).transform((value) => value === "true"),

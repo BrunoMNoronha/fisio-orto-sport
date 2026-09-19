@@ -58,7 +58,7 @@ function form(values: Record<string, string>) {
   return data;
 }
 
-const adult = { fullName: "Maria Teste", birthDate: "1990-05-10", phone: "11987654321", cpf: VALID_CPF };
+const adult = { fullName: "Maria Teste", birthDate: "1990-05-10", sex: "FEMININO", phone: "11987654321", cpf: VALID_CPF };
 
 function as(role: string | null) {
   currentUser.current = role ? { id: `u-${role}`, name: role, email: `${role}@example.com`, role } : null;
@@ -89,6 +89,8 @@ describe.each(["ADMIN", "RECEPCAO"])("%s (pacientes:gerir)", (role) => {
     expect(prismaMock.patient.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         fullName: "Maria Teste",
+        sex: "FEMININO",
+        occupation: null,
         cpf: VALID_CPF,
         phone: "11987654321",
         createdById: `u-${role}`,
@@ -188,6 +190,28 @@ describe("regras de cadastro", () => {
       guardianPhone: "11911112222",
       guardianRelationship: "Mãe",
     });
+  });
+
+  it("grava sexo e profissão na criação e na edição", async () => {
+    await expectRedirect(createPatient(undefined, form({ ...adult, occupation: " Pedreiro " })), "/pacientes/p1");
+    expect(prismaMock.patient.create.mock.calls[0][0].data).toMatchObject({ sex: "FEMININO", occupation: "Pedreiro" });
+
+    await expectRedirect(
+      updatePatient(undefined, form({ ...adult, id: "p1", sex: "NAO_INFORMADO", occupation: "" })),
+      "/pacientes/p1",
+    );
+    expect(prismaMock.patient.update.mock.calls[0][0].data).toMatchObject({ sex: "NAO_INFORMADO", occupation: null });
+  });
+
+  it("sexo ausente ou inválido é recusado sem tocar no banco (inclusive ao editar cadastro antigo)", async () => {
+    const withoutSex = Object.fromEntries(Object.entries(adult).filter(([key]) => key !== "sex"));
+    expect((await createPatient(undefined, form(withoutSex)))?.fieldErrors?.sex).toEqual(["Selecione o sexo."]);
+    expect((await updatePatient(undefined, form({ ...withoutSex, id: "p1" })))?.fieldErrors?.sex).toEqual([
+      "Selecione o sexo.",
+    ]);
+    expect((await createPatient(undefined, form({ ...adult, sex: "X" })))?.fieldErrors?.sex).toBeDefined();
+    expect(prismaMock.patient.create).not.toHaveBeenCalled();
+    expect(prismaMock.patient.update).not.toHaveBeenCalled();
   });
 
   it("edição de paciente inexistente responde não encontrado", async () => {

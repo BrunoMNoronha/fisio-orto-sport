@@ -6,15 +6,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { PatientActionState } from "@/modules/pacientes/actions";
-import { isMinor } from "@/modules/pacientes/validation";
+import { OCCUPATION_MAX, SEXES, SEX_LABELS, isMinor } from "@/modules/pacientes/validation";
 
 type Action = (prev: PatientActionState, formData: FormData) => Promise<PatientActionState>;
 
 export type PatientFormValues = {
   fullName: string;
   birthDate: string;
+  sex: string;
+  occupation: string;
   cpf: string;
   phone: string;
   email: string;
@@ -28,6 +31,8 @@ export type PatientFormValues = {
 export const EMPTY_PATIENT: PatientFormValues = {
   fullName: "",
   birthDate: "",
+  sex: "",
+  occupation: "",
   cpf: "",
   phone: "",
   email: "",
@@ -85,7 +90,7 @@ export function PatientForm({
     return {
       name,
       value: values[name],
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
         setValues((current) => ({ ...current, [name]: event.target.value })),
     };
   }
@@ -114,7 +119,22 @@ export function PatientForm({
         <legend className="mb-2 text-base font-medium">Dados pessoais</legend>
         <div className="sm:col-span-2">{text("fullName", "Nome completo *", { required: true, maxLength: 120 })}</div>
         {text("birthDate", "Data de nascimento *", { type: "date", required: true })}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="paciente-sex">Sexo *</Label>
+          <NativeSelect {...a11y("paciente-sex", errors?.sex)} {...field("sex")} required className="w-full">
+            <NativeSelectOption value="" disabled>
+              Selecione
+            </NativeSelectOption>
+            {SEXES.map((sex) => (
+              <NativeSelectOption key={sex} value={sex}>
+                {SEX_LABELS[sex]}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <FieldError id="paciente-sex-erro" messages={errors?.sex} />
+        </div>
         {text("cpf", "CPF (opcional)", { inputMode: "numeric", placeholder: "000.000.000-00", maxLength: 14 })}
+        {text("occupation", "Profissão (opcional)", { maxLength: OCCUPATION_MAX })}
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">

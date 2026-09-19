@@ -28,6 +28,9 @@ const MANAGER_ROLES: Role[] = ROLES.filter((role) => can(role, "usuarios:gerir")
 
 class SafeguardError extends Error {}
 
+// Não ecoa o valor informado.
+const DUPLICATE_CREFITO: UserActionState = { fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } };
+
 async function guard(): Promise<{ actorId: string } | UserActionState> {
   try {
     const actor = await assertPermission("usuarios:gerir");
@@ -42,13 +45,27 @@ function isActor(value: unknown): value is { actorId: string } {
   return typeof value === "object" && value !== null && "actorId" in value;
 }
 
+function isUniqueViolation(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+// P2002 em User pode vir do e-mail ou do CREFITO. O formato de `meta` varia com o adapter,
+// então procuramos o nome da coluna em qualquer parte dele.
+function violatesCrefito(error: Prisma.PrismaClientKnownRequestError) {
+  return JSON.stringify(error.meta ?? {}).includes("crefito");
+}
+
 function entries(formData: FormData, keys: string[]) {
   return Object.fromEntries(keys.map((key) => [key, formData.get(key) ?? undefined]));
 }
 
 // Aplica a mudança de perfil/status numa transação serializável, validando as salvaguardas
 // contra o estado atual do banco (evita corrida entre dois admins).
-async function changeUser(actorId: string, id: string, data: { name?: string; role?: Role; active?: boolean }) {
+async function changeUser(
+  actorId: string,
+  id: string,
+  data: { name?: string; role?: Role; crefito?: string | null; active?: boolean },
+) {
   await prisma.$transaction(
     async (tx) => {
       const target = await tx.user.findUnique({ where: { id }, select: { id: true, role: true, active: true } });
@@ -68,6 +85,7 @@ async function runChange(fn: () => Promise<void>, success: string): Promise<User
     await fn();
   } catch (error) {
     if (error instanceof SafeguardError) return { error: error.message };
+    if (isUniqueViolation(error) && violatesCrefito(error)) return DUPLICATE_CREFITO;
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return { error: "Outra alteração ocorreu ao mesmo tempo. Tente novamente." };
     }
@@ -81,14 +99,15 @@ export async function createUser(_prev: UserActionState, formData: FormData): Pr
   const actor = await guard();
   if (!isActor(actor)) return actor;
 
-  const parsed = createUserSchema.safeParse(entries(formData, ["name", "email", "role", "password"]));
+  const parsed = createUserSchema.safeParse(entries(formData, ["name", "email", "role", "crefito", "password"]));
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { password, ...data } = parsed.data;
   try {
     await prisma.user.create({ data: { ...data, passwordHash: await hashPassword(password) } });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    if (isUniqueViolation(error)) {
+      if (violatesCrefito(error)) return DUPLICATE_CREFITO;
       return { fieldErrors: { email: ["Já existe um usuário com este e-mail."] } };
     }
     throw error;
@@ -101,7 +120,7 @@ export async function updateUser(_prev: UserActionState, formData: FormData): Pr
   const actor = await guard();
   if (!isActor(actor)) return actor;
 
-  const parsed = updateUserSchema.safeParse(entries(formData, ["id", "name", "role"]));
+  const parsed = updateUserSchema.safeParse(entries(formData, ["id", "name", "role", "crefito"]));
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { id, ...data } = parsed.data;

@@ -1,6 +1,6 @@
 # pacientes
 
-Cadastro e consulta cadastral de pacientes (Fase 2a). **Somente dados cadastrais e de contato.** Anamnese, avaliações e demais dados clínicos não ficam aqui: terão entidades próprias protegidas por `clinico:*`.
+Cadastro e consulta cadastral de pacientes (Fase 2a; sexo e profissão na Fase 2c). **Somente dados cadastrais e de contato.** Anamnese, avaliações e demais dados clínicos não ficam aqui: terão entidades próprias protegidas por `clinico:*`.
 
 ## Peças
 
@@ -15,6 +15,9 @@ Cadastro e consulta cadastral de pacientes (Fase 2a). **Somente dados cadastrais
 
 - **CPF**: opcional; gravado só com os 11 dígitos; validado pelos dígitos verificadores; único quando informado (índice único, o Postgres aceita vários `NULL`). Duplicidade responde "Já existe um paciente com este CPF." sem ecoar o valor. O CPF nunca vai para a URL: a busca é só por nome.
 - **Telefone**: obrigatório, só dígitos, 10 ou 11 (DDD + número).
+- **Sexo** (Fase 2c): enum `Sex` com as opções definidas pela clínica, `FEMININO`, `MASCULINO` e `NAO_INFORMADO` (rótulos em `SEX_LABELS`). **Obrigatório no formulário**, na criação e na edição. No banco a coluna é anulável só para preservar cadastros anteriores à 2c: editar um deles exige escolher o sexo.
+- **Profissão** (Fase 2c): opcional, texto livre aparado, até 120 caracteres (`VarChar(120)`); vazio vira `null`.
+- Sexo e profissão são dados **cadastrais** (`pacientes:*`), substituem o valor anterior e sem histórico, e aparecem só na ficha, não na listagem.
 - **Data de nascimento**: obrigatória, a partir de 1900 e não futura. Guardada como data civil (`@db.Date`); a idade é calculada em UTC.
 - **Responsável legal**: para menores de 18 anos, nome e telefone são obrigatórios e o parentesco é opcional. Para adultos, os dados do responsável são descartados (gravados como `null`).
 - **Situação**: `ATIVO` ou `INATIVO`. Inativos continuam consultáveis e podem ser reativados.

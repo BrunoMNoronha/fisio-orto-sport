@@ -6,11 +6,55 @@ type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
   size?: "sm" | "default"
 }
 
+// Após uma action, o React 19 reseta o <form> nativamente. O reset devolve o <select> à opção
+// marcada no primeiro render (ou à primeira habilitada), mas o React não reaplica o `value`
+// controlado, porque o estado não mudou. Aqui o valor controlado é restaurado após o reset.
+function useKeepControlledValueOnReset(value: NativeSelectProps["value"]) {
+  const selectRef = React.useRef<HTMLSelectElement | null>(null)
+  const valueRef = React.useRef(value)
+  const form = React.useRef<HTMLFormElement | null>(null)
+
+  React.useEffect(() => {
+    valueRef.current = value
+  }, [value])
+
+  const onReset = React.useCallback(() => {
+    // O evento "reset" dispara antes de o formulário ser de fato resetado.
+    queueMicrotask(() => {
+      const select = selectRef.current
+      const current = valueRef.current
+      if (select && typeof current === "string") select.value = current
+    })
+  }, [])
+
+  const controlled = value !== undefined
+  return React.useCallback(
+    (node: HTMLSelectElement | null) => {
+      form.current?.removeEventListener("reset", onReset)
+      selectRef.current = node
+      form.current = controlled ? (node?.form ?? null) : null
+      form.current?.addEventListener("reset", onReset)
+    },
+    [onReset, controlled]
+  )
+}
+
 function NativeSelect({
   className,
   size = "default",
+  ref,
   ...props
 }: NativeSelectProps) {
+  const keepValueRef = useKeepControlledValueOnReset(props.value)
+  const mergedRef = React.useCallback(
+    (node: HTMLSelectElement | null) => {
+      keepValueRef(node)
+      if (typeof ref === "function") ref(node)
+      else if (ref) ref.current = node
+    },
+    [keepValueRef, ref]
+  )
+
   return (
     <div
       className={cn(
@@ -25,6 +69,7 @@ function NativeSelect({
         data-size={size}
         className="h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm transition-colors outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:py-0.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
         {...props}
+        ref={mergedRef}
       />
       <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground select-none" aria-hidden="true" data-slot="native-select-icon" />
     </div>

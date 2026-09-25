@@ -2,6 +2,7 @@
 // Cadastro do primeiro Administrador: só funciona com a tabela de usuários vazia.
 const tx = { user: { count: jest.fn(), create: jest.fn() } };
 const prismaMock = {
+  user: { findFirst: jest.fn() },
   $transaction: jest.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
 };
 jest.mock("@/lib/db", () => ({
@@ -17,12 +18,18 @@ jest.mock("@/generated/prisma/client", () => ({
     },
   },
 }));
-jest.mock("next/headers", () => ({ headers: async () => new Headers() }));
+jest.mock("next/headers", () => ({
+  headers: async () => new Headers({ "x-forwarded-for": "10.0.0.9" }),
+}));
 jest.mock("next/navigation", () => ({
   redirect: jest.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT:${path}`);
   }),
 }));
+jest.mock("../password", () => {
+  const actual = jest.requireActual("../password");
+  return { ...actual, hashPassword: jest.fn(actual.hashPassword) };
+});
 const createSession = jest.fn();
 const deleteSession = jest.fn();
 jest.mock("../session", () => ({
@@ -32,6 +39,8 @@ jest.mock("../session", () => ({
 
 import { Prisma } from "@/generated/prisma/client";
 import { setupFirstAdmin } from "../actions";
+import { hashPassword } from "../password";
+import { setupAttemptsByIp } from "../rate-limit";
 
 function form(fields: Record<string, string>) {
   const fd = new FormData();
@@ -49,6 +58,8 @@ function prismaError(code: string) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  setupAttemptsByIp.reset("ip:10.0.0.9");
+  prismaMock.user.findFirst.mockResolvedValue(null);
   tx.user.count.mockResolvedValue(0);
   tx.user.create.mockResolvedValue({ id: "u1" });
   createSession.mockResolvedValue(true);
@@ -104,5 +115,22 @@ describe("setupFirstAdmin", () => {
     createSession.mockResolvedValue(false);
     const state = await setupFirstAdmin(undefined, form(valid));
     expect(state?.error).toMatch(/Tente novamente/i);
+  });
+
+  it("com usuário já cadastrado, recusa antes do scrypt e da transação", async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: "u1" });
+    const state = await setupFirstAdmin(undefined, form(valid));
+    expect(state?.error).toMatch(/já foi cadastrado/i);
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia após 10 tentativas por IP, sem tocar no banco", async () => {
+    for (let i = 0; i < 10; i++) await setupFirstAdmin(undefined, form({ name: "A", email: "x", password: "1" }));
+    prismaMock.user.findFirst.mockClear();
+    const state = await setupFirstAdmin(undefined, form(valid));
+    expect(state?.error).toMatch(/Muitas tentativas/i);
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 });

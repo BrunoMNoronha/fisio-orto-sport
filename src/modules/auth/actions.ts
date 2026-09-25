@@ -4,11 +4,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { getDummyHash, verifyPassword } from "./password";
+import { getDummyHash, hashPassword, verifyPassword } from "./password";
 import { loginAttemptsByIp, loginFailuresByEmail } from "./rate-limit";
 import { safeRedirectPath } from "./redirect-path";
 import { createSession, deleteSession } from "./session";
-import { loginSchema } from "./validation";
+import { fieldErrors, firstAdminSchema, loginSchema, type FieldErrors } from "./validation";
 
 export type LoginState = { error?: string; email?: string } | undefined;
 
@@ -61,6 +61,67 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   if (!created) return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
 
   loginFailuresByEmail.reset(emailKey);
+  redirect(safeRedirectPath(formData.get("next")));
+}
+
+// --- Primeiro acesso ---------------------------------------------------------------
+// Enquanto a tabela de usuários está vazia, a tela de login mostra o cadastro do primeiro
+// Administrador. A action não exige autenticação (não há quem autentique), então a única
+// barreira é a tabela vazia: ela é reconferida dentro de uma transação serializável, para
+// que duas chamadas simultâneas não criem dois administradores.
+export type SetupState =
+  | { error?: string; fieldErrors?: FieldErrors; values?: { name?: string; email?: string } }
+  | undefined;
+
+const SETUP_CLOSED = "O primeiro usuário já foi cadastrado. Atualize a página para entrar.";
+const SETUP_RETRY = "Não foi possível concluir o cadastro. Tente novamente.";
+
+class SetupClosedError extends Error {}
+
+export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Promise<SetupState> {
+  const rawName = formData.get("name");
+  const rawEmail = formData.get("email");
+  const values = {
+    name: typeof rawName === "string" ? rawName.slice(0, 120) : undefined,
+    email: typeof rawEmail === "string" ? rawEmail.slice(0, 254) : undefined,
+  };
+
+  const parsed = firstAdminSchema.safeParse({
+    name: rawName ?? undefined,
+    email: rawEmail ?? undefined,
+    password: formData.get("password") ?? undefined,
+  });
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values };
+
+  const { password, ...data } = parsed.data;
+  const passwordHash = await hashPassword(password);
+
+  let userId: string;
+  try {
+    userId = await prisma.$transaction(
+      async (tx) => {
+        if ((await tx.user.count()) > 0) throw new SetupClosedError();
+        const created = await tx.user.create({
+          data: { ...data, role: "ADMIN", passwordHash },
+          select: { id: true },
+        });
+        return created.id;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (error) {
+    if (error instanceof SetupClosedError) return { error: SETUP_CLOSED, values };
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002: outra requisição criou o mesmo e-mail antes. P2034: conflito de serialização.
+      if (error.code === "P2002") return { error: SETUP_CLOSED, values };
+      if (error.code === "P2034") return { error: SETUP_RETRY, values };
+    }
+    throw error;
+  }
+
+  await deleteSession(); // descarta uma sessão anterior neste navegador, se houver
+  if (!(await createSession(userId, passwordHash))) return { error: SETUP_RETRY, values };
+
   redirect(safeRedirectPath(formData.get("next")));
 }
 

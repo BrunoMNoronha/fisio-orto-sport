@@ -53,6 +53,9 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(PASSWORD_MAX),
 });
 
+// Primeiro acesso: só nome, e-mail e senha. O perfil é sempre ADMIN (definido na action).
+export const firstAdminSchema = z.object({ name, email, password });
+
 export const createUserSchema = z.object({ name, email, role, crefito, password }).transform(applyCrefitoRule);
 export const updateUserSchema = z.object({ id, name, role, crefito }).transform(applyCrefitoRule);
 export const setUserActiveSchema = z.object({

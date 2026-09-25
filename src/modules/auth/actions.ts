@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { getDummyHash, hashPassword, verifyPassword } from "./password";
-import { loginAttemptsByIp, loginFailuresByEmail } from "./rate-limit";
+import { loginAttemptsByIp, loginFailuresByEmail, setupAttemptsByIp } from "./rate-limit";
 import { safeRedirectPath } from "./redirect-path";
 import { createSession, deleteSession } from "./session";
+import { hasAnyUser } from "./setup";
 import { fieldErrors, firstAdminSchema, loginSchema, type FieldErrors } from "./validation";
 
 export type LoginState = { error?: string; email?: string } | undefined;
@@ -75,6 +76,7 @@ export type SetupState =
 
 const SETUP_CLOSED = "O primeiro usuário já foi cadastrado. Atualize a página para entrar.";
 const SETUP_RETRY = "Não foi possível concluir o cadastro. Tente novamente.";
+const SETUP_TOO_MANY_ATTEMPTS = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
 
 class SetupClosedError extends Error {}
 
@@ -85,6 +87,13 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
     name: typeof rawName === "string" ? rawName.slice(0, 120) : undefined,
     email: typeof rawEmail === "string" ? rawEmail.slice(0, 254) : undefined,
   };
+
+  // A action continua acessível por POST depois do primeiro cadastro. Limite por IP e
+  // checagem barata antes do scrypt evitam que ela vire um gerador de custo anônimo.
+  const ipKey = `ip:${await clientIp()}`;
+  if (setupAttemptsByIp.isBlocked(ipKey)) return { error: SETUP_TOO_MANY_ATTEMPTS, values };
+  setupAttemptsByIp.hit(ipKey);
+  if (await hasAnyUser()) return { error: SETUP_CLOSED, values };
 
   const parsed = firstAdminSchema.safeParse({
     name: rawName ?? undefined,

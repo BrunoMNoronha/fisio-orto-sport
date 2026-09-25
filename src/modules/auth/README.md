@@ -52,7 +52,7 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 ## Proteções do login
 
 - Mensagem genérica e scrypt contra hash fictício (sem enumeração de contas por conteúdo ou tempo).
-- Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min. Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
+- Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min (10 por IP no primeiro acesso). Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
 - A sessão é criada numa transação serializável que confere se o usuário segue ativo e com o mesmo hash de senha (sem sessão residual após uma redefinição simultânea).
 - Em produção o cookie se chama `__Host-session` (Secure, Path=/, sem Domain).
 
@@ -61,6 +61,7 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 - Enquanto **não existe nenhum usuário**, `/login` mostra o formulário de cadastro (`setup-form.tsx`) no lugar do de login. O acesso rápido de desenvolvimento também some, porque não haveria quem listar.
 - `setupFirstAdmin` cria o usuário com perfil **ADMIN** (nome, e-mail e senha; mesma política de senha do cadastro comum) e já abre a sessão, redirecionando para o `?next=` validado.
 - A action **não exige autenticação** — não há quem autentique no primeiro acesso. A única barreira é a tabela estar vazia, reconferida com `count()` **dentro de uma transação serializável** antes do `create`, para que duas requisições simultâneas não criem dois administradores. `P2002` (e-mail já criado por outra requisição) e o conflito de serialização `P2034` são tratados sem vazar detalhes.
+- A action segue acessível por POST depois do primeiro cadastro, então antes do scrypt ela aplica um limite de **10 tentativas por IP a cada 15 min** (`setupAttemptsByIp`) e uma checagem barata (`hasAnyUser()`); com usuário cadastrado, recusa sem gerar hash nem abrir transação. A reconferência dentro da transação continua sendo a que vale.
 - Depois do primeiro usuário, a tela volta ao login normal e novos usuários passam a ser criados só em `/usuarios` (`usuarios:gerir`).
 - **Risco aceito**: entre o deploy e o primeiro cadastro, quem alcançar `/login` cria o Administrador. Em ambiente exposto, faça o primeiro acesso logo após o deploy (ou rode o seed antes de publicar).
 

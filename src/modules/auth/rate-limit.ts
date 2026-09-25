@@ -45,3 +45,5 @@ const WINDOW_MS = 15 * 60 * 1000;
 // Falhas por e-mail (força bruta numa conta) e tentativas por IP (varredura e custo do scrypt).
 export const loginFailuresByEmail = new RateLimiter(5, WINDOW_MS);
 export const loginAttemptsByIp = new RateLimiter(30, WINDOW_MS);
+// Cadastro do primeiro Administrador: action pública e com scrypt, então também limitada por IP.
+export const setupAttemptsByIp = new RateLimiter(10, WINDOW_MS);

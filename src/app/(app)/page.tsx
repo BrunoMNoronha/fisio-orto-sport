@@ -18,7 +18,7 @@ import { listPatients } from "@/modules/pacientes/queries";
 import { listPatientsSchema } from "@/modules/pacientes/validation";
 import { formatTime } from "./agenda/format";
 
-const modulos = ["Planos terapêuticos", "Sessões e evolução clínica"];
+const modulos = ["Sessões e evolução clínica"];
 
 export default async function Home() {
   const user = await requireUser();

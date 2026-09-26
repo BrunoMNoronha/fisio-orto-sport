@@ -2,7 +2,7 @@
 
 Registros clínicos do paciente. **Dados pessoais sensíveis (LGPD art. 11)**: toda leitura exige `clinico:ler` e toda escrita exige `clinico:gerir`, checados no servidor.
 
-Implementado até agora: **anamnese subjetiva** (Fase 2b) e **avaliação fisioterapêutica inicial** (Fase 4, issue #24). Plano terapêutico, sessões, evolução e reavaliação continuam para depois.
+Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisioterapêutica inicial** (Fase 4, issue #24) e **plano terapêutico** com revisões (Fase 4, issue #25). Sessões, evolução, reavaliação e alta continuam para depois.
 
 ## Peças
 
@@ -15,6 +15,10 @@ Implementado até agora: **anamnese subjetiva** (Fase 2b) e **avaliação fisiot
 | `assessment-validation.ts` | Schemas zod da avaliação (criação com `anamnesisId`; edição com `version`), limites (`ASSESSMENT_LIMITS`, iguais aos `@db.VarChar`), rótulos por campo e `diffAssessment()` (campos alterados, datas em AAAA-MM-DD). |
 | `assessment-queries.ts` (`server-only`) | `listAssessments()` (10 por página), `getAssessment()` e `listAssessmentChanges()`, com `clinico:ler` e filtro pelo paciente. A listagem traz só metadados. |
 | `assessment-actions.ts` | `createAssessment(patientId, …)` e `updateAssessment(patientId, assessmentId, …)`, ambas com `clinico:gerir`. |
+| `plan-validation.ts` | Schemas do plano (criação com `assessmentId`; revisão com `kind`, `reason` e `baseRevision`; encerramento e reabertura), limites (`PLAN_LIMITS`), rótulos e `samePlanContent()`. |
+| `plan-queries.ts` (`server-only`) | `listPlans()` (10 por página, só metadados), `getPlan()` (origem e revisão vigente), `getPlanRevision()`, `listPlanRevisions()`, `listPlanStatusChanges()` e `listPlanOriginOptions()`. Todas filtram pelo paciente. |
+| `plan-actions.ts` | `createPlan`, `revisePlan` e `changePlanStatus`, todas com `clinico:gerir`. |
+| `src/app/(app)/pacientes/[id]/planos/**` | Lista, novo (`/novo?avaliacao=<id>`), detalhe (`/[planoId]`), nova revisão (`/[planoId]/revisar`) e revisão específica (`/[planoId]/revisoes/[numero]`). |
 | `src/app/(app)/pacientes/[id]/avaliacoes/**` | Lista (`/avaliacoes?pagina=N`), nova (`/nova`), detalhe (`/[avaliacaoId]`) e edição (`/[avaliacaoId]/editar`). |
 | `src/app/(app)/pacientes/[id]/anamnese/**` | Versão vigente (`/anamnese`), nova versão (`/nova`), histórico (`/historico`) e versão específica (`/historico/[versaoId]`). |
 
@@ -51,6 +55,22 @@ Decisões de Bruno (D1–D3 de 18/09 e respostas às pendências da #24, em 26/0
 - **Integração** (`test/integration/avaliacao.integration.ts`): cobre a FK composta, os CHECKs, a preservação de contexto e autoria, o `Restrict`, a inativação concorrente, a edição concorrente com a mesma versão e a unicidade do histórico.
 - **Fora do escopo:** plano terapêutico, sessões, evolução, reavaliação, impressão e PDF da avaliação, anexos, assinatura digital e backfill de CREFITO nas anamneses antigas (D1 prevê isso, mas esta entrega não mexe na anamnese).
 
+## Plano terapêutico (`TherapyPlan`)
+
+Decisões de Bruno para a #25, em 26/09 (as de autoria, CREFITO e paciente inativo seguem a #24):
+
+- **Origem:** todo plano decorre de uma avaliação inicial do mesmo paciente. A FK composta `(assessmentId, patientId) → Assessment(id, patientId)` garante isso no banco, e a action também confere e responde no campo. O plano guarda `assessmentVersion`, a versão exata da avaliação usada. Edições posteriores da avaliação não mudam o plano, e o detalhe avisa quando a avaliação ficou mais nova. Criar ou revisar o plano **nunca** altera a avaliação. Os objetivos da avaliação só entram no plano quando o profissional clica em "Usar estes objetivos no plano", e nada é sincronizado depois.
+- **Campos:** data clínica do plano, objetivos terapêuticos e conduta são **obrigatórios**. Técnicas, exercícios, quantidade prevista de sessões (inteiro de 1 a 100), frequência, critério ou previsão de reavaliação e observações são opcionais. Frequência e reavaliação são **texto livre**, sem automação.
+- **Datas:** a data clínica não pode ser futura (`America/Sao_Paulo`) nem anterior à data da avaliação de origem. Lançamento retroativo é permitido. `createdAt` é técnico.
+- **Quantidade prevista** é só informativa: não é saldo, pacote nem autorização de convênio. Não bloqueia atendimento nem encerra o plano. Salvar um plano não agenda, não cobra e não dá alta.
+- **Revisões imutáveis:** o conteúdo fica em `TherapyPlanRevision`. A revisão 1 é `INICIAL`, sem motivo. Cada correção cria a revisão seguinte, com tipo `CORRECAO` (erro de registro) ou `MUDANCA_CLINICA` (mudança do planejamento) e motivo obrigatório. Nenhuma revisão é alterada ou apagada. A **vigente** é a de número `TherapyPlan.currentRevision`, sempre a maior. Revisão idêntica à vigente é recusada. Sessões futuras devem apontar para a revisão efetivamente usada, que tem id estável e `(planId, number)` único. Uma reavaliação futura vai originar uma nova revisão; nesta entrega, o primeiro plano não exige reavaliação.
+- **Concorrência de revisões:** o formulário envia a `baseRevision` carregada. O `UPDATE TherapyPlan ... WHERE currentRevision = base AND status = 'ATIVO'` só avança se ninguém revisou nem encerrou antes, e a unicidade `(planId, number)` é a segunda barreira. Se perder a corrida, nada é gravado e a mensagem pede para recarregar a página.
+- **Vários planos por paciente** (um por demanda), com estado `ATIVO` ou `ENCERRADO`. Encerrar e reabrir exigem motivo e ficam em `TherapyPlanStatusChange`, com assinatura. **Encerrar não é alta clínica.** Plano encerrado não recebe revisão até ser reaberto. Admin e Fisioterapeuta podem fazer as duas coisas.
+- **Paciente inativo:** consulta liberada, mas nada de criar, revisar, encerrar ou reabrir. Usa o mesmo `FOR UPDATE` do paciente (`assertPatientCanReceivePlan`).
+- **Autoria:** nome e CREFITO (anulável) do usuário autenticado, gravados no plano, em cada revisão e em cada mudança de estado. Vêm de `signature()` em `rules.ts`, dentro da transação.
+- **CHECKs manuais** (migração `plano_terapeutico`): `TherapyPlan_assessmentVersion_positive`, `TherapyPlan_currentRevision_positive`, `TherapyPlanRevision_kind_matches_number` (INICIAL só na 1ª e sem motivo; as demais com motivo), objetivos e conduta não vazios, `TherapyPlanRevision_plannedSessions_range` (1–100), `TherapyPlanStatusChange_changes_status`, motivo e nomes não vazios. A migração também cria o índice único `Assessment(id, patientId)`, alvo da FK composta. É uma mudança só aditiva.
+- **Integração** (`test/integration/plano.integration.ts`): cobre a FK composta, os CHECKs, o `Restrict`, a origem preservada após editar a avaliação, revisões concorrentes, encerramento concorrente com revisão e inativação concorrente.
+
 ## Privacidade
 
 - Nenhum dado clínico em URL, metadata de página (títulos genéricos), logs ou mensagens de erro. As mensagens nunca ecoam o conteúdo enviado.
@@ -65,9 +85,11 @@ Decisões de Bruno (D1–D3 de 18/09 e respostas às pendências da #24, em 26/0
 | Registrar nova versão (`clinico:gerir`) | ✓ | — | ✓ |
 | Ver avaliações, detalhe e histórico (`clinico:ler`) | ✓ | — | ✓ |
 | Criar e editar avaliação (`clinico:gerir`) | ✓ | — | ✓ |
+| Ver planos, revisões e histórico de estado (`clinico:ler`) | ✓ | — | ✓ |
+| Criar, revisar, encerrar e reabrir plano (`clinico:gerir`) | ✓ | — | ✓ |
 
-A Recepção não vê as abas Anamnese e Avaliações nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
+A Recepção não vê as abas Anamnese, Avaliações e Planos nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
 
 ## Fora do escopo (por ora)
 
-Conduta/plano, sessões, evolução e reavaliação (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+Sessões, evolução, reavaliação e alta (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.

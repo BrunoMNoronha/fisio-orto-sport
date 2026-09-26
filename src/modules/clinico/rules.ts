@@ -30,9 +30,25 @@ export async function assertPatientCanReceiveAssessment(tx: Tx, patientId: strin
   await assertPatientActive(tx, patientId, PATIENT_INACTIVE_ASSESSMENT);
 }
 
+export const PATIENT_INACTIVE_PLAN =
+  "Paciente inativo não pode receber novo plano, revisão nem mudança de estado do plano. Reative o cadastro antes.";
+
+// Criar, revisar, encerrar e reabrir plano: mesma regra (e mesmo lock) da anamnese e da avaliação.
+export async function assertPatientCanReceivePlan(tx: Tx, patientId: string) {
+  await assertPatientActive(tx, patientId, PATIENT_INACTIVE_PLAN);
+}
+
 async function assertPatientActive(tx: Tx, patientId: string, inactiveMessage: string) {
   const [patient] = await tx.$queryRaw<{ status: PatientStatus }[]>`
     SELECT "status" FROM "Patient" WHERE "id" = ${patientId} FOR UPDATE`;
   if (!patient) throw new ClinicoRuleError(PATIENT_NOT_FOUND);
   if (patient.status !== "ATIVO") throw new ClinicoRuleError(inactiveMessage);
+}
+
+// Assinatura histórica (D1/D3): nome e CREFITO lidos do usuário autenticado na própria transação,
+// nunca do formulário. CREFITO é nulo para quem não o tem (ex.: Administrador).
+export async function signature(tx: Tx, userId: string) {
+  const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true, crefito: true } });
+  if (!user) throw new ClinicoRuleError("Acesso negado.");
+  return { name: user.name, crefito: user.crefito };
 }

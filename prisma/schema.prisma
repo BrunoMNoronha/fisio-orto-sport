@@ -18,29 +18,32 @@ enum Role {
 }
 
 model User {
-  id                         String             @id @default(cuid())
+  id                         String                    @id @default(cuid())
   name                       String
   // Sempre gravado normalizado (trim + minúsculas).
-  email                      String             @unique
+  email                      String                    @unique
   passwordHash               String
   role                       Role
   // Registro no conselho (CREFITO). Obrigatório no formulário para FISIOTERAPEUTA; nulo nos
   // demais perfis. Texto curto normalizado (trim + maiúsculas), único quando informado.
-  crefito                    String?            @unique @db.VarChar(20)
-  active                     Boolean            @default(true)
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @updatedAt
+  crefito                    String?                   @unique @db.VarChar(20)
+  active                     Boolean                   @default(true)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
   sessions                   Session[]
-  patientsCreated            Patient[]          @relation("PatientCreatedBy")
-  patientsUpdated            Patient[]          @relation("PatientUpdatedBy")
+  patientsCreated            Patient[]                 @relation("PatientCreatedBy")
+  patientsUpdated            Patient[]                 @relation("PatientUpdatedBy")
   // Agenda: o próprio usuário FISIOTERAPEUTA ativo é o profissional atendente.
-  appointmentsAsProfessional Appointment[]      @relation("AppointmentProfessional")
-  appointmentsCreated        Appointment[]      @relation("AppointmentCreatedBy")
-  appointmentsUpdated        Appointment[]      @relation("AppointmentUpdatedBy")
-  appointmentsCancelled      Appointment[]      @relation("AppointmentCancelledBy")
+  appointmentsAsProfessional Appointment[]             @relation("AppointmentProfessional")
+  appointmentsCreated        Appointment[]             @relation("AppointmentCreatedBy")
+  appointmentsUpdated        Appointment[]             @relation("AppointmentUpdatedBy")
+  appointmentsCancelled      Appointment[]             @relation("AppointmentCancelledBy")
   anamnesesAuthored          Anamnesis[]
   assessmentsAuthored        Assessment[]
   assessmentChangesAuthored  AssessmentChange[]
+  therapyPlansAuthored       TherapyPlan[]
+  planRevisionsAuthored      TherapyPlanRevision[]
+  planStatusChangesAuthored  TherapyPlanStatusChange[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -102,6 +105,7 @@ model Patient {
   appointments         Appointment[]
   anamneses            Anamnesis[]
   assessments          Assessment[]
+  therapyPlans         TherapyPlan[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -216,7 +220,10 @@ model Assessment {
   anamnesis             Anamnesis          @relation(fields: [anamnesisId, patientId], references: [id, patientId], onDelete: Restrict)
   author                User               @relation(fields: [authorId], references: [id], onDelete: Restrict)
   changes               AssessmentChange[]
+  therapyPlans          TherapyPlan[]
 
+  // Alvo da FK composta de TherapyPlan: a avaliação de origem é sempre do mesmo paciente.
+  @@unique([id, patientId])
   @@index([patientId, assessmentDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([anamnesisId, patientId])
   @@index([authorId])
@@ -241,4 +248,95 @@ model AssessmentChange {
 
   @@unique([assessmentId, version, field])
   @@index([editorId])
+}
+
+enum TherapyPlanStatus {
+  ATIVO
+  ENCERRADO
+}
+
+enum TherapyPlanRevisionKind {
+  INICIAL
+  CORRECAO
+  MUDANCA_CLINICA
+}
+
+// Plano terapêutico (Fase 4, dado clínico sensível, protegido por `clinico:*`). Decorre de uma
+// avaliação inicial do mesmo paciente (FK composta) e guarda a versão exata da avaliação usada
+// (assessmentVersion). O conteúdo fica em revisões imutáveis (TherapyPlanRevision); a vigente é a
+// de número currentRevision, que também serve à checagem otimista de revisões concorrentes.
+// Vários planos por paciente. Estado ATIVO/ENCERRADO (encerrar não é alta clínica), com as
+// mudanças registradas em TherapyPlanStatusChange. Não há exclusão.
+// CHECKs manuais na migração: assessmentVersion >= 1, currentRevision >= 1, nome do autor não vazio.
+model TherapyPlan {
+  id                    String                    @id @default(cuid())
+  patientId             String
+  assessmentId          String
+  assessmentVersion     Int
+  status                TherapyPlanStatus         @default(ATIVO)
+  currentRevision       Int                       @default(1)
+  authorId              String
+  authorNameSnapshot    String                    @db.VarChar(120)
+  authorCrefitoSnapshot String?                   @db.VarChar(20)
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                  @default(now()) @db.Timestamptz(3)
+  patient               Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  assessment            Assessment                @relation(fields: [assessmentId, patientId], references: [id, patientId], onDelete: Restrict)
+  author                User                      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  revisions             TherapyPlanRevision[]
+  statusChanges         TherapyPlanStatusChange[]
+
+  @@index([patientId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([assessmentId, patientId])
+  @@index([authorId])
+}
+
+// Revisão imutável do plano: o conteúdo completo em cada número (1 = INICIAL). Nunca é alterada;
+// corrigir ou mudar o plano cria a revisão seguinte, com tipo e motivo. Sessões futuras apontarão
+// para a revisão efetivamente usada. planDate é a data clínica da revisão (não futura em
+// America/Sao_Paulo e não anterior à data da avaliação de origem); createdAt é técnico.
+// CHECKs manuais na migração: number >= 1, INICIAL só no número 1 e sem motivo, demais com motivo,
+// objetivos e conduta não vazios, plannedSessions entre 1 e 100 quando informado.
+model TherapyPlanRevision {
+  id                    String                  @id @default(cuid())
+  planId                String
+  number                Int
+  kind                  TherapyPlanRevisionKind
+  reason                String?                 @db.VarChar(500)
+  planDate              DateTime                @db.Date
+  goals                 String                  @db.VarChar(2000)
+  conduct               String                  @db.VarChar(4000)
+  techniques            String?                 @db.VarChar(4000)
+  exercises             String?                 @db.VarChar(4000)
+  plannedSessions       Int?                    @db.SmallInt
+  frequency             String?                 @db.VarChar(200)
+  reassessment          String?                 @db.VarChar(500)
+  notes                 String?                 @db.VarChar(4000)
+  authorId              String
+  authorNameSnapshot    String                  @db.VarChar(120)
+  authorCrefitoSnapshot String?                 @db.VarChar(20)
+  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
+  plan                  TherapyPlan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  author                User                    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@unique([planId, number])
+  @@index([authorId])
+}
+
+// Encerramento e reabertura do plano, com motivo e assinatura. Append-only.
+model TherapyPlanStatusChange {
+  id                    String            @id @default(cuid())
+  planId                String
+  fromStatus            TherapyPlanStatus
+  toStatus              TherapyPlanStatus
+  reason                String            @db.VarChar(500)
+  authorId              String
+  authorNameSnapshot    String            @db.VarChar(120)
+  authorCrefitoSnapshot String?           @db.VarChar(20)
+  createdAt             DateTime          @default(now()) @db.Timestamptz(3)
+  plan                  TherapyPlan       @relation(fields: [planId], references: [id], onDelete: Restrict)
+  author                User              @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([planId, createdAt])
+  @@index([authorId])
 }

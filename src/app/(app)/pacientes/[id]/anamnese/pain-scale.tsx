@@ -54,6 +54,7 @@ export function PainScale({
             value=""
             checked={value === ""}
             onChange={() => onChange("")}
+            aria-label="Não informado"
             className="peer sr-only"
           />
           <span className={cn(option, "px-3 font-medium")}>Não informado</span>

@@ -79,10 +79,14 @@ export function AgendaDayGrid({ date, items, professionals, canManage, now = new
                   <Link
                     key={hour}
                     href={`/agenda/novo?${newQuery(hour)}`}
-                    aria-label={`Agendar às ${pad(hour)} com ${professional.name}`}
                     className="block border-t border-border/60 transition-colors first:border-t-0 hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none"
                     style={{ height: HOUR_HEIGHT_PX }}
-                  />
+                  >
+                    {/* Texto real (não só aria-label): o link vazio não tem nome em todas as tecnologias assistivas. */}
+                    <span className="sr-only">
+                      Agendar às {pad(hour)} com {professional.name}
+                    </span>
+                  </Link>
                 ) : (
                   <div
                     key={hour}

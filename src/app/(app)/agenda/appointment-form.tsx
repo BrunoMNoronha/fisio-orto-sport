@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { AppointmentActionState } from "@/modules/agenda/actions";
+import { startsInPast } from "@/modules/agenda/validation";
 
 type Action = (prev: AppointmentActionState, formData: FormData) => Promise<AppointmentActionState>;
 type Option = { id: string; label: string };
@@ -39,6 +40,17 @@ function a11y(id: string, errors?: string[]) {
   } as const;
 }
 
+// Relógio arredondado ao minuto, só no cliente: no servidor é null (sem aviso), o que evita
+// divergência de hidratação. O valor é relido a cada renderização (ex.: ao editar um campo).
+const MINUTE_MS = 60_000;
+const noSubscribe = () => () => {};
+function useClientMinute() {
+  return useSyncExternalStore(
+    noSubscribe,
+    () => Math.floor(Date.now() / MINUTE_MS) * MINUTE_MS,
+    () => null,
+  );
+}
 
 // Criação (com paciente e observação) ou reagendamento (paciente fixo; muda horário e profissional).
 export function AppointmentForm({
@@ -63,6 +75,8 @@ export function AppointmentForm({
   const [values, setValues] = useState(initial);
   const [state, formAction, pending] = useActionState(action, undefined);
   const errors = state?.fieldErrors;
+  const minute = useClientMinute();
+  const past = minute !== null && startsInPast(values.date, values.startTime, new Date(minute));
 
   function field(name: keyof AppointmentFormValues) {
     return {
@@ -125,6 +139,15 @@ export function AppointmentForm({
         {input("startTime", "Início *", "time")}
         {input("endTime", "Fim *", "time")}
       </div>
+
+      {past && (
+        <Alert aria-live="polite">
+          <AlertDescription>
+            O início escolhido já passou. O agendamento será registrado mesmo assim (lançamento retroativo);
+            confira a data e o horário se não era essa a intenção.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {patients && (
         <div className="flex flex-col gap-2">

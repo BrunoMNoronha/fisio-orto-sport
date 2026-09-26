@@ -23,6 +23,7 @@ const LABELS: Record<string, string> = {
   nova: "Nova versão",
   historico: "Histórico",
   agendamentos: "Agendamentos",
+  documentos: "Documentos",
 }
 
 export function AppBreadcrumb() {

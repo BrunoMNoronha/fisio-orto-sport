@@ -180,6 +180,13 @@ export function isValidTime(value: string) {
   return TIME_RE.test(value);
 }
 
+// Início já passado (no fuso da clínica). Não é erro: permite o lançamento retroativo, e o
+// formulário apenas avisa. Data ou hora incompletas não contam como passado.
+export function startsInPast(date: string, startTime: string, now = new Date()) {
+  if (!isValidDate(date) || !isValidTime(startTime)) return false;
+  return toInstant(date, startTime).getTime() < now.getTime();
+}
+
 // Segunda-feira da semana que contém `date` (semana de segunda a domingo).
 export function startOfWeek(date: string) {
   const [y, m, d] = date.split("-").map(Number);

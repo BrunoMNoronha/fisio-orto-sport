@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ageOn,
   formatCpf,
@@ -5,6 +7,9 @@ import {
   isMinor,
   isValidCpf,
   listPatientsSchema,
+  maskCpf,
+  maskPhone,
+  normalizeSearch,
   patientSchema,
   setPatientStatusSchema,
   updatePatientSchema,
@@ -230,5 +235,53 @@ describe("parâmetros da listagem", () => {
       status: "INATIVO",
       page: 3,
     });
+  });
+});
+
+describe("busca sem acento", () => {
+  it("normalizeSearch remove acentos e passa para minúsculas", () => {
+    expect(normalizeSearch("Paginação Fictício")).toBe("paginacao ficticio");
+    expect(normalizeSearch("ÂNGELA CONCEIÇÃO")).toBe("angela conceicao");
+    expect(normalizeSearch("João Müller")).toBe("joao muller");
+  });
+
+  it("coincide com a tabela de translate da função SQL patient_search_name", () => {
+    const dir = join(process.cwd(), "prisma", "migrations");
+    const migration = readdirSync(dir).find((name) => name.endsWith("_busca_sem_acento"));
+    const sql = readFileSync(join(dir, migration!, "migration.sql"), "utf8");
+    const [, from, to] = /translate\(\s*value,\s*'([^']+)',\s*'([^']+)'/.exec(sql)!;
+    expect([...from]).toHaveLength([...to].length);
+    [...from].forEach((char, index) => expect(normalizeSearch(char)).toBe(to[index].toLowerCase()));
+  });
+});
+
+describe("máscaras de digitação", () => {
+  it("CPF progressivo, limitado a 11 dígitos", () => {
+    expect(maskCpf("")).toBe("");
+    expect(maskCpf("111")).toBe("111");
+    expect(maskCpf("1114")).toBe("111.4");
+    expect(maskCpf("1114447")).toBe("111.444.7");
+    expect(maskCpf("11144477735")).toBe("111.444.777-35");
+    expect(maskCpf("111.444.777-3599")).toBe("111.444.777-35");
+  });
+
+  it("telefone progressivo: fixo 4+4, celular 5+4", () => {
+    expect(maskPhone("")).toBe("");
+    expect(maskPhone("1")).toBe("(1");
+    expect(maskPhone("1198")).toBe("(11) 98");
+    expect(maskPhone("1133334444")).toBe("(11) 3333-4444");
+    expect(maskPhone("11987654321")).toBe("(11) 98765-4321");
+    expect(maskPhone("(11) 98765-43210")).toBe("(11) 98765-4321");
+  });
+
+  it("valor mascarado continua válido no schema (o servidor guarda só dígitos)", () => {
+    const result = patientSchema.safeParse({
+      fullName: "Ana Souza",
+      birthDate: "1990-05-10",
+      sex: "FEMININO",
+      cpf: maskCpf(VALID_CPF),
+      phone: maskPhone("11987654321"),
+    });
+    expect(result.success && [result.data.cpf, result.data.phone]).toEqual([VALID_CPF, "11987654321"]);
   });
 });

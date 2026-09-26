@@ -9,6 +9,7 @@ import {
   parseAgendaView,
   rescheduleSchema,
   startOfWeek,
+  startsInPast,
   toInstant,
   toLocalDate,
   toLocalTime,
@@ -203,5 +204,22 @@ describe("startOfWeek e isValidTime", () => {
     expect(isValidTime("08:00")).toBe(true);
     expect(isValidTime("24:00")).toBe(false);
     expect(isValidTime("8:00")).toBe(false);
+  });
+});
+
+describe("startsInPast", () => {
+  // 18/09/2026 15:30 em São Paulo (UTC−3).
+  const now = new Date("2026-09-18T18:30:00Z");
+
+  it("compara no fuso da clínica", () => {
+    expect(startsInPast("2026-09-18", "15:00", now)).toBe(true);
+    expect(startsInPast("2026-09-18", "15:30", now)).toBe(false);
+    expect(startsInPast("2026-09-18", "16:00", now)).toBe(false);
+    expect(startsInPast("2026-09-17", "23:00", now)).toBe(true);
+  });
+
+  it("data ou hora incompletas não são passado", () => {
+    expect(startsInPast("", "15:00", now)).toBe(false);
+    expect(startsInPast("2026-09-18", "", now)).toBe(false);
   });
 });

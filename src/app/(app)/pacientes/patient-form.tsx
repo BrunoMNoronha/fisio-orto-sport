@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { PatientActionState } from "@/modules/pacientes/actions";
-import { OCCUPATION_MAX, SEXES, SEX_LABELS, isMinor } from "@/modules/pacientes/validation";
+import { OCCUPATION_MAX, SEXES, SEX_LABELS, isMinor, maskCpf, maskPhone } from "@/modules/pacientes/validation";
 
 type Action = (prev: PatientActionState, formData: FormData) => Promise<PatientActionState>;
 
@@ -66,6 +66,12 @@ function birthDateIsMinor(value: string) {
   return !Number.isNaN(date.getTime()) && isMinor(date);
 }
 
+// O servidor guarda só os dígitos; a máscara é apenas de exibição.
+const MASKS: Partial<Record<keyof PatientFormValues, (value: string) => string>> = {
+  cpf: maskCpf,
+  phone: maskPhone,
+  guardianPhone: maskPhone,
+};
 
 // Campos controlados: os valores sobrevivem ao reset do formulário após uma validação com erro.
 export function PatientForm({
@@ -87,11 +93,14 @@ export function PatientForm({
   const minor = birthDateIsMinor(values.birthDate);
 
   function field(name: keyof PatientFormValues) {
+    const mask = MASKS[name];
     return {
       name,
       value: values[name],
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-        setValues((current) => ({ ...current, [name]: event.target.value })),
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const value = mask ? mask(event.target.value) : event.target.value;
+        setValues((current) => ({ ...current, [name]: value }));
+      },
     };
   }
 
@@ -139,7 +148,7 @@ export function PatientForm({
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-2 text-base font-medium">Contato</legend>
-        {text("phone", "Telefone *", { type: "tel", inputMode: "tel", required: true, placeholder: "(00) 00000-0000" })}
+        {text("phone", "Telefone *", { type: "tel", inputMode: "tel", required: true, placeholder: "(00) 00000-0000", maxLength: 15 })}
         {text("email", "E-mail (opcional)", { type: "email" })}
         <div className="flex flex-col gap-2 sm:col-span-2">
           <Label htmlFor="paciente-address">Endereço (opcional)</Label>
@@ -160,7 +169,13 @@ export function PatientForm({
             Paciente menor de 18 anos: informe o nome e o telefone do responsável.
           </p>
           {text("guardianName", "Nome do responsável *", { required: true, maxLength: 120 })}
-          {text("guardianPhone", "Telefone do responsável *", { type: "tel", inputMode: "tel", required: true })}
+          {text("guardianPhone", "Telefone do responsável *", {
+            type: "tel",
+            inputMode: "tel",
+            required: true,
+            placeholder: "(00) 00000-0000",
+            maxLength: 15,
+          })}
           {text("guardianRelationship", "Parentesco ou relação (opcional)", { maxLength: 60 })}
         </fieldset>
       )}

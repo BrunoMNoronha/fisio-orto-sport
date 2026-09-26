@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { EMPTY_PATIENT, PatientForm } from "../patient-form";
 
 function setup(initial = EMPTY_PATIENT) {
@@ -32,5 +32,17 @@ describe("PatientForm — cadastro complementar (Fase 2c)", () => {
     setup({ ...EMPTY_PATIENT, sex: "MASCULINO", occupation: "Motorista" });
     expect((screen.getByLabelText("Sexo *") as HTMLSelectElement).value).toBe("MASCULINO");
     expect((screen.getByLabelText("Profissão (opcional)") as HTMLInputElement).value).toBe("Motorista");
+  });
+});
+
+describe("PatientForm — máscaras de CPF e telefone", () => {
+  it("aplica a máscara enquanto digita", () => {
+    setup();
+    const cpf = screen.getByLabelText("CPF (opcional)") as HTMLInputElement;
+    const phone = screen.getByLabelText("Telefone *") as HTMLInputElement;
+    fireEvent.change(cpf, { target: { value: "11144477735" } });
+    fireEvent.change(phone, { target: { value: "11987654321" } });
+    expect(cpf.value).toBe("111.444.777-35");
+    expect(phone.value).toBe("(11) 98765-4321");
   });
 });

@@ -25,16 +25,18 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 3. Em Server Actions e Route Handlers, chame `await assertPermission("modulo:acao")` antes de qualquer acesso a dados.
 4. Na UI, esconda botões com `can(user.role, ...)`, sempre além da checagem no servidor, nunca no lugar dela.
 
-## Matriz inicial (SUPOSIÇÃO a validar, ver docs/PROJECT.md)
+## Matriz vigente (a do Fisioterapeuta confirmada na issue #31)
 
 | Permissão | Administrador | Recepção | Fisioterapeuta |
 |---|:-:|:-:|:-:|
 | `usuarios:ler` / `usuarios:gerir` | ✓ | — | — |
 | `pacientes:ler` | ✓ | ✓ | ✓ |
-| `pacientes:gerir` | ✓ | ✓ | — |
+| `pacientes:gerir` | ✓ | ✓ | ✓ |
 | `agenda:ler` | ✓ | ✓ | ✓ |
-| `agenda:gerir` | ✓ | ✓ | — |
+| `agenda:gerir` | ✓ | ✓ | ✓ |
 | `clinico:ler` / `clinico:gerir` | ✓ | — | ✓ (todos os pacientes) |
+
+Contrato: toda permissão da Recepção também é do Fisioterapeuta, que soma a ela o clínico. Isso é testado em `__tests__/permissions.test.ts`. Não use `PERMISSIONS` para o Fisioterapeuta, porque isso daria `usuarios:*`. A autorização é resolvida a cada requisição a partir do usuário da sessão (`dal.ts`), então sessões já abertas recebem a matriz nova sem novo login.
 
 ## CREFITO do fisioterapeuta (Fase 2c)
 

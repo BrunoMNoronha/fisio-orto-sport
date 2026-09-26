@@ -105,12 +105,18 @@ describe("opções", () => {
     );
   });
 
-  it("pacientes para agendar: só ativos e só com agenda:gerir", async () => {
-    await expect(listActivePatientOptions()).rejects.toThrow("redirect");
-    currentRole.current = "RECEPCAO";
+  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("pacientes para agendar: só ativos, com agenda:gerir (%s)", async (role) => {
+    currentRole.current = role;
     prismaMock.patient.findMany.mockResolvedValue([]);
     await listActivePatientOptions();
+    expect(requirePermission).toHaveBeenCalledWith("agenda:gerir");
     expect(prismaMock.patient.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "ATIVO" } }));
+  });
+
+  it("pacientes para agendar: sem perfil é bloqueado antes do banco", async () => {
+    currentRole.current = null;
+    await expect(listActivePatientOptions()).rejects.toThrow("redirect");
+    expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
   });
 });
 

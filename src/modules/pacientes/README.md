@@ -37,12 +37,14 @@ A aba **Documentos** (`[id]/documentos`) lista os documentos e abre cada um em n
 | Cartão de frequência | `cartao-frequencia` | `pacientes:ler` | 4 cartões por folha (2×2), com o nome preenchido, convênio em branco (não há o campo) e 20 sessões. |
 | Ficha de anamnese | `anamnese` | `clinico:ler` | Anamnese vigente, com assinatura do autor e o CREFITO dele. Sem anamnese, dá 404 e o card da aba aparece como indisponível. |
 
-## Permissões (matriz vigente, sem alteração)
+## Permissões
 
 | Ação | Administrador | Recepção | Fisioterapeuta |
 |---|:-:|:-:|:-:|
 | Listar e consultar (`pacientes:ler`) | ✓ | ✓ | ✓ |
-| Criar, editar, inativar e reativar (`pacientes:gerir`) | ✓ | ✓ | — |
+| Criar, editar, inativar e reativar (`pacientes:gerir`) | ✓ | ✓ | ✓ (desde a #31) |
+
+O autor gravado (`createdById`, `updatedById`) é sempre o usuário logado, qualquer que seja o perfil.
 
 ## Fora do escopo (por ora)
 

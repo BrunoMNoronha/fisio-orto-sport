@@ -5,7 +5,8 @@ import { PERMISSIONS, ROLES, can, type Permission } from "../permissions";
 const expected: Record<Role, Permission[]> = {
   ADMIN: [...PERMISSIONS],
   RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir"],
-  FISIOTERAPEUTA: ["pacientes:ler", "agenda:ler", "clinico:ler", "clinico:gerir"],
+  // Issue #31: o Fisioterapeuta recebe tudo o que a Recepção tem, além do clínico.
+  FISIOTERAPEUTA: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "clinico:ler", "clinico:gerir"],
 };
 
 describe("can()", () => {
@@ -17,6 +18,17 @@ describe("can()", () => {
       });
     }
   }
+
+  it("contrato: toda permissão da Recepção também é do Fisioterapeuta", () => {
+    for (const permission of PERMISSIONS) {
+      if (can("RECEPCAO", permission)) expect(can("FISIOTERAPEUTA", permission)).toBe(true);
+    }
+  });
+
+  it("Fisioterapeuta nunca recebe gestão de usuários", () => {
+    expect(can("FISIOTERAPEUTA", "usuarios:ler")).toBe(false);
+    expect(can("FISIOTERAPEUTA", "usuarios:gerir")).toBe(false);
+  });
 
   it("Recepção não acessa dados clínicos nem usuários", () => {
     expect(can("RECEPCAO", "clinico:ler")).toBe(false);

@@ -18,32 +18,37 @@ enum Role {
 }
 
 model User {
-  id                         String                    @id @default(cuid())
-  name                       String
+  id                              String                    @id @default(cuid())
+  name                            String
   // Sempre gravado normalizado (trim + minúsculas).
-  email                      String                    @unique
-  passwordHash               String
-  role                       Role
+  email                           String                    @unique
+  passwordHash                    String
+  role                            Role
   // Registro no conselho (CREFITO). Obrigatório no formulário para FISIOTERAPEUTA; nulo nos
   // demais perfis. Texto curto normalizado (trim + maiúsculas), único quando informado.
-  crefito                    String?                   @unique @db.VarChar(20)
-  active                     Boolean                   @default(true)
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
-  sessions                   Session[]
-  patientsCreated            Patient[]                 @relation("PatientCreatedBy")
-  patientsUpdated            Patient[]                 @relation("PatientUpdatedBy")
+  crefito                         String?                   @unique @db.VarChar(20)
+  active                          Boolean                   @default(true)
+  createdAt                       DateTime                  @default(now())
+  updatedAt                       DateTime                  @updatedAt
+  sessions                        Session[]
+  patientsCreated                 Patient[]                 @relation("PatientCreatedBy")
+  patientsUpdated                 Patient[]                 @relation("PatientUpdatedBy")
   // Agenda: o próprio usuário FISIOTERAPEUTA ativo é o profissional atendente.
-  appointmentsAsProfessional Appointment[]             @relation("AppointmentProfessional")
-  appointmentsCreated        Appointment[]             @relation("AppointmentCreatedBy")
-  appointmentsUpdated        Appointment[]             @relation("AppointmentUpdatedBy")
-  appointmentsCancelled      Appointment[]             @relation("AppointmentCancelledBy")
-  anamnesesAuthored          Anamnesis[]
-  assessmentsAuthored        Assessment[]
-  assessmentChangesAuthored  AssessmentChange[]
-  therapyPlansAuthored       TherapyPlan[]
-  planRevisionsAuthored      TherapyPlanRevision[]
-  planStatusChangesAuthored  TherapyPlanStatusChange[]
+  appointmentsAsProfessional      Appointment[]             @relation("AppointmentProfessional")
+  appointmentsCreated             Appointment[]             @relation("AppointmentCreatedBy")
+  appointmentsUpdated             Appointment[]             @relation("AppointmentUpdatedBy")
+  appointmentsCancelled           Appointment[]             @relation("AppointmentCancelledBy")
+  anamnesesAuthored               Anamnesis[]
+  assessmentsAuthored             Assessment[]
+  assessmentChangesAuthored       AssessmentChange[]
+  therapyPlansAuthored            TherapyPlan[]
+  planRevisionsAuthored           TherapyPlanRevision[]
+  planStatusChangesAuthored       TherapyPlanStatusChange[]
+  // Atendimento clínico (TreatmentSession) não é a sessão de autenticação (Session).
+  treatmentSessionsAsProfessional TreatmentSession[]        @relation("TreatmentSessionProfessional")
+  treatmentSessionsAuthored       TreatmentSession[]        @relation("TreatmentSessionAuthor")
+  treatmentSessionsInvalidated    TreatmentSession[]        @relation("TreatmentSessionInvalidatedBy")
+  treatmentSessionChangesAuthored TreatmentSessionChange[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -74,38 +79,39 @@ enum Sex {
 // avaliações, sessões) ficam em entidades próprias, protegidas por `clinico:*`.
 // Não há exclusão física; futuras relações com Patient devem usar onDelete: Restrict.
 model Patient {
-  id                   String        @id @default(cuid())
+  id                   String             @id @default(cuid())
   fullName             String
   // Nome sem acentos e em minúsculas, para a busca. Mantido pelo trigger "Patient_search_name"
   // (ver migração busca_sem_acento): a aplicação nunca grava este campo.
-  searchName           String        @default("")
-  birthDate            DateTime      @db.Date
+  searchName           String             @default("")
+  birthDate            DateTime           @db.Date
   // Fase 2c. Obrigatório no formulário; nulo apenas em cadastros anteriores à 2c.
   sex                  Sex?
-  occupation           String?       @db.VarChar(120)
+  occupation           String?            @db.VarChar(120)
   // Só os 11 dígitos. Único quando informado (o Postgres aceita vários NULL).
-  cpf                  String?       @unique
+  cpf                  String?            @unique
   // Só dígitos (DDD + número).
   phone                String
   email                String?
   address              String?
-  status               PatientStatus @default(ATIVO)
+  status               PatientStatus      @default(ATIVO)
   // Observações administrativas; nunca conteúdo clínico.
   notes                String?
   // Responsável legal: obrigatório (nome e telefone) para menores de 18 anos; nulo para adultos.
   guardianName         String?
   guardianPhone        String?
   guardianRelationship String?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
   createdById          String
   updatedById          String
-  createdBy            User          @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy            User          @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy            User               @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy            User               @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   appointments         Appointment[]
   anamneses            Anamnesis[]
   assessments          Assessment[]
   therapyPlans         TherapyPlan[]
+  treatmentSessions    TreatmentSession[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -285,7 +291,10 @@ model TherapyPlan {
   author                User                      @relation(fields: [authorId], references: [id], onDelete: Restrict)
   revisions             TherapyPlanRevision[]
   statusChanges         TherapyPlanStatusChange[]
+  treatmentSessions     TreatmentSession[]
 
+  // Alvo da FK composta de TreatmentSession: o plano é sempre do mesmo paciente.
+  @@unique([id, patientId])
   @@index([patientId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([assessmentId, patientId])
   @@index([authorId])
@@ -318,8 +327,11 @@ model TherapyPlanRevision {
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   plan                  TherapyPlan             @relation(fields: [planId], references: [id], onDelete: Restrict)
   author                User                    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  treatmentSessions     TreatmentSession[]
 
   @@unique([planId, number])
+  // Alvo da FK composta de TreatmentSession: a revisão aplicada é sempre do mesmo plano.
+  @@unique([id, planId])
   @@index([authorId])
 }
 
@@ -339,4 +351,82 @@ model TherapyPlanStatusChange {
 
   @@index([planId, createdAt])
   @@index([authorId])
+}
+
+enum TreatmentSessionStatus {
+  VALIDO
+  INVALIDADO
+}
+
+// Atendimento clínico (sessão de fisioterapia) com a evolução do paciente (Fase 4, dado clínico
+// sensível, `clinico:*`). NÃO é a sessão de autenticação (Session) nem um agendamento: não há vínculo
+// com Appointment nesta fatia. Aponta para o plano (mesmo paciente) e para a revisão exata aplicada
+// (mesmo plano), por FKs compostas; novas revisões não mudam a referência.
+// occurredAt é o momento clínico (não futuro; não antes do início do plano); createdAt é técnico.
+// Responsável (professional*) é um FISIOTERAPEUTA, distinto do autor do lançamento (author*).
+// Editável com histórico por campo (TreatmentSessionChange) e checagem otimista por `version`.
+// Invalidação (lançado por engano) mantém o registro e o tira da contagem. Não há exclusão.
+// idempotencyKey (gerada pelo formulário) impede que um reenvio crie o mesmo atendimento duas vezes.
+// CHECKs manuais: evolução e nomes não vazios, version >= 1, invalidação coerente com o status.
+model TreatmentSession {
+  id                          String                   @id @default(cuid())
+  patientId                   String
+  planId                      String
+  planRevisionId              String
+  occurredAt                  DateTime                 @db.Timestamptz(3)
+  professionalId              String
+  professionalNameSnapshot    String                   @db.VarChar(120)
+  professionalCrefitoSnapshot String?                  @db.VarChar(20)
+  techniques                  String?                  @db.VarChar(4000)
+  exercises                   String?                  @db.VarChar(4000)
+  observations                String?                  @db.VarChar(4000)
+  evolution                   String                   @db.VarChar(4000)
+  nextSteps                   String?                  @db.VarChar(2000)
+  status                      TreatmentSessionStatus   @default(VALIDO)
+  invalidationReason          String?                  @db.VarChar(500)
+  invalidatedAt               DateTime?                @db.Timestamptz(3)
+  invalidatedById             String?
+  invalidatedByNameSnapshot   String?                  @db.VarChar(120)
+  version                     Int                      @default(1)
+  idempotencyKey              String                   @unique @db.VarChar(64)
+  authorId                    String
+  authorNameSnapshot          String                   @db.VarChar(120)
+  authorCrefitoSnapshot       String?                  @db.VarChar(20)
+  createdAt                   DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime                 @default(now()) @db.Timestamptz(3)
+  patient                     Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  plan                        TherapyPlan              @relation(fields: [planId, patientId], references: [id, patientId], onDelete: Restrict)
+  planRevision                TherapyPlanRevision      @relation(fields: [planRevisionId, planId], references: [id, planId], onDelete: Restrict)
+  professional                User                     @relation("TreatmentSessionProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
+  author                      User                     @relation("TreatmentSessionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  invalidatedBy               User?                    @relation("TreatmentSessionInvalidatedBy", fields: [invalidatedById], references: [id], onDelete: Restrict)
+  changes                     TreatmentSessionChange[]
+
+  @@index([patientId, occurredAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([planId, status])
+  @@index([planRevisionId, planId])
+  @@index([professionalId])
+  @@index([authorId])
+  @@index([invalidatedById])
+}
+
+// Histórico do atendimento: uma linha por campo alterado em cada edição (append-only), com o motivo
+// da correção. `version` é a versão do atendimento produzida pela edição.
+model TreatmentSessionChange {
+  id                    String           @id @default(cuid())
+  sessionId             String
+  version               Int
+  field                 String           @db.VarChar(40)
+  previousValue         String?          @db.VarChar(4000)
+  newValue              String?          @db.VarChar(4000)
+  reason                String           @db.VarChar(500)
+  editorId              String
+  editorNameSnapshot    String           @db.VarChar(120)
+  editorCrefitoSnapshot String?          @db.VarChar(20)
+  changedAt             DateTime         @default(now()) @db.Timestamptz(3)
+  session               TreatmentSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  editor                User             @relation(fields: [editorId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, version, field])
+  @@index([editorId])
 }

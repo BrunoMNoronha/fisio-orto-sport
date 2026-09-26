@@ -7,6 +7,7 @@ import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
 import { changePlanStatus } from "@/modules/clinico/plan-actions";
 import { getPlan, listPlanRevisions, listPlanStatusChanges } from "@/modules/clinico/plan-queries";
+import { countValidSessions } from "@/modules/clinico/session-queries";
 import { getPatient } from "@/modules/pacientes/queries";
 import { formatDate } from "../../../format";
 import { formatDateTime, signatureLabel } from "../../avaliacoes/assessment-view";
@@ -25,10 +26,12 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
   const plan = await getPlan(patient.id, planoId);
   if (!plan) notFound();
 
-  const [revisions, statusChanges] = await Promise.all([
+  const [revisions, statusChanges, validSessions] = await Promise.all([
     listPlanRevisions(patient.id, plan.id),
     listPlanStatusChanges(patient.id, plan.id),
+    countValidSessions(patient.id, plan.id),
   ]);
+  const planned = plan.current.plannedSessions;
   const active = patient.status === "ATIVO";
   const canManage = can(actor.role, "clinico:gerir") && active;
   const base = `/pacientes/${patient.id}/planos`;
@@ -48,9 +51,14 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
           {canManage && (
             <div className="flex flex-wrap items-start gap-2">
               {plan.status === "ATIVO" && (
-                <Link href={`${base}/${plan.id}/revisar`} className={buttonVariants()}>
-                  Revisar plano
-                </Link>
+                <>
+                  <Link href={`/pacientes/${patient.id}/sessoes/nova?plano=${plan.id}`} className={buttonVariants()}>
+                    Registrar sessão
+                  </Link>
+                  <Link href={`${base}/${plan.id}/revisar`} className={buttonVariants({ variant: "outline" })}>
+                    Revisar plano
+                  </Link>
+                </>
               )}
               <PlanStatusDialog action={changePlanStatus.bind(null, patient.id, plan.id)} status={plan.status} />
             </div>
@@ -64,7 +72,7 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
         </Alert>
       )}
 
-      <dl className="grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-3">
+      <dl className="grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-1">
           <dt className="text-muted-foreground">Origem</dt>
           <dd>
@@ -83,6 +91,20 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
           <dt className="text-muted-foreground">Revisão vigente</dt>
           <dd>
             {plan.currentRevision} de {revisions.length}
+          </dd>
+        </div>
+        <div className="flex flex-col gap-1">
+          <dt className="text-muted-foreground">Sessões realizadas</dt>
+          <dd>
+            {/* Só atendimentos válidos contam; a previsão é informativa (sem bloqueio, cobrança ou alta). */}
+            {validSessions}
+            {planned ? ` de ${planned} previstas` : ""}
+            {planned && validSessions > planned && (
+              <span className="block text-muted-foreground">Acima da previsão (apenas informativo).</span>
+            )}
+            <Link href={`/pacientes/${patient.id}/sessoes`} className="block underline underline-offset-4">
+              Ver sessões
+            </Link>
           </dd>
         </div>
         <div className="flex flex-col gap-1">

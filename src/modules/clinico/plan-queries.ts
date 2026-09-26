@@ -137,6 +137,13 @@ export async function listPlanStatusChanges(patientId: string, planId: string) {
   });
 }
 
+// Há plano ATIVO? (decide se a tela de sessões oferece o registro.)
+export async function countActivePlans(patientId: string) {
+  await requirePermission("clinico:ler");
+  if (!isPlausibleId(patientId)) return 0;
+  return prisma.therapyPlan.count({ where: { patientId, status: "ATIVO" } });
+}
+
 // Avaliações que podem originar um plano, com diagnóstico e objetivos de referência para o formulário.
 export async function listPlanOriginOptions(patientId: string) {
   await requirePermission("clinico:gerir");

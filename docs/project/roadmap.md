@@ -28,7 +28,7 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 - [x] Cadastro;
 - [x] Consulta;
 - [x] Edição;
-- [ ] Histórico de atendimentos — aguarda Fases 3 e 4;
+- [ ] Histórico de atendimentos — parcial: histórico clínico de sessões por paciente (issue #26); vínculo com a agenda pendente;
 - [x] Anamnese subjetiva versionada;
 - [x] Cadastro complementar da ficha: sexo, profissão e CREFITO;
 - [x] Documentos de impressão: termo, cartão de frequência e ficha de anamnese, gerados sem armazenamento.
@@ -55,8 +55,8 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 
 - [x] Avaliação inicial (issue #24: criação, lista, detalhe e edição com histórico por campo; implementada e testada, publicação pendente);
 - [x] Plano terapêutico (issue #25: criação a partir da avaliação, revisões imutáveis, encerrar e reabrir; implementado e testado, publicação pendente);
-- [ ] Registro de sessões;
-- [ ] Evoluções;
+- [x] Registro de sessões (issue #26: atendimento ligado à revisão exata do plano, correção com histórico, invalidação, contagem de realizados; implementado e testado, publicação pendente);
+- [x] Evoluções — por atendimento (issue #26); evolução independente de atendimento e visão de progresso ficam fora;
 - [ ] Reavaliação.
 
 ## Fase 5 — Financeiro

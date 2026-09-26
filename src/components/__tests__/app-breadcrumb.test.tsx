@@ -37,4 +37,11 @@ describe("AppBreadcrumb", () => {
     render(<AppBreadcrumb />);
     expect(screen.getByText("Revisar")).toHaveAttribute("aria-current", "page");
   });
+
+  it("sessões: Nova sessão", () => {
+    pathname.current = "/pacientes/p1/sessoes/nova";
+    render(<AppBreadcrumb />);
+    expect(screen.getByRole("link", { name: "Sessões" })).toHaveAttribute("href", "/pacientes/p1/sessoes");
+    expect(screen.getByText("Nova sessão")).toHaveAttribute("aria-current", "page");
+  });
 });

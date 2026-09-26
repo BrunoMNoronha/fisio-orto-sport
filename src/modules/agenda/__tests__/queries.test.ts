@@ -16,7 +16,7 @@ jest.mock("@/modules/auth/dal", () => {
 const prismaMock = {
   appointment: { findMany: jest.fn(), findUnique: jest.fn() },
   user: { findMany: jest.fn() },
-  patient: { findMany: jest.fn() },
+  patient: { findMany: jest.fn(), findFirst: jest.fn() },
 };
 jest.mock("@/lib/db", () => ({
   get prisma() {
@@ -29,7 +29,7 @@ import {
   APPOINTMENT_DETAIL_SELECT,
   APPOINTMENT_LIST_SELECT,
   getAppointment,
-  listActivePatientOptions,
+  getActivePatientOption,
   listAgenda,
   listPatientAppointments,
   listProfessionals,
@@ -105,18 +105,29 @@ describe("opções", () => {
     );
   });
 
-  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("pacientes para agendar: só ativos, com agenda:gerir (%s)", async (role) => {
+  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("pré-seleção: só paciente ativo, com agenda:gerir (%s)", async (role) => {
     currentRole.current = role;
-    prismaMock.patient.findMany.mockResolvedValue([]);
-    await listActivePatientOptions();
+    prismaMock.patient.findFirst.mockResolvedValue({ id: "p1", fullName: "Ana" });
+    await expect(getActivePatientOption("p1")).resolves.toEqual({ id: "p1", label: "Ana" });
     expect(requirePermission).toHaveBeenCalledWith("agenda:gerir");
-    expect(prismaMock.patient.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: "ATIVO" } }));
+    expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({
+      where: { id: "p1", status: "ATIVO" },
+      select: { id: true, fullName: true },
+    });
   });
 
-  it("pacientes para agendar: sem perfil é bloqueado antes do banco", async () => {
+  it("pré-seleção: inativo, inexistente ou id inválido não pré-seleciona", async () => {
+    prismaMock.patient.findFirst.mockResolvedValue(null);
+    await expect(getActivePatientOption("p-inativo")).resolves.toBeNull();
+    await expect(getActivePatientOption(undefined)).resolves.toBeNull();
+    await expect(getActivePatientOption("x".repeat(65))).resolves.toBeNull();
+    expect(prismaMock.patient.findFirst).toHaveBeenCalledTimes(1);
+  });
+
+  it("pré-seleção: sem perfil é bloqueado antes do banco", async () => {
     currentRole.current = null;
-    await expect(listActivePatientOptions()).rejects.toThrow("redirect");
-    expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
+    await expect(getActivePatientOption("p1")).rejects.toThrow("redirect");
+    expect(prismaMock.patient.findFirst).not.toHaveBeenCalled();
   });
 });
 

@@ -19,7 +19,7 @@ jest.mock("server-only", () => ({}));
 
 const prismaMock = {
   $transaction: jest.fn(),
-  patient: { findUnique: jest.fn() },
+  patient: { findUnique: jest.fn(), findMany: jest.fn() },
   user: { findUnique: jest.fn() },
   appointment: {
     create: jest.fn(),
@@ -50,7 +50,7 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
-import { cancelAppointment, createAppointment, rescheduleAppointment } from "../actions";
+import { cancelAppointment, createAppointment, rescheduleAppointment, searchActivePatients } from "../actions";
 import { CONFLICT_MESSAGE } from "../rules";
 
 function form(values: Record<string, string>) {
@@ -315,5 +315,67 @@ describe("cancelAppointment", () => {
     await expect(cancelAppointment(undefined, form({ id: "x" }))).resolves.toEqual({
       error: "Agendamento não encontrado.",
     });
+  });
+});
+
+describe("searchActivePatients", () => {
+  // Massa fictícia maior que o antigo limite de 500, em ordem por nome.
+  const everyone = Array.from({ length: 620 }, (_, i) => ({
+    id: `p${String(i).padStart(3, "0")}`,
+    fullName: `Paciente Fictício ${String(i).padStart(3, "0")}`,
+  }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prismaMock.patient.findMany.mockImplementation(
+      async ({ where, take }: { where: { searchName?: { contains: string } }; take: number }) => {
+        const term = where.searchName?.contains;
+        const matches = term
+          ? everyone.filter((p) => p.fullName.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().includes(term))
+          : everyone;
+        return matches.slice(0, take);
+      },
+    );
+  });
+
+  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("encontra paciente além dos 500 primeiros (%s)", async (role) => {
+    as(role);
+    const result = await searchActivePatients("fictício 599");
+    expect(result).toEqual({ items: [{ id: "p599", label: "Paciente Fictício 599" }], hasMore: false });
+  });
+
+  it("consulta só ativos, só id e nome, em ordem estável e com limite", async () => {
+    as("RECEPCAO");
+    const result = await searchActivePatients("  PACIENTE  ");
+    expect(prismaMock.patient.findMany).toHaveBeenCalledWith({
+      where: { status: "ATIVO", searchName: { contains: "paciente" } },
+      orderBy: [{ fullName: "asc" }, { id: "asc" }],
+      take: 21,
+      select: { id: true, fullName: true },
+    });
+    expect(result).toMatchObject({ hasMore: true });
+    expect("items" in result && result.items).toHaveLength(20);
+  });
+
+  it("busca vazia devolve os primeiros ativos; termo longo é cortado", async () => {
+    as("RECEPCAO");
+    await searchActivePatients("");
+    expect(prismaMock.patient.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { status: "ATIVO" } }));
+    await searchActivePatients("a".repeat(300));
+    const where = prismaMock.patient.findMany.mock.calls.at(-1)[0].where;
+    expect(where.searchName.contains).toHaveLength(100);
+    await searchActivePatients({ q: "x" });
+    expect(prismaMock.patient.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { status: "ATIVO" } }));
+  });
+
+  it("sem resultados devolve lista vazia", async () => {
+    as("RECEPCAO");
+    await expect(searchActivePatients("ninguém com esse nome")).resolves.toEqual({ items: [], hasMore: false });
+  });
+
+  it("sem agenda:gerir é negado antes do banco", async () => {
+    as(null);
+    await expect(searchActivePatients("ana")).resolves.toEqual({ error: "Acesso negado." });
+    expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
   });
 });

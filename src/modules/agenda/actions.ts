@@ -16,6 +16,7 @@ import {
   isOverlapViolation,
 } from "./rules";
 import { appointmentSchema, cancelSchema, rescheduleSchema } from "./validation";
+import { normalizeSearch } from "@/modules/pacientes/validation";
 
 export type AppointmentActionState =
   | { ok?: boolean; message?: string; error?: string; fieldErrors?: FieldErrors }
@@ -152,4 +153,30 @@ export async function cancelAppointment(
   revalidatePath(AGENDA_PATH);
   revalidatePath(`${AGENDA_PATH}/${id}`);
   return { ok: true, message: "Agendamento cancelado." };
+}
+
+// --- Busca de pacientes para agendar (issue #38) --------------------------------------
+// Substitui a lista fixa de 500: busca no servidor por nome (sem acentos nem maiúsculas),
+// só pacientes ativos, só id e nome, em ordem estável e com no máximo PATIENT_SEARCH_LIMIT
+// resultados por consulta. A escolha continua validada em createAppointment.
+export type PatientOption = { id: string; label: string };
+export type PatientSearchResult = { items: PatientOption[]; hasMore: boolean } | { error: string };
+
+const PATIENT_SEARCH_LIMIT = 20;
+const PATIENT_SEARCH_MAX = 100;
+
+export async function searchActivePatients(query: unknown): Promise<PatientSearchResult> {
+  const actor = await guard();
+  if (!isActor(actor)) return { error: actor?.error ?? "Acesso negado." };
+  const term = typeof query === "string" ? normalizeSearch(query.trim().slice(0, PATIENT_SEARCH_MAX)) : "";
+  const rows = await prisma.patient.findMany({
+    where: { status: "ATIVO", ...(term ? { searchName: { contains: term } } : {}) },
+    orderBy: [{ fullName: "asc" }, { id: "asc" }],
+    take: PATIENT_SEARCH_LIMIT + 1,
+    select: { id: true, fullName: true },
+  });
+  return {
+    items: rows.slice(0, PATIENT_SEARCH_LIMIT).map((patient) => ({ id: patient.id, label: patient.fullName })),
+    hasMore: rows.length > PATIENT_SEARCH_LIMIT,
+  };
 }

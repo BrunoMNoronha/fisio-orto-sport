@@ -33,5 +33,6 @@ point-in-time/branch no Neon.
 ## PENDENTE / TBD
 
 - domínio próprio;
-- política formal de backup e observabilidade;
+- política formal de backup e observabilidade (janela PITR atual de 6 h e sem
+  snapshots; ver [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md));
 - `pnpm audit`: vulnerabilidades transitivas via `prisma` (ver `docs/AUDITORIA-DEPENDENCIAS.md`).

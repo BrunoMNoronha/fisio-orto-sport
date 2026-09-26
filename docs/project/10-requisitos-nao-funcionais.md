@@ -14,4 +14,4 @@ Usar WCAG 2.1 AA como referência e registrar auditoria de acesso a dados clíni
 
 ## PENDENTE / TBD
 
-Metas de performance, disponibilidade, backup, observabilidade, homologação e produção ainda não foram definidas ou comprovadas.
+Metas de performance, disponibilidade, backup, observabilidade, homologação e produção ainda não foram definidas ou comprovadas. Backup, auditoria de acesso e observabilidade: ver [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md).

@@ -97,9 +97,10 @@ recomendação jurídica.
 | A2 | Quais eventos de segurança registrar? | Login com sucesso/falha, logout, acesso negado, criação/alteração/desativação de usuário, troca de perfil/senha, uso do `db:admin` | **CONFIRMADO (Bruno, 26/09/2026):** eventos de login (sucesso, falha, logout, acesso negado) e gestão de usuários (criar, alterar perfil, desativar/reativar, redefinir senha, uso do `db:admin`) |
 | A3 | Histórico de valores anteriores para `Patient`, `Appointment` e `User`? | Hoje só guardam o último autor | TBD |
 | A4 | Quem consulta os registros de auditoria e por qual meio? | Tela para ADMIN, consulta técnica sob pedido, exportação | **CONFIRMADO (Bruno, 26/09/2026):** somente ADMIN, em tela da aplicação |
-| A5 | Por quanto tempo os registros de auditoria são guardados? | Relacionar ao prazo do prontuário (R1); não inventar prazo | TBD |
-| A6 | Quais dados o registro pode conter? | Mínimo: usuário, perfil, ação, alvo (id), data, IP/origem; **sem conteúdo clínico** | TBD |
-| A7 | Registro de auditoria imutável para a própria aplicação? | Só inserção pela aplicação, sem edição/exclusão pela interface | TBD |
+| A5 | Por quanto tempo os registros de auditoria são guardados? | Relacionar ao prazo do prontuário (R1); não inventar prazo | **CONFIRMADO (Bruno, 26/09/2026):** 7 dias, como decisão operacional (não é prazo legal). Registros mais antigos são expurgados; eventos percebidos depois de 7 dias ficam sem trilha |
+| A6 | Quais dados o registro pode conter? | Mínimo: usuário, perfil, ação, alvo (id), data, IP/origem; **sem conteúdo clínico** | **CONFIRMADO (Bruno, 26/09/2026):** ação, data, resultado, usuário, perfil, alvo (id) e IP. Sem senha, token, user-agent ou conteúdo clínico; na falha de login, o e-mail digitado só como hash, sem revelar se a conta existe |
+| A7 | Registro de auditoria imutável para a própria aplicação? | Só inserção pela aplicação, sem edição/exclusão pela interface | **CONFIRMADO (Bruno, 26/09/2026):** imutável também no banco — a aplicação só insere e o PostgreSQL bloqueia UPDATE/DELETE, exceto o expurgo de registros vencidos (A5) |
+| A8 | Se gravar o registro falhar, a ação segue? | Bloquear tudo, bloquear só gestão, não bloquear | **CONFIRMADO (Bruno, 26/09/2026):** gestão de usuários grava na mesma transação e falha junto; o login segue, e a falha vai para o log do servidor sem dado pessoal |
 
 ### B — Backup e recuperação
 
@@ -129,10 +130,10 @@ da decisão correspondente.
 | Tarefa | Natureza | Depende de | Aceite mínimo |
 |---|---|---|---|
 | T1 — Tabela de auditoria de acesso e registro nas leituras escolhidas | Auditoria de acesso | A1 (decidido: nenhuma leitura por ora) | **Adiada.** Leitura auditada gera registro com usuário, ação, alvo e data; falha ao registrar tem política definida; sem conteúdo clínico no registro; testes por perfil |
-| T2 — Eventos de segurança (login, logout, negação, gestão de usuários, `db:admin`) — **#56** | Auditoria de acesso | A2 ✓; A5, A6, A7 pendentes | Eventos definidos registrados sem senha/token; testes |
+| T2 — Eventos de segurança (login, logout, negação, gestão de usuários, `db:admin`) — **#56** | Auditoria de acesso | A2, A5–A8 ✓ | Eventos definidos registrados sem senha/token; testes |
 | T3 — Histórico de alterações de `Patient`, `Appointment` e `User` | Autoria de escrita | A3 | Cada alteração guarda autor, data e valores anteriores dos campos decididos; migração aditiva |
 | T4 — Consulta da auditoria — **#56** | Auditoria de acesso | A4 ✓; T2 | Somente ADMIN consulta, em tela; filtros por usuário, evento e período |
-| T5 — Expurgo dos registros de auditoria vencidos | Retenção | A5 | Rotina documentada e testada em banco descartável |
+| T5 — Expurgo dos registros de auditoria vencidos — **incluído na #56** | Retenção | A5 ✓ (7 dias) | Rotina documentada e testada em banco descartável |
 | T6 — Configurar retenção/snapshots no Neon e cópia externa | Backup | B4/B5 (decidido: manter) | **Adiada** por risco aceito. Configuração lida de volta e registrada; custo aprovado |
 | T7 — Roteiro e primeiro teste de restauração | Backup | B3, B6, B7 | Restauração em branch isolado com evidência registrada; branch removido após conferência autorizada |
 | T8 — Fluxo de retenção/anonimização do prontuário | Retenção | R1–R5 | Somente após decisão e autorização expressa; teste só com dados fictícios |

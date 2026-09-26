@@ -71,6 +71,9 @@ enum Sex {
 model Patient {
   id                   String        @id @default(cuid())
   fullName             String
+  // Nome sem acentos e em minúsculas, para a busca. Mantido pelo trigger "Patient_search_name"
+  // (ver migração busca_sem_acento): a aplicação nunca grava este campo.
+  searchName           String        @default("")
   birthDate            DateTime      @db.Date
   // Fase 2c. Obrigatório no formulário; nulo apenas em cadastros anteriores à 2c.
   sex                  Sex?

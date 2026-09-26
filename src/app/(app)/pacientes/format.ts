@@ -1,6 +1,6 @@
 import type { PatientFormValues } from "./patient-form";
 import type { PatientDetail } from "@/modules/pacientes/queries";
-import { ageOn } from "@/modules/pacientes/validation";
+import { ageOn, maskCpf, maskPhone } from "@/modules/pacientes/validation";
 
 // birthDate é @db.Date (meia-noite UTC): formatar em UTC evita deslocar o dia.
 export function formatDate(date: Date) {
@@ -19,13 +19,13 @@ export function toFormValues(patient: PatientDetail): PatientFormValues {
     // Cadastros anteriores à Fase 2c não têm sexo: a edição exige escolher.
     sex: patient.sex ?? "",
     occupation: patient.occupation ?? "",
-    cpf: patient.cpf ?? "",
-    phone: patient.phone,
+    cpf: maskCpf(patient.cpf ?? ""),
+    phone: maskPhone(patient.phone),
     email: patient.email ?? "",
     address: patient.address ?? "",
     notes: patient.notes ?? "",
     guardianName: patient.guardianName ?? "",
-    guardianPhone: patient.guardianPhone ?? "",
+    guardianPhone: maskPhone(patient.guardianPhone ?? ""),
     guardianRelationship: patient.guardianRelationship ?? "",
   };
 }

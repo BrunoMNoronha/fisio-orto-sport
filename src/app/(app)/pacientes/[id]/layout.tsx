@@ -71,7 +71,7 @@ export default async function PacienteLayout({ children, params }: LayoutProps<"
                   <PencilIcon />
                   Editar
                 </Link>
-                <ToggleStatusButton id={patient.id} status={patient.status} />
+                <ToggleStatusButton id={patient.id} status={patient.status} patientName={patient.fullName} />
               </>
             )}
           </div>

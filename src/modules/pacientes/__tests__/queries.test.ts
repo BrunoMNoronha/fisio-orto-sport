@@ -85,9 +85,9 @@ describe("listPatients", () => {
     expect((await listPatients({ page: 1 })).pageCount).toBe(1);
   });
 
-  it("filtra por nome (sem diferenciar maiúsculas) e por situação", async () => {
-    await listPatients({ q: "ana", status: "INATIVO", page: 1 });
-    const where = { fullName: { contains: "ana", mode: "insensitive" }, status: "INATIVO" };
+  it("filtra por nome (sem diferenciar acentos nem maiúsculas) e por situação", async () => {
+    await listPatients({ q: "Paginação", status: "INATIVO", page: 1 });
+    const where = { searchName: { contains: "paginacao" }, status: "INATIVO" };
     expect(prismaMock.patient.findMany).toHaveBeenCalledWith(expect.objectContaining({ where }));
     expect(prismaMock.patient.count).toHaveBeenCalledWith({ where });
   });

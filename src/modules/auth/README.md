@@ -52,7 +52,9 @@ Contrato: toda permissão da Recepção também é do Fisioterapeuta, que soma a
 
 ## Fora do escopo (por ora)
 
-Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/SSO, 2FA e trilha de auditoria de acesso.
+Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/SSO, 2FA e auditoria de leitura do prontuário.
+
+Login, logout, acesso negado e gestão de usuários são registrados na trilha de auditoria: ver [`../auditoria/README.md`](../auditoria/README.md) (issue #56).
 
 ## Proteções do login
 

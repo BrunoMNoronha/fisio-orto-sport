@@ -28,6 +28,9 @@ jest.mock("@/generated/prisma/client", () => ({
   Prisma: { TransactionIsolationLevel: { Serializable: "Serializable" } },
 }));
 
+const recordAudit = jest.fn();
+jest.mock("@/modules/auditoria/record", () => ({ recordAudit: (...args: unknown[]) => recordAudit(...args) }));
+
 // `cache` do React memoriza por renderização; nos testes cada chamada deve consultar de novo.
 jest.mock("react", () => ({ ...jest.requireActual("react"), cache: <T,>(fn: T) => fn }));
 
@@ -105,5 +108,27 @@ describe("assertPermission", () => {
     await expect(assertPermission("usuarios:gerir")).rejects.toBeInstanceOf(AuthorizationError);
     cookieValue.current = undefined;
     await expect(assertPermission("usuarios:gerir")).rejects.toBeInstanceOf(AuthorizationError);
+  });
+});
+
+describe("auditoria de acesso negado (issue #56)", () => {
+  const denied = (role: string) => ({ action: "ACESSO_NEGADO", result: "NEGADO", actorId: "u1", actorRole: role });
+
+  it.each(["RECEPCAO", "FISIOTERAPEUTA"])("registra a negação de %s em páginas e actions", async (role) => {
+    prismaMock.session.findUnique.mockResolvedValue(sessionFor(role));
+    await expect(requirePermission("auditoria:ler")).rejects.toThrow("NEXT_REDIRECT:/acesso-negado");
+    await expect(requireRole("ADMIN")).rejects.toThrow("NEXT_REDIRECT:/acesso-negado");
+    await expect(assertPermission("usuarios:gerir")).rejects.toBeInstanceOf(AuthorizationError);
+    expect(recordAudit.mock.calls).toEqual([[denied(role)], [denied(role)], [denied(role)]]);
+  });
+
+  it("anônimo e acesso permitido não geram registro", async () => {
+    cookieValue.current = undefined;
+    await expect(requirePermission("auditoria:ler")).rejects.toThrow("NEXT_REDIRECT:/login");
+    await expect(assertPermission("usuarios:gerir")).rejects.toBeInstanceOf(AuthorizationError);
+    cookieValue.current = "token-valido";
+    prismaMock.session.findUnique.mockResolvedValue(sessionFor("ADMIN"));
+    await expect(requirePermission("auditoria:ler")).resolves.toMatchObject({ role: "ADMIN" });
+    expect(recordAudit).not.toHaveBeenCalled();
   });
 });

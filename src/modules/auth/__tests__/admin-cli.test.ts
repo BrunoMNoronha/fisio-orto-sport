@@ -25,22 +25,22 @@ function makeIO(answers: (string | PromptClosedError)[]) {
 
 function makeDb(existing: { id: string; role: string; active: boolean } | null = null) {
   const tx = {
-    user: { updateMany: jest.fn(async () => ({ count: 1 })) },
+    user: {
+      updateMany: jest.fn(async () => ({ count: 1 })),
+      create: jest.fn<Promise<{ id: string }>, [unknown]>(async () => ({ id: "novo" })),
+    },
     session: { deleteMany: jest.fn(async () => ({ count: 2 })) },
+    auditLog: { create: jest.fn<Promise<{ id: string }>, [unknown]>(async () => ({ id: "log" })) },
   };
   const db = {
-    user: {
-      findUnique: jest.fn(async () => existing),
-      create: jest.fn(async () => ({ id: "novo" })),
-    },
+    user: { findUnique: jest.fn(async () => existing) },
     $transaction: jest.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
     $disconnect: jest.fn(async () => {}),
   };
   return { db, tx, open: jest.fn(() => db as unknown as AdminCliDb) };
 }
 
-const writes = (db: ReturnType<typeof makeDb>) =>
-  db.db.user.create.mock.calls.length + db.db.$transaction.mock.calls.length;
+const writes = (db: ReturnType<typeof makeDb>) => db.db.$transaction.mock.calls.length;
 
 describe("describeTarget", () => {
   it("mostra só host e banco, nunca usuário ou senha", () => {
@@ -61,10 +61,16 @@ describe("runAdminCli", () => {
     const db = makeDb();
     const { io, output, questions } = makeIO(["sim", PASSWORD, PASSWORD]);
     await expect(runAdminCli(["--email", " Ana@X.com ", "--name", "Ana"], LOCAL, io, db.open)).resolves.toBe(0);
-    expect(db.db.user.create).toHaveBeenCalledWith({
+    expect(db.tx.user.create).toHaveBeenCalledWith({
       data: { name: "Ana", email: "ana@x.com", role: "ADMIN", passwordHash: expect.stringMatching(/^scrypt\$|\$/) },
+      select: { id: true },
     });
-    const hash = (db.db.user.create.mock.calls[0] as unknown as [{ data: { passwordHash: string } }])[0].data.passwordHash;
+    // Auditoria na mesma transação, sem ator nem IP (issue #56).
+    expect(db.tx.auditLog.create).toHaveBeenCalledWith({
+      data: { action: "CLI_ADMIN_CRIADO", result: "SUCESSO", targetUserId: "novo" },
+      select: { id: true },
+    });
+    const hash = (db.tx.user.create.mock.calls[0] as unknown as [{ data: { passwordHash: string } }])[0].data.passwordHash;
     expect(hash).not.toContain(PASSWORD);
     expect(questions.filter((q) => q.hidden)).toHaveLength(2);
     expect(output.join("\n")).toContain("Administrador ana@x.com criado.");
@@ -83,6 +89,11 @@ describe("runAdminCli", () => {
       data: { passwordHash: expect.any(String), active: true },
     });
     expect(db.tx.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "a1" } });
+    expect(db.tx.auditLog.create).toHaveBeenCalledWith({
+      data: { action: "CLI_SENHA_REDEFINIDA", result: "SUCESSO", targetUserId: "a1" },
+      select: { id: true },
+    });
+    expect(JSON.stringify(db.tx.auditLog.create.mock.calls)).not.toContain(PASSWORD);
     expect(output.join("\n")).toMatch(/redefinida\. Sessões anteriores encerradas/);
   });
 
@@ -101,6 +112,7 @@ describe("runAdminCli", () => {
     const { io, output } = makeIO(["sim", PASSWORD, PASSWORD]);
     await expect(runAdminCli(["--email", "ana@x.com"], LOCAL, io, db.open)).resolves.toBe(1);
     expect(db.tx.session.deleteMany).not.toHaveBeenCalled();
+    expect(db.tx.auditLog.create).not.toHaveBeenCalled();
     expect(output.join("\n")).toMatch(/deixou de ser Administrador/);
   });
 
@@ -167,10 +179,17 @@ describe("runAdminCli", () => {
     expect(a.output.join("\n")).toMatch(/Rode as migrações/);
 
     const race = makeDb();
-    race.db.user.create.mockRejectedValueOnce(Object.assign(new Error("Unique constraint failed"), { code: "P2002" }));
+    race.tx.user.create.mockRejectedValueOnce(Object.assign(new Error("Unique constraint failed"), { code: "P2002" }));
     const b = makeIO(["sim", PASSWORD, PASSWORD]);
     await expect(runAdminCli(["--email", "a@x.com"], LOCAL, b.io, race.open)).resolves.toBe(1);
     expect(b.output.join("\n")).toMatch(/cadastrado por outra operação/);
+
+    // Falha ao gravar a auditoria desfaz a escrita (A8) e vira mensagem curta.
+    const auditDown = makeDb();
+    auditDown.tx.auditLog.create.mockRejectedValueOnce(Object.assign(new Error("audit"), { code: "P2010" }));
+    const d = makeIO(["sim", PASSWORD, PASSWORD]);
+    await expect(runAdminCli(["--email", "a@x.com"], LOCAL, d.io, auditDown.open)).resolves.toBe(1);
+    expect(d.output.join("\n")).toMatch(/Falha \(P2010\)/);
 
     const down = makeDb();
     down.db.user.findUnique.mockRejectedValueOnce(

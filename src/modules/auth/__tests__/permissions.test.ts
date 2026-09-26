@@ -35,6 +35,12 @@ describe("can()", () => {
     expect(can("RECEPCAO", "usuarios:gerir")).toBe(false);
   });
 
+  it("só o Administrador consulta a auditoria (issue #56, A4)", () => {
+    expect(can("ADMIN", "auditoria:ler")).toBe(true);
+    expect(can("RECEPCAO", "auditoria:ler")).toBe(false);
+    expect(can("FISIOTERAPEUTA", "auditoria:ler")).toBe(false);
+  });
+
   it("nega sem perfil ou com perfil desconhecido", () => {
     expect(can(null, "pacientes:ler")).toBe(false);
     expect(can(undefined, "pacientes:ler")).toBe(false);

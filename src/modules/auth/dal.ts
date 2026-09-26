@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import type { Role } from "@/generated/prisma/enums";
+import { recordAudit } from "@/modules/auditoria/record";
 import { can, type Permission } from "./permissions";
 import { SESSION_COOKIE, hashToken } from "./session";
 
@@ -43,15 +44,27 @@ export async function requireUser(): Promise<CurrentUser> {
   return user;
 }
 
+// Usuário autenticado sem a permissão vai para a auditoria (A2). Sem sessão não é negação, é
+// falta de login, e não gera registro.
+async function auditDenied(user: CurrentUser) {
+  await recordAudit({ action: "ACESSO_NEGADO", result: "NEGADO", actorId: user.id, actorRole: user.role });
+}
+
 export async function requirePermission(permission: Permission): Promise<CurrentUser> {
   const user = await requireUser();
-  if (!can(user.role, permission)) redirect(ACCESS_DENIED_PATH);
+  if (!can(user.role, permission)) {
+    await auditDenied(user);
+    redirect(ACCESS_DENIED_PATH);
+  }
   return user;
 }
 
 export async function requireRole(...roles: Role[]): Promise<CurrentUser> {
   const user = await requireUser();
-  if (!roles.includes(user.role)) redirect(ACCESS_DENIED_PATH);
+  if (!roles.includes(user.role)) {
+    await auditDenied(user);
+    redirect(ACCESS_DENIED_PATH);
+  }
   return user;
 }
 
@@ -65,6 +78,10 @@ export class AuthorizationError extends Error {
 // Para Server Actions: não redireciona; lança erro que a action converte em resposta.
 export async function assertPermission(permission: Permission): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user || !can(user.role, permission)) throw new AuthorizationError();
+  if (!user) throw new AuthorizationError();
+  if (!can(user.role, permission)) {
+    await auditDenied(user);
+    throw new AuthorizationError();
+  }
   return user;
 }

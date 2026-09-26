@@ -1,6 +1,6 @@
 /** @jest-environment node */
 // Cadastro do primeiro Administrador: exige SETUP_TOKEN e só funciona com a tabela de usuários vazia.
-const tx = { user: { count: jest.fn(), create: jest.fn() } };
+const tx = { user: { count: jest.fn(), create: jest.fn() }, auditLog: { create: jest.fn() } };
 const prismaMock = {
   user: { findFirst: jest.fn() },
   $transaction: jest.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
@@ -86,8 +86,19 @@ describe("setupFirstAdmin", () => {
         data: expect.objectContaining({ name: "Ana Souza", email: "ana@x.com", role: "ADMIN" }),
       }),
     );
+    // Auditoria na mesma transação, com o IP confiável da requisição (issue #56).
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: { action: "PRIMEIRO_ADMIN_CRIADO", result: "SUCESSO", actorId: "u1", actorRole: "ADMIN", targetUserId: "u1", ip: "10.0.0.9" },
+      select: { id: true },
+    });
     expect(deleteSession).toHaveBeenCalled();
     expect(createSession).toHaveBeenCalledWith("u1", expect.any(String));
+  });
+
+  it("se a auditoria falhar, o Administrador não é criado e não abre sessão (A8)", async () => {
+    tx.auditLog.create.mockRejectedValueOnce(new Error("auditoria indisponível"));
+    await expect(setupFirstAdmin(undefined, form(valid))).rejects.toThrow("auditoria indisponível");
+    expect(createSession).not.toHaveBeenCalled();
   });
 
   it("recusa quando já existe usuário, sem criar nada", async () => {

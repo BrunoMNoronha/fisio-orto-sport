@@ -5,10 +5,12 @@
 // - E-mail de outro perfil: recusa (não promove ninguém a ADMIN).
 // Toda validação e confirmação acontece antes de qualquer escrita. A senha só é lida pelo prompt
 // oculto (nunca por argumento) e não aparece em nenhuma saída; a URL do banco nunca é impressa,
-// só host e nome do banco.
+// só host e nome do banco. Cada escrita grava o registro de auditoria na mesma transação (issue #56),
+// sem ator nem IP: o comando roda fora de uma sessão do aplicativo.
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { writeAudit } from "@/modules/auditoria/write";
 import { hashPassword } from "./password";
 import { PASSWORD_MAX, PASSWORD_MIN } from "./validation";
 
@@ -132,6 +134,7 @@ export async function runAdminCli(
         if (count === 0) return false;
         // Senha trocada: derruba as sessões abertas com a senha antiga.
         await tx.session.deleteMany({ where: { userId: existing.id } });
+        await writeAudit(tx, { action: "CLI_SENHA_REDEFINIDA", result: "SUCESSO", targetUserId: existing.id });
         return true;
       });
       if (!updated) {
@@ -141,7 +144,10 @@ export async function runAdminCli(
       io.out(`Senha do Administrador ${email} redefinida. Sessões anteriores encerradas.`);
     } else {
       try {
-        await db.user.create({ data: { name, email, role: "ADMIN", passwordHash } });
+        await db.$transaction(async (tx) => {
+          const created = await tx.user.create({ data: { name, email, role: "ADMIN", passwordHash }, select: { id: true } });
+          await writeAudit(tx, { action: "CLI_ADMIN_CRIADO", result: "SUCESSO", targetUserId: created.id });
+        });
       } catch (error) {
         if (errorCode(error) === "P2002") {
           io.err(`${email} foi cadastrado por outra operação agora. Rode o comando de novo.`);

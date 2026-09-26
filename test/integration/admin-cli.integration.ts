@@ -61,6 +61,12 @@ describe("db:admin no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL nã
     assert.equal(user?.role, "ADMIN");
     assert.equal(user?.active, true);
     assert.ok(await verifyPassword(PASSWORD, user!.passwordHash));
+    // Auditoria na mesma transação (issue #56), sem ator nem IP.
+    const logs = await prisma.auditLog.findMany({ where: { targetUserId: user!.id } });
+    assert.deepEqual(
+      logs.map(({ action, result, actorId, ip }) => ({ action, result, actorId, ip })),
+      [{ action: "CLI_ADMIN_CRIADO", result: "SUCESSO", actorId: null, ip: null }],
+    );
   });
 
   it("redefine a senha, reativa e encerra as sessões do Administrador", async () => {
@@ -86,6 +92,8 @@ describe("db:admin no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL nã
     assert.ok(await verifyPassword(NEW_PASSWORD, updated!.passwordHash));
     assert.equal(await verifyPassword(PASSWORD, updated!.passwordHash), false);
     assert.equal(await prisma.session.count({ where: { userId: user!.id } }), 0);
+    const actions = await prisma.auditLog.findMany({ where: { targetUserId: user!.id }, orderBy: { createdAt: "asc" } });
+    assert.deepEqual(actions.map((log) => log.action), ["CLI_ADMIN_CRIADO", "CLI_SENHA_REDEFINIDA"]);
   });
 
   it("recusa e-mail de outro perfil sem perguntar nem alterar", async () => {

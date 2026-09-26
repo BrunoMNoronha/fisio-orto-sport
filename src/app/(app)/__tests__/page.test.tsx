@@ -32,12 +32,9 @@ describe("Home", () => {
     expect(screen.getByText("Nenhum atendimento hoje.")).toBeInTheDocument();
   });
 
-  it("lista os módulos em construção (Avaliações, Planos e Sessões já estão disponíveis)", async () => {
+  it("não lista mais módulos em construção (a Fase 4 clínica está disponível)", async () => {
     render(await Home());
-    expect(screen.getAllByText("Em breve")).toHaveLength(1);
-    expect(screen.queryByText("Avaliações")).not.toBeInTheDocument();
-    expect(screen.queryByText("Planos terapêuticos")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sessões e evolução clínica")).not.toBeInTheDocument();
-    expect(screen.getByText("Reavaliação")).toBeInTheDocument();
+    expect(screen.queryByText("Em construção")).not.toBeInTheDocument();
+    expect(screen.queryByText("Em breve")).not.toBeInTheDocument();
   });
 });

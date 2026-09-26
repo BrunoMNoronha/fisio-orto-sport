@@ -83,6 +83,9 @@ export function PlanRevisionList({
               {revision.number === current && <Badge variant="secondary">Vigente</Badge>}
             </span>
             {revision.reason && <span className="whitespace-pre-line">Motivo: {revision.reason}</span>}
+            {revision.motivatingReassessment && (
+              <span>A partir da reavaliação de {formatDate(revision.motivatingReassessment.reassessmentDate)}</span>
+            )}
             <span className="text-muted-foreground">
               Data do plano {formatDate(revision.planDate)} ·{" "}
               {signatureLabel(revision.authorNameSnapshot, revision.authorCrefitoSnapshot)} · salva em{" "}

@@ -106,6 +106,18 @@ export async function countValidSessions(patientId: string, planId: string) {
   return prisma.treatmentSession.count({ where: { patientId, planId, status: "VALIDO" } });
 }
 
+// Últimas sessões válidas de um plano (contexto da reavaliação): momento e evolução, mais recente primeiro.
+export async function listRecentPlanSessions(patientId: string, planId: string, take = 5) {
+  await requirePermission("clinico:ler");
+  if (!isPlausibleId(patientId) || !isPlausibleId(planId)) return [];
+  return prisma.treatmentSession.findMany({
+    where: { patientId, planId, status: "VALIDO" },
+    orderBy: NEWEST_FIRST,
+    take,
+    select: { id: true, occurredAt: true, evolution: true, professionalNameSnapshot: true },
+  });
+}
+
 // Planos ATIVOS do paciente, com as revisões (para escolher a aplicada) e a contagem de realizados.
 export async function listSessionPlanOptions(patientId: string) {
   await requirePermission("clinico:gerir");
@@ -138,3 +150,4 @@ export type SessionDetail = NonNullable<Awaited<ReturnType<typeof getSession>>>;
 export type SessionChangeItem = Awaited<ReturnType<typeof listSessionChanges>>[number];
 export type SessionPlanOption = Awaited<ReturnType<typeof listSessionPlanOptions>>[number];
 export type ProfessionalOption = Awaited<ReturnType<typeof listProfessionalOptions>>[number];
+export type RecentPlanSession = Awaited<ReturnType<typeof listRecentPlanSessions>>[number];

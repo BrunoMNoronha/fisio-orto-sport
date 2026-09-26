@@ -57,7 +57,7 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 - [x] Plano terapêutico (issue #25: criação a partir da avaliação, revisões imutáveis, encerrar e reabrir; implementado e testado, publicação pendente);
 - [x] Registro de sessões (issue #26: atendimento ligado à revisão exata do plano, correção com histórico, invalidação, contagem de realizados; implementado e testado, publicação pendente);
 - [x] Evoluções — por atendimento (issue #26); evolução independente de atendimento e visão de progresso ficam fora;
-- [ ] Reavaliação.
+- [x] Reavaliação (issue #27: comparação congelada com avaliação de origem e reavaliação anterior, situação dos objetivos, conclusão e revisão do plano motivada; implementado e testado, publicação pendente; alta só documentada).
 
 ## Fase 5 — Financeiro
 

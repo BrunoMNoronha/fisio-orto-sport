@@ -44,4 +44,11 @@ describe("AppBreadcrumb", () => {
     expect(screen.getByRole("link", { name: "Sessões" })).toHaveAttribute("href", "/pacientes/p1/sessoes");
     expect(screen.getByText("Nova sessão")).toHaveAttribute("aria-current", "page");
   });
+
+  it("reavaliações: Nova reavaliação", () => {
+    pathname.current = "/pacientes/p1/reavaliacoes/nova";
+    render(<AppBreadcrumb />);
+    expect(screen.getByRole("link", { name: "Reavaliações" })).toHaveAttribute("href", "/pacientes/p1/reavaliacoes");
+    expect(screen.getByText("Nova reavaliação")).toHaveAttribute("aria-current", "page");
+  });
 });

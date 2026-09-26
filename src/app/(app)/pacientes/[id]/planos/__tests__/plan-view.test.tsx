@@ -36,8 +36,17 @@ describe("PlanRevisionView", () => {
 describe("PlanRevisionList", () => {
   it("identifica a vigente sem ambiguidade e aponta cada revisão para o seu conteúdo", () => {
     const revisions: PlanRevisionItem[] = [
-      { ...revision, id: "r2" },
-      { ...revision, id: "r1", number: 1, kind: "INICIAL", reason: null, authorCrefitoSnapshot: null, authorNameSnapshot: "Admin" },
+      { ...revision, id: "r2", motivatingReassessment: null },
+      {
+        ...revision,
+        id: "r1",
+        number: 1,
+        kind: "INICIAL",
+        reason: null,
+        authorCrefitoSnapshot: null,
+        authorNameSnapshot: "Admin",
+        motivatingReassessment: null,
+      },
     ];
     render(<PlanRevisionList revisions={revisions} current={2} hrefFor={(n) => `/r/${n}`} />);
     const links = screen.getAllByRole("link");

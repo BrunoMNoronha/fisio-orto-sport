@@ -21,6 +21,7 @@ const tx = {
   therapyPlan: { create: jest.fn(), findFirst: jest.fn(), updateMany: jest.fn(), delete: jest.fn() },
   therapyPlanRevision: { create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn() },
   therapyPlanStatusChange: { create: jest.fn() },
+  reassessment: { findFirst: jest.fn() },
 };
 const prismaMock = {
   ...tx,
@@ -45,6 +46,7 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
+import { Prisma } from "@/generated/prisma/client";
 import { changePlanStatus, createPlan, revisePlan } from "../plan-actions";
 
 const SECRET = "SEGREDO-CLINICO-FICTICIO";
@@ -350,5 +352,58 @@ describe("changePlanStatus", () => {
       error: "Acesso negado.",
     });
     expectNoWrites();
+  });
+});
+
+describe("revisePlan a partir de reavaliação (#27)", () => {
+  const pending = {
+    conclusion: "AJUSTE_PLANO",
+    reassessmentDate: new Date("2026-09-10T00:00:00.000Z"),
+    resultingRevision: null,
+  };
+
+  beforeEach(() => {
+    as("FISIOTERAPEUTA");
+    tx.reassessment.findFirst.mockReset().mockResolvedValue(pending);
+  });
+
+  it("liga a revisão à reavaliação do mesmo plano e força mudança clínica", async () => {
+    await expect(
+      revisePlan("p1", "pl1", undefined, reviseForm({ kind: "CORRECAO", reassessmentId: "re1" })),
+    ).rejects.toMatchObject({ url: "/pacientes/p1/planos/pl1" });
+    expect(tx.reassessment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "re1", planId: "pl1", patientId: "p1" } }),
+    );
+    expect(tx.therapyPlanRevision.create.mock.calls[0][0].data).toMatchObject({
+      reassessmentId: "re1",
+      kind: "MUDANCA_CLINICA",
+      number: 2,
+    });
+  });
+
+  it("reavaliação de outro plano, sem 'Ajuste do plano' ou já com revisão é recusada", async () => {
+    tx.reassessment.findFirst.mockResolvedValueOnce(null);
+    expect((await revisePlan("p1", "pl1", undefined, reviseForm({ reassessmentId: "alheia" })))?.error).toBe(
+      "Reavaliação não encontrada neste plano.",
+    );
+    tx.reassessment.findFirst.mockResolvedValueOnce({ ...pending, conclusion: "CONTINUIDADE" });
+    expect((await revisePlan("p1", "pl1", undefined, reviseForm({ reassessmentId: "re1" })))?.error).toMatch(/Ajuste do plano/);
+    tx.reassessment.findFirst.mockResolvedValueOnce({ ...pending, resultingRevision: { id: "r9" } });
+    expect((await revisePlan("p1", "pl1", undefined, reviseForm({ reassessmentId: "re1" })))?.error).toMatch(/Já existe uma revisão/);
+    expect(tx.therapyPlanRevision.create).not.toHaveBeenCalled();
+  });
+
+  it("revisão com data anterior à reavaliação é recusada", async () => {
+    const result = await revisePlan("p1", "pl1", undefined, reviseForm({ reassessmentId: "re1", planDate: "2026-09-05" }));
+    expect(result?.fieldErrors?.planDate?.[0]).toMatch(/anterior à data da reavaliação/);
+  });
+
+  it("duas revisões concorrentes da mesma reavaliação: a unicidade barra a segunda sem duplicar", async () => {
+    tx.therapyPlanRevision.create.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "7", meta: { target: ["reassessmentId", "planId"] } }),
+    );
+    expect(await revisePlan("p1", "pl1", undefined, reviseForm({ reassessmentId: "re1" }))).toEqual({
+      error: "Já existe uma revisão do plano criada a partir desta reavaliação.",
+    });
   });
 });

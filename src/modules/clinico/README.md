@@ -2,7 +2,7 @@
 
 Registros clínicos do paciente. **Dados pessoais sensíveis (LGPD art. 11)**: toda leitura exige `clinico:ler` e toda escrita exige `clinico:gerir`, checados no servidor.
 
-Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisioterapêutica inicial** (Fase 4, issue #24) e **plano terapêutico** com revisões (Fase 4, issue #25) e **sessões de atendimento com evolução clínica** (Fase 4, issue #26). Reavaliação e alta continuam para depois.
+Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisioterapêutica inicial** (Fase 4, issue #24) e **plano terapêutico** com revisões (Fase 4, issue #25) , **sessões de atendimento com evolução clínica** (Fase 4, issue #26) e **reavaliação** com retorno ao plano (Fase 4, issue #27). O encerramento operacional por alta continua fora.
 
 ## Peças
 
@@ -21,6 +21,10 @@ Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisiote
 | `session-validation.ts` | Schemas do atendimento: data e hora no fuso da clínica viram `occurredAt`, criação com plano, revisão e `requestId`, correção com `version` e motivo, e invalidação. Também traz limites, rótulos e `formatOccurredAt()`. |
 | `session-queries.ts` (`server-only`) | `listSessions()` (histórico paginado, com evolução), `getSession()` (com a revisão exata aplicada), `listSessionChanges()`, `countValidSessions()`, `listSessionPlanOptions()` e `listProfessionalOptions()`. |
 | `session-actions.ts` | `createSession`, `updateSession` e `invalidateSession`, todas com `clinico:gerir`. |
+| `reassessment-validation.ts` | Schemas da reavaliação (criação com `planId`; correção com `version` e motivo), opções de situação dos objetivos e de conclusão, `diffReassessment()` e o tipo `ReferenceSnapshot`. |
+| `reassessment-queries.ts` (`server-only`) | `listReassessments()` (com a pendência de ajuste), `getReassessment()` (com a referência congelada), `listReassessmentChanges()` e `listReassessmentPlanOptions()`. |
+| `reassessment-actions.ts` | `createReassessment` e `updateReassessment`, ambas com `clinico:gerir`. A revisão motivada é gravada por `revisePlan` com `reassessmentId`. |
+| `src/app/(app)/pacientes/[id]/reavaliacoes/**` | Lista, nova (`/nova?plano=<id>`), detalhe comparativo (`/[reavaliacaoId]`) e correção (`/[reavaliacaoId]/editar`). |
 | `src/app/(app)/pacientes/[id]/sessoes/**` | Histórico (`/sessoes?pagina=N`), nova (`/nova?plano=<id>`), detalhe (`/[sessaoId]`) e correção (`/[sessaoId]/editar`). |
 | `src/app/(app)/pacientes/[id]/planos/**` | Lista, novo (`/novo?avaliacao=<id>`), detalhe (`/[planoId]`), nova revisão (`/[planoId]/revisar`) e revisão específica (`/[planoId]/revisoes/[numero]`). |
 | `src/app/(app)/pacientes/[id]/avaliacoes/**` | Lista (`/avaliacoes?pagina=N`), nova (`/nova`), detalhe (`/[avaliacaoId]`) e edição (`/[avaliacaoId]/editar`). |
@@ -93,6 +97,25 @@ Decisões de Bruno para a #26, em 26/09. As de autoria, CREFITO e paciente inati
 - **Integração** (`test/integration/sessoes.integration.ts`): cobre as FKs compostas, a idempotência, os CHECKs, o `Restrict`, a referência preservada após nova revisão, o encerramento concorrente (`FOR SHARE`), a correção concorrente com invalidação e a inativação concorrente.
 - **Fora do escopo:** presença e faltas, vínculo com a agenda, cobrança, pacotes e convênio, reavaliação, alta, anexos, impressão/PDF, assinatura digital e evolução independente de atendimento.
 
+## Reavaliação (`Reassessment`)
+
+Decisões de Bruno para a #27, em 26/09. Autoria, CREFITO, paciente inativo e o padrão de correção seguem as issues #24 a #26.
+
+- **Evento novo:** não corrige a avaliação inicial nem edita sessões. Exige um **plano `ATIVO`** (mesma demanda, não só o mesmo paciente), travado com `FOR SHARE`. Não exige sessões anteriores nem periodicidade.
+- **Referências calculadas no servidor**, nunca vindas do formulário, e todas presas por FKs compostas:
+  - a revisão do plano **aplicável na data** (a de maior número com data até a reavaliação);
+  - a avaliação de origem do plano;
+  - a reavaliação anterior do mesmo plano (a mais recente até a data).
+- **Comparação congelada:** `referenceSnapshot` guarda, na criação, os achados da avaliação de origem (com a versão) e os da reavaliação anterior. Edições posteriores nesses registros não mudam a comparação. A tela mostra tudo lado a lado, com datas; campo ausente aparece como "Não informado". Não há percentuais, deltas nem conclusão automática de melhora.
+- **Campos:** o exame físico repete as mesmas seções da avaliação, mais dor e limitações atuais, todos opcionais. São **obrigatórios**: data, evolução em relação à referência, situação dos objetivos (Atingidos, Parcialmente atingidos ou Não atingidos) com justificativa, e conclusão (Continuidade, Ajuste do plano ou Indicação de alta) com síntese.
+- **Datas:** não pode ser futura (`America/Sao_Paulo`) nem anterior ao início do plano. Na correção, também não pode ficar antes da revisão de referência já vinculada. Lançamento retroativo é permitido. Sessões posteriores não são associadas automaticamente.
+- **A alta só documenta:** "Indicação de alta" não encerra o plano, não inativa o paciente e não mexe na agenda. O encerramento continua sendo a ação manual do plano.
+- **Retorno ao plano:** com "Ajuste do plano", a reavaliação é salva e fica **"Ajuste pendente"** até existir a revisão. O botão "Revisar plano a partir desta reavaliação" abre `/planos/[id]/revisar?reavaliacao=<id>`. A revisão gravada leva `reassessmentId` e é sempre `MUDANCA_CLINICA`, garantido por CHECK. Sua data não pode ser anterior à da reavaliação. A unicidade `(reassessmentId, planId)` impede duas revisões da mesma reavaliação (repetir a ação só redireciona), e a FK composta garante que a reavaliação é do mesmo plano. Se a revisão for abandonada, a reavaliação continua íntegra e a pendência continua visível. Sessões antigas seguem presas à revisão original; as novas usam a revisão escolhida.
+- **Correção:** plano, revisão, avaliação e comparação ficam fixos. `ReassessmentChange` guarda uma linha por campo alterado, com motivo e assinatura, e há checagem otimista por `version`.
+- **CHECKs manuais** (migração `reavaliacao`): textos obrigatórios e nome do autor não vazios, `version >= 1`, a reavaliação não pode ser anterior de si mesma, a versão de correção é `>= 2` com motivo, e `TherapyPlanRevision_reassessment_is_clinical_change`.
+- **Integração** (`test/integration/reavaliacao.integration.ts`): cobre as FKs compostas, os CHECKs, a revisão única do mesmo plano, a comparação congelada, o histórico e o fluxo sessão → reavaliação → revisão → nova sessão, com a sessão antiga presa à revisão original.
+- **Fora do escopo:** alta operacional (encerramento clínico com efeitos), gráficos, protocolos padronizados, IA, anexos, impressão/PDF e assinatura digital.
+
 ## Privacidade
 
 - Nenhum dado clínico em URL, metadata de página (títulos genéricos), logs ou mensagens de erro. As mensagens nunca ecoam o conteúdo enviado.
@@ -110,10 +133,12 @@ Decisões de Bruno para a #26, em 26/09. As de autoria, CREFITO e paciente inati
 | Ver planos, revisões e histórico de estado (`clinico:ler`) | ✓ | — | ✓ |
 | Criar, revisar, encerrar e reabrir plano (`clinico:gerir`) | ✓ | — | ✓ |
 | Ver sessões, evolução e correções (`clinico:ler`) | ✓ | — | ✓ |
+| Ver reavaliações, comparação e correções (`clinico:ler`) | ✓ | — | ✓ |
+| Registrar e corrigir reavaliação; revisar plano a partir dela (`clinico:gerir`) | ✓ | — | ✓ |
 | Registrar, corrigir e invalidar sessão (`clinico:gerir`) | ✓ (escolhe o fisioterapeuta) | — | ✓ (como responsável por si) |
 
-A Recepção não vê as abas Anamnese, Avaliações, Planos e Sessões nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
+A Recepção não vê as abas Anamnese, Avaliações, Planos, Sessões e Reavaliações nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
 
 ## Fora do escopo (por ora)
 
-Reavaliação e alta (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+Alta operacional (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.

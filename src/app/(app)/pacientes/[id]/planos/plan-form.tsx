@@ -26,7 +26,10 @@ export type PlanFormValues = Record<PlanField, string>;
 // Avaliação que pode originar o plano, com diagnóstico e objetivos de referência (só leitura aqui).
 export type PlanOrigin = { id: string; label: string; diagnosis: string; therapeuticGoals: string | null };
 
-type Mode = { kind: "create"; origins: PlanOrigin[]; initialAssessmentId: string } | { kind: "revise"; baseRevision: number };
+// `reassessment`: revisão motivada por uma reavaliação com "Ajuste do plano" (tipo fixo: mudança clínica).
+type Mode =
+  | { kind: "create"; origins: PlanOrigin[]; initialAssessmentId: string }
+  | { kind: "revise"; baseRevision: number; reassessment?: { id: string; label: string; reason: string } };
 
 type TextField = Exclude<PlanField, "planDate" | "plannedSessions">;
 
@@ -104,8 +107,9 @@ export function PlanForm({
 }) {
   const [values, setValues] = useState(initial);
   const [assessmentId, setAssessmentId] = useState(mode.kind === "create" ? mode.initialAssessmentId : "");
-  const [kind, setKind] = useState("");
-  const [reason, setReason] = useState("");
+  const fromReassessment = mode.kind === "revise" ? mode.reassessment : undefined;
+  const [kind, setKind] = useState(fromReassessment ? "MUDANCA_CLINICA" : "");
+  const [reason, setReason] = useState(fromReassessment?.reason ?? "");
   const [state, formAction, pending] = useActionState(action, undefined);
   const errors = state?.fieldErrors;
   const formRef = useRef<HTMLFormElement>(null);
@@ -177,6 +181,7 @@ export function PlanForm({
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-5" noValidate>
       {mode.kind === "revise" && <input type="hidden" name="baseRevision" value={mode.baseRevision} />}
+      {fromReassessment && <input type="hidden" name="reassessmentId" value={fromReassessment.id} />}
       {state?.error && (
         <Alert ref={alertRef} tabIndex={-1} variant="destructive">
           <AlertDescription>{state.error}</AlertDescription>
@@ -225,27 +230,34 @@ export function PlanForm({
         </Section>
       ) : (
         <Section id="plano-secao-revisao" title="Revisão">
-          <fieldset
-            className="flex flex-col gap-2"
-            aria-invalid={errors?.kind ? true : undefined}
-            aria-describedby={errors?.kind ? "plano-kind-erro" : undefined}
-          >
-            <legend className="mb-1 text-sm font-medium">Tipo de revisão *</legend>
-            {REVISION_KINDS.map((option) => (
-              <label key={option} className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="kind"
-                  value={option}
-                  checked={kind === option}
-                  onChange={() => setKind(option)}
-                  className="size-4 accent-primary"
-                />
-                {REVISION_KIND_LABELS[option]}
-              </label>
-            ))}
-            <FieldError id="plano-kind-erro" messages={errors?.kind} />
-          </fieldset>
+          {fromReassessment ? (
+            <p className="text-sm">
+              <input type="hidden" name="kind" value="MUDANCA_CLINICA" />
+              Mudança clínica do planejamento, a partir da {fromReassessment.label}.
+            </p>
+          ) : (
+            <fieldset
+              className="flex flex-col gap-2"
+              aria-invalid={errors?.kind ? true : undefined}
+              aria-describedby={errors?.kind ? "plano-kind-erro" : undefined}
+            >
+              <legend className="mb-1 text-sm font-medium">Tipo de revisão *</legend>
+              {REVISION_KINDS.map((option) => (
+                <label key={option} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="kind"
+                    value={option}
+                    checked={kind === option}
+                    onChange={() => setKind(option)}
+                    className="size-4 accent-primary"
+                  />
+                  {REVISION_KIND_LABELS[option]}
+                </label>
+              ))}
+              <FieldError id="plano-kind-erro" messages={errors?.kind} />
+            </fieldset>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="plano-reason">Motivo da revisão *</Label>
             <Textarea

@@ -29,6 +29,7 @@ const LABELS: Record<string, string> = {
   revisar: "Revisar",
   revisoes: "Revisões",
   sessoes: "Sessões",
+  reavaliacoes: "Reavaliações",
 }
 
 // Rótulos que dependem do segmento anterior (ex.: "nova" em avaliacoes não é "Nova versão").
@@ -36,6 +37,7 @@ const CONTEXT_LABELS: Record<string, string> = {
   "avaliacoes/nova": "Nova avaliação",
   "planos/novo": "Novo plano",
   "sessoes/nova": "Nova sessão",
+  "reavaliacoes/nova": "Nova reavaliação",
 }
 
 export function AppBreadcrumb() {

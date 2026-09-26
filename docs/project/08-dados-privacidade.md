@@ -12,4 +12,4 @@ Aplicar mínimo necessário, controle de acesso por perfil, criptografia em trâ
 
 ## PENDENTE / TBD
 
-Prazo de retenção do prontuário e política de exclusão/anonimização ainda não foram definidos. Verificar norma COFFITO antes de decidir.
+Prazo de retenção do prontuário e política de exclusão/anonimização ainda não foram definidos. Verificar norma COFFITO antes de decidir. Não há auditoria de leitura. Perguntas, estado verificado e tarefas derivadas em [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md) (issue #41).

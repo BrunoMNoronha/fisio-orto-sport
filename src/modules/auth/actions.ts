@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { SetupClosedError, createFirstAdmin, isSetupEnabled, isValidSetupToken } from "./bootstrap";
 import { getDummyHash, hashPassword, verifyPassword } from "./password";
-import { loginAttemptsByIp, loginFailuresByEmail, setupAttemptsByIp } from "./rate-limit";
+import { clientIpFrom } from "./client-ip";
+import { loginAttemptsByEmail, loginAttemptsByIp, setupAttemptsByIp } from "./limits";
 import { safeRedirectPath } from "./redirect-path";
 import { createSession, deleteSession } from "./session";
 import { hasAnyUser } from "./setup";
@@ -21,24 +22,23 @@ const GENERIC_LOGIN_ERROR = "E-mail ou senha inválidos.";
 // Mesma mensagem para qualquer e-mail, exista ou não (não revela contas).
 const TOO_MANY_ATTEMPTS = "Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.";
 
-async function clientIp() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "desconhecido";
+// Sem IP confiável (ver client-ip.ts) o limite por IP não se aplica.
+async function withinIpLimit(limiter: typeof loginAttemptsByIp) {
+  const ip = clientIpFrom(await headers());
+  return ip === null || (await limiter.consume(ip));
 }
 
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const rawEmail = formData.get("email");
   const typedEmail = typeof rawEmail === "string" ? rawEmail.slice(0, 254) : "";
 
-  const ipKey = `ip:${await clientIp()}`;
-  if (loginAttemptsByIp.isBlocked(ipKey)) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
-  loginAttemptsByIp.hit(ipKey);
+  if (!(await withinIpLimit(loginAttemptsByIp))) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
 
   const parsed = loginSchema.safeParse({ email: rawEmail, password: formData.get("password") });
   if (!parsed.success) return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
 
-  const emailKey = `email:${parsed.data.email}`;
-  if (loginFailuresByEmail.isBlocked(emailKey)) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
+  // Conta toda tentativa antes do scrypt (atômico, vale para chamadas simultâneas) e zera no sucesso.
+  if (!(await loginAttemptsByEmail.consume(parsed.data.email))) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
 
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
@@ -48,7 +48,6 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   // Sempre executa o scrypt, mesmo sem usuário, para não revelar por tempo se o e-mail existe.
   const passwordOk = await verifyPassword(parsed.data.password, user?.passwordHash ?? (await getDummyHash()));
   if (!user || !user.active || !passwordOk) {
-    loginFailuresByEmail.hit(emailKey);
     return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
   }
 
@@ -62,7 +61,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   }
   if (!created) return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
 
-  loginFailuresByEmail.reset(emailKey);
+  await loginAttemptsByEmail.reset(parsed.data.email);
   redirect(safeRedirectPath(formData.get("next")));
 }
 
@@ -92,9 +91,7 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
 
   // A action continua acessível por POST depois do primeiro cadastro. Limite por IP, código de
   // configuração e checagem barata antes do scrypt evitam que ela vire um gerador de custo anônimo.
-  const ipKey = `ip:${await clientIp()}`;
-  if (setupAttemptsByIp.isBlocked(ipKey)) return { error: SETUP_TOO_MANY_ATTEMPTS, values };
-  setupAttemptsByIp.hit(ipKey);
+  if (!(await withinIpLimit(setupAttemptsByIp))) return { error: SETUP_TOO_MANY_ATTEMPTS, values };
   if (!isSetupEnabled()) return { error: SETUP_DISABLED, values };
   if (!isValidSetupToken(formData.get("setupToken"))) return { error: SETUP_INVALID_TOKEN, values };
   if (await hasAnyUser()) return { error: SETUP_CLOSED, values };

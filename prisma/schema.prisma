@@ -529,3 +529,14 @@ model ReassessmentChange {
   @@unique([reassessmentId, version, field])
   @@index([editorId])
 }
+
+// Limites de tentativas de autenticação compartilhados entre instâncias (issue #37). A chave é
+// o SHA-256 de "<limite>:<valor>" (IP ou e-mail), então a tabela não guarda dados pessoais em
+// claro. Só é lida e escrita por SQL atômico em `modules/auth/rate-limit.ts`, com o relógio do banco.
+model AuthRateLimit {
+  key     String   @id @db.Char(64)
+  count   Int
+  resetAt DateTime @db.Timestamptz(3)
+
+  @@index([resetAt])
+}

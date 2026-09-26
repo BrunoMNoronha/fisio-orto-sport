@@ -21,6 +21,11 @@ jest.mock("@/generated/prisma/client", () => ({
 jest.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-forwarded-for": "10.0.0.9" }),
 }));
+jest.mock("../limits", () => {
+  const { MemoryRateLimitStore, RATE_LIMIT_WINDOW_MS, RateLimiter } = jest.requireActual("../rate-limit");
+  const store = new MemoryRateLimitStore();
+  return { setupAttemptsByIp: new RateLimiter("setup-ip", 10, RATE_LIMIT_WINDOW_MS, store) };
+});
 jest.mock("next/navigation", () => ({
   redirect: jest.fn((path: string) => {
     throw new Error(`NEXT_REDIRECT:${path}`);
@@ -40,7 +45,7 @@ jest.mock("../session", () => ({
 import { Prisma } from "@/generated/prisma/client";
 import { setupFirstAdmin } from "../actions";
 import { hashPassword } from "../password";
-import { setupAttemptsByIp } from "../rate-limit";
+import { setupAttemptsByIp } from "../limits";
 
 function form(fields: Record<string, string>) {
   const fd = new FormData();
@@ -57,10 +62,11 @@ function prismaError(code: string) {
   return error;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   process.env.SETUP_TOKEN = TOKEN;
-  setupAttemptsByIp.reset("ip:10.0.0.9");
+  process.env.VERCEL = "1";
+  await setupAttemptsByIp.reset("10.0.0.9");
   prismaMock.user.findFirst.mockResolvedValue(null);
   tx.user.count.mockResolvedValue(0);
   tx.user.create.mockResolvedValue({ id: "u1" });

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { listPatientAppointments } from "@/modules/agenda/queries";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
+import { listAssessments } from "@/modules/clinico/assessment-queries";
 import { getCurrentAnamnesis } from "@/modules/clinico/queries";
 import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
 import { getPatient } from "@/modules/pacientes/queries";
@@ -42,11 +43,13 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
   if (!patient) notFound();
 
   const active = patient.status === "ATIVO";
-  const canRegisterAnamnesis = can(actor.role, "clinico:gerir") && active;
-  const [upcoming, anamnesis] = await Promise.all([
+  const canWriteClinical = can(actor.role, "clinico:gerir") && active;
+  const [upcoming, anamnesis, assessments] = await Promise.all([
     canReadAgenda ? listPatientAppointments(patient.id, { upcoming: true, take: 20 }) : null,
     canReadClinical ? getCurrentAnamnesis(patient.id) : null,
+    canReadClinical ? listAssessments(patient.id, 1) : null,
   ]);
+  const latestAssessment = assessments?.items[0];
   const nextAppointments = upcoming?.filter((item) => item.status === "AGENDADO").slice(0, 3) ?? [];
   const hasGuardian = Boolean(patient.guardianName || patient.guardianPhone);
   const base = `/pacientes/${patient.id}`;
@@ -206,12 +209,43 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">Nenhuma anamnese registrada.</p>
-                  {canRegisterAnamnesis && (
+                  {canWriteClinical && (
                     <Link href={`${base}/anamnese/nova`} className={buttonVariants({ size: "sm" })}>
                       Registrar anamnese
                     </Link>
                   )}
                 </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {assessments && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Avaliações</CardTitle>
+              {latestAssessment && (
+                <CardDescription>
+                  {assessments.total === 1 ? "1 avaliação" : `${assessments.total} avaliações`} · última em{" "}
+                  {formatDate(latestAssessment.assessmentDate)}, por {latestAssessment.authorNameSnapshot}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {latestAssessment ? (
+                <Link
+                  href={`${base}/avaliacoes/${latestAssessment.id}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Ver última avaliação
+                </Link>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada.</p>
+              )}
+              {canWriteClinical && anamnesis && (
+                <Link href={`${base}/avaliacoes/nova`} className={buttonVariants({ size: "sm" })}>
+                  Nova avaliação inicial
+                </Link>
               )}
             </CardContent>
           </Card>

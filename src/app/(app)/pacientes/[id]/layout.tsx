@@ -27,7 +27,12 @@ export default async function PacienteLayout({ children, params }: LayoutProps<"
   const canSchedule = can(actor.role, "agenda:gerir") && active;
   const tabs = [
     { href: `/pacientes/${patient.id}`, label: "Resumo", exact: true },
-    ...(can(actor.role, "clinico:ler") ? [{ href: `/pacientes/${patient.id}/anamnese`, label: "Anamnese" }] : []),
+    ...(can(actor.role, "clinico:ler")
+      ? [
+          { href: `/pacientes/${patient.id}/anamnese`, label: "Anamnese" },
+          { href: `/pacientes/${patient.id}/avaliacoes`, label: "Avaliações" },
+        ]
+      : []),
     ...(can(actor.role, "agenda:ler")
       ? [{ href: `/pacientes/${patient.id}/agendamentos`, label: "Agendamentos" }]
       : []),

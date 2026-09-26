@@ -1,7 +1,7 @@
 import "server-only";
 import type { PatientStatus, Prisma } from "@/generated/prisma/client";
 
-// Regras da anamnese, executadas dentro da transação da action.
+// Regras clínicas (anamnese e avaliação), executadas dentro da transação da action.
 type Tx = Prisma.TransactionClient;
 
 export class ClinicoRuleError extends Error {
@@ -19,8 +19,20 @@ export const PATIENT_INACTIVE = "Paciente inativo não pode receber nova anamnes
 // (UPDATE em setPatientStatus) espera, ou é esperada e relida em READ COMMITTED. Sem o lock,
 // a FK do INSERT só pega FOR KEY SHARE, que não conflita com a mudança de status.
 export async function assertPatientCanReceiveAnamnesis(tx: Tx, patientId: string) {
+  await assertPatientActive(tx, patientId, PATIENT_INACTIVE);
+}
+
+export const PATIENT_INACTIVE_ASSESSMENT =
+  "Paciente inativo não pode receber nova avaliação nem edição. Reative o cadastro antes de registrar.";
+
+// Mesma regra (e mesmo lock) para criar e editar avaliações.
+export async function assertPatientCanReceiveAssessment(tx: Tx, patientId: string) {
+  await assertPatientActive(tx, patientId, PATIENT_INACTIVE_ASSESSMENT);
+}
+
+async function assertPatientActive(tx: Tx, patientId: string, inactiveMessage: string) {
   const [patient] = await tx.$queryRaw<{ status: PatientStatus }[]>`
     SELECT "status" FROM "Patient" WHERE "id" = ${patientId} FOR UPDATE`;
   if (!patient) throw new ClinicoRuleError(PATIENT_NOT_FOUND);
-  if (patient.status !== "ATIVO") throw new ClinicoRuleError(PATIENT_INACTIVE);
+  if (patient.status !== "ATIVO") throw new ClinicoRuleError(inactiveMessage);
 }

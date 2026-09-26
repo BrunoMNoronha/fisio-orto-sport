@@ -13,4 +13,17 @@ describe("AppBreadcrumb", () => {
     expect(screen.getByText("Documentos")).toHaveAttribute("aria-current", "page");
     expect(screen.getAllByText("Detalhes")).toHaveLength(1);
   });
+
+  it("nova avaliação: Pacientes › Detalhes › Avaliações › Nova avaliação", () => {
+    pathname.current = "/pacientes/p1/avaliacoes/nova";
+    render(<AppBreadcrumb />);
+    expect(screen.getByRole("link", { name: "Avaliações" })).toHaveAttribute("href", "/pacientes/p1/avaliacoes");
+    expect(screen.getByText("Nova avaliação")).toHaveAttribute("aria-current", "page");
+  });
+
+  it("anamnese continua com \"Nova versão\"", () => {
+    pathname.current = "/pacientes/p1/anamnese/nova";
+    render(<AppBreadcrumb />);
+    expect(screen.getByText("Nova versão")).toHaveAttribute("aria-current", "page");
+  });
 });

@@ -2,7 +2,7 @@
 
 Use este arquivo como índice do briefing e da governança permanente do projeto. Cada responsabilidade do briefing fica em um arquivo próprio, com fatos agrupados por status. O roadmap também está separado para permitir atualização independente.
 
-Atualizado em 2026-09-19 a partir do estado local verificado em `main`. A documentação distingue planejado, implementado, testado e publicado; código e testes locais não comprovam homologação, produção ou deploy.
+Roadmap, escopo e definição de pronto reconciliados em 2026-09-26 a partir do checkout `feat/fisio-acessos-recepcao` (`ae2b054`) e das evidências do GitHub. Os demais arquivos mantêm suas decisões e referências históricas. A documentação distingue planejado, implementado, testado e publicado; código e testes locais não comprovam homologação, produção ou deploy.
 
 ## 1. Briefing por responsabilidade
 

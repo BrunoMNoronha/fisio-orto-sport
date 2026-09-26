@@ -14,14 +14,18 @@ Inclui, no escopo geral, cadastro/consulta/edição de pacientes, anamnese, agen
 - Fase 2c: sexo, profissão e CREFITO.
 - Fase 2d: documentos de impressão gerados na hora, sem armazenamento.
 - Fase 3, primeira fatia: agenda por profissional/período, criação, consulta, reagendamento, cancelamento e visões dia, semana e lista.
+- Fase 4, núcleo: avaliação inicial com histórico, plano terapêutico com revisões imutáveis, sessões com evolução/correção/invalidação e reavaliação comparativa com revisão motivada do plano (issues #24–#27).
+- Histórico clínico de sessões na ficha do paciente; agenda e sessões ainda sem vínculo.
 
 Fontes: `src/modules/*/README.md`, `git log`, `docs/project/roadmap.md`.
 
-## PLANEJADO
+## LIMITES VERIFICADOS EM 26/09/2026
 
-Fase 4: avaliação inicial, plano terapêutico, registro de sessões, evoluções e reavaliação.
+Indicação de alta é documental; não encerra plano, inativa paciente ou altera agenda. O módulo próprio de profissionais ainda não foi implementado: profissionais são usuários fisioterapeutas. Publicação e funcionamento autenticado no ambiente publicado não foram verificados nesta revisão.
+
+Correções, melhorias e critérios de aceite estão no [roadmap](roadmap.md), com prioridade de estabilização antes da próxima fatia funcional.
 
 ## PENDENTE / TBD
 
 Bloqueios de horários, horário de funcionamento, controle de presença e visão mensal precisam ser decididos em relação ao MVP.
-Financeiro, relatórios/indicadores e evoluções futuras como notificações, WhatsApp, assinatura digital, portal do paciente,  teleatendimento
+Decidir também a inclusão do vínculo agenda–sessão e da alta operacional. Financeiro, relatórios/indicadores e evoluções como notificações, WhatsApp, assinatura digital, portal do paciente e teleatendimento permanecem posteriores ao MVP.

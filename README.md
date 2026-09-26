@@ -416,7 +416,7 @@ Casos de teste devem contemplar, quando aplicável:
 - [x] Cadastro;
 - [x] Consulta;
 - [x] Edição;
-- [ ] Histórico;
+- [x] Histórico clínico de sessões; vínculo com a agenda ainda pendente;
 - [x] Anamnese subjetiva versionada;
 - [x] Cadastro complementar da ficha (sexo, profissão e CREFITO do fisioterapeuta).
 - [x] Documentos de impressão (termo, cartão de frequência e ficha de anamnese), gerados sem armazenamento.
@@ -432,11 +432,12 @@ Casos de teste devem contemplar, quando aplicável:
 
 ### Fase 4 — Prontuário
 
-- [ ] Avaliação inicial;
-- [ ] Plano terapêutico;
-- [ ] Registro de sessões;
-- [ ] Evoluções;
-- [ ] Reavaliação;
+- [x] Avaliação inicial com histórico de alterações;
+- [x] Plano terapêutico com revisões imutáveis;
+- [x] Registro de sessões, correção e invalidação;
+- [x] Evoluções por atendimento;
+- [x] Reavaliação comparativa com retorno ao plano;
+- [ ] Alta operacional — indicação de alta documentada não encerra o tratamento automaticamente.
 
 ### Fase 5 — Financeiro
 
@@ -461,10 +462,12 @@ Casos de teste devem contemplar, quando aplicável:
 ## Status
 
 ```text
-🚧 Em desenvolvimento — Fases 1 e 2 implementadas; primeira fatia da Fase 3 implementada; Fase 4 planejada.
+🚧 Em desenvolvimento — fundação e núcleo clínico implementados e testados; pacientes e agenda com pendências de integração e escopo. Revisão: 26/09/2026.
 ```
 
 O roadmap detalhado, separado por status e responsabilidade, está em [`docs/project/roadmap.md`](docs/project/roadmap.md). O briefing modular está em [`docs/PROJECT.md`](docs/PROJECT.md).
+
+O roadmap inclui correções e melhorias priorizadas, critérios de aceite e evidências. Implementação e CI não comprovam funcionamento em produção; publicação e interface autenticada não foram verificadas nesta revisão.
 
 Os requisitos e a arquitetura poderão evoluir conforme necessidades reais da operação forem identificadas.
 

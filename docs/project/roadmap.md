@@ -54,7 +54,7 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 **Status: PLANEJADO**
 
 - [x] Avaliação inicial (issue #24: criação, lista, detalhe e edição com histórico por campo; implementada e testada, publicação pendente);
-- [ ] Plano terapêutico;
+- [x] Plano terapêutico (issue #25: criação a partir da avaliação, revisões imutáveis, encerrar e reabrir; implementado e testado, publicação pendente);
 - [ ] Registro de sessões;
 - [ ] Evoluções;
 - [ ] Reavaliação.

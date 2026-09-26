@@ -43,9 +43,17 @@ export default async function AvaliacaoPage({ params }: PageProps<"/pacientes/[i
             Avaliação inicial de {formatDate(assessment.assessmentDate)}
           </h2>
           {canEdit && (
-            <Link href={`${base}/${assessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
-              Editar
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`${base}/${assessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
+                Editar
+              </Link>
+              <Link
+                href={`/pacientes/${patient.id}/planos/novo?avaliacao=${assessment.id}`}
+                className={buttonVariants()}
+              >
+                Criar plano terapêutico
+              </Link>
+            </div>
           )}
         </div>
       </div>

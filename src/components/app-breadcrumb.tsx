@@ -25,11 +25,15 @@ const LABELS: Record<string, string> = {
   agendamentos: "Agendamentos",
   documentos: "Documentos",
   avaliacoes: "Avaliações",
+  planos: "Planos",
+  revisar: "Revisar",
+  revisoes: "Revisões",
 }
 
 // Rótulos que dependem do segmento anterior (ex.: "nova" em avaliacoes não é "Nova versão").
 const CONTEXT_LABELS: Record<string, string> = {
   "avaliacoes/nova": "Nova avaliação",
+  "planos/novo": "Novo plano",
 }
 
 export function AppBreadcrumb() {

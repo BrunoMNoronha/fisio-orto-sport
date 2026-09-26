@@ -26,4 +26,15 @@ describe("AppBreadcrumb", () => {
     render(<AppBreadcrumb />);
     expect(screen.getByText("Nova versão")).toHaveAttribute("aria-current", "page");
   });
+
+  it("planos: Novo plano e revisões", () => {
+    pathname.current = "/pacientes/p1/planos/novo";
+    const { unmount } = render(<AppBreadcrumb />);
+    expect(screen.getByRole("link", { name: "Planos" })).toHaveAttribute("href", "/pacientes/p1/planos");
+    expect(screen.getByText("Novo plano")).toHaveAttribute("aria-current", "page");
+    unmount();
+    pathname.current = "/pacientes/p1/planos/pl1/revisar";
+    render(<AppBreadcrumb />);
+    expect(screen.getByText("Revisar")).toHaveAttribute("aria-current", "page");
+  });
 });

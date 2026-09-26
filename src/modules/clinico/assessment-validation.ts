@@ -53,29 +53,33 @@ const optionalText = (max: number, label: string) =>
     .optional()
     .transform((value) => (value ? value : null));
 
-// Data clínica: não pode ser futura no calendário da clínica (America/Sao_Paulo).
-// Lançamento retroativo é permitido.
-const assessmentDate = z
-  .string({ error: "Informe a data da avaliação." })
-  .trim()
-  .min(1, { error: "Informe a data da avaliação.", abort: true })
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Informe uma data válida." })
-  .transform((value, ctx) => {
-    const date = new Date(`${value}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
-      ctx.addIssue({ code: "custom", message: "Informe uma data válida." });
-      return z.NEVER;
-    }
-    if (value > toLocalDate(new Date())) {
-      ctx.addIssue({ code: "custom", message: "A data da avaliação não pode ser futura." });
-      return z.NEVER;
-    }
-    if (date.getUTCFullYear() < 1900) {
-      ctx.addIssue({ code: "custom", message: "Informe uma data a partir de 1900." });
-      return z.NEVER;
-    }
-    return date;
-  });
+// Data clínica (avaliação, plano): não pode ser futura no calendário da clínica
+// (America/Sao_Paulo). Lançamento retroativo é permitido.
+export function clinicalDate(label: string) {
+  return z
+    .string({ error: `Informe a data ${label}.` })
+    .trim()
+    .min(1, { error: `Informe a data ${label}.`, abort: true })
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Informe uma data válida." })
+    .transform((value, ctx) => {
+      const date = new Date(`${value}T00:00:00.000Z`);
+      if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+        ctx.addIssue({ code: "custom", message: "Informe uma data válida." });
+        return z.NEVER;
+      }
+      if (value > toLocalDate(new Date())) {
+        ctx.addIssue({ code: "custom", message: `A data ${label} não pode ser futura.` });
+        return z.NEVER;
+      }
+      if (date.getUTCFullYear() < 1900) {
+        ctx.addIssue({ code: "custom", message: "Informe uma data a partir de 1900." });
+        return z.NEVER;
+      }
+      return date;
+    });
+}
+
+const assessmentDate = clinicalDate("da avaliação");
 
 const assessmentFields = z.object({
   assessmentDate,

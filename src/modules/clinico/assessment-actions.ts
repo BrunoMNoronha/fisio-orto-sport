@@ -7,7 +7,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@/generated/prisma/client";
 import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
 import {
@@ -16,7 +15,7 @@ import {
   diffAssessment,
   updateAssessmentSchema,
 } from "./assessment-validation";
-import { ClinicoRuleError, PATIENT_NOT_FOUND, assertPatientCanReceiveAssessment } from "./rules";
+import { ClinicoRuleError, PATIENT_NOT_FOUND, assertPatientCanReceiveAssessment, signature } from "./rules";
 import { isPlausibleId } from "./validation";
 
 export type AssessmentActionState = { error?: string; fieldErrors?: FieldErrors } | undefined;
@@ -24,8 +23,6 @@ export type AssessmentActionState = { error?: string; fieldErrors?: FieldErrors 
 const ASSESSMENT_NOT_FOUND = "Avaliação não encontrada.";
 const ASSESSMENT_CONFLICT =
   "Esta avaliação foi alterada por outra pessoa enquanto você editava. Recarregue a página para ver a versão atual; suas alterações não foram salvas.";
-
-type Tx = Prisma.TransactionClient;
 
 // Erro associado a um campo do formulário (ex.: anamnese de outro paciente).
 class AssessmentFieldError extends Error {
@@ -49,14 +46,6 @@ async function guard(): Promise<{ id: string } | AssessmentActionState> {
 
 function isActor(value: unknown): value is { id: string } {
   return typeof value === "object" && value !== null && "id" in value;
-}
-
-// Assinatura histórica (D1/D3): nome e CREFITO lidos do usuário autenticado na própria transação,
-// nunca do formulário. CREFITO é nulo para quem não o tem (ex.: Administrador).
-async function signature(tx: Tx, userId: string) {
-  const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true, crefito: true } });
-  if (!user) throw new ClinicoRuleError("Acesso negado.");
-  return { name: user.name, crefito: user.crefito };
 }
 
 function failure(error: unknown): AssessmentActionState {

@@ -16,6 +16,8 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `setup.ts` (`server-only`) | `hasAnyUser()`: diz se a tabela de usuários já tem alguém (decide login × primeiro acesso). |
 | `bootstrap.ts` (`server-only`) | Autorização do primeiro acesso por `SETUP_TOKEN` (`isSetupEnabled`, `isValidSetupToken`) e `createFirstAdmin` (transação serializável). |
 | `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
+| `rate-limit.ts` / `limits.ts` | Limites de tentativas em janela fixa, guardados no PostgreSQL (`AuthRateLimit`), com reserva em memória. `limits.ts` (`server-only`) define os limites do login e do primeiro acesso. |
+| `client-ip.ts` | IP do cliente, lido dos cabeçalhos só atrás de proxy confiável (Vercel ou `TRUST_PROXY=true`). |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
 | `src/proxy.ts` | Checagem **otimista** (presença do cookie). Não substitui a DAL. |
 
@@ -55,9 +57,19 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 ## Proteções do login
 
 - Mensagem genérica e scrypt contra hash fictício (sem enumeração de contas por conteúdo ou tempo).
-- Limite em memória (`rate-limit.ts`): 5 falhas por e-mail e 30 tentativas por IP a cada 15 min (10 por IP no primeiro acesso). Vale para uma instância; com várias, trocar por armazenamento compartilhado. O IP vem de `x-forwarded-for`, então só é confiável atrás de um proxy que sobrescreva esse cabeçalho. O limite por e-mail não depende dele.
+- Limites de tentativas **compartilhados entre instâncias** (issue #37; detalhes em [Limites de tentativas](#limites-de-tentativas)): 5 tentativas sem sucesso por e-mail, 30 por IP no login e 10 por IP no primeiro acesso, a cada 15 min. A resposta de bloqueio é a mesma para qualquer e-mail.
 - A sessão é criada numa transação serializável que confere se o usuário segue ativo e com o mesmo hash de senha (sem sessão residual após uma redefinição simultânea).
 - Em produção o cookie se chama `__Host-session` (Secure, Path=/, sem Domain).
+
+## Limites de tentativas
+
+- **Armazenamento**: tabela `AuthRateLimit` no mesmo PostgreSQL (Neon), sem serviço novo. Cada tentativa é um `INSERT … ON CONFLICT DO UPDATE … RETURNING` atômico por chave, com o relógio do banco, então instâncias diferentes e chamadas simultâneas somam no mesmo contador e na mesma janela, e um cold start não zera nada. Janela fixa de 15 min: tentativas recusadas também contam, mas não estendem a janela.
+- **Custo operacional**: uma escrita pequena por tentativa de login ou de primeiro acesso (duas no login: IP e e-mail) e, em ~1% delas, a limpeza das janelas vencidas. A tabela guarda uma linha por IP/e-mail ativo na janela. Não há serviço extra a contratar nem a monitorar.
+- **Privacidade**: a chave é o SHA-256 de `<limite>:<valor>`. IP e e-mail não ficam em claro na tabela nem nos logs.
+- **Login**: conta toda tentativa por e-mail antes do scrypt (atômico, não fura com chamadas paralelas) e zera no login bem-sucedido. Na prática são 5 tentativas sem sucesso por conta.
+- **Indisponibilidade (fail-soft)**: se o armazenamento falhar (banco fora do ar ou migração ainda não aplicada), a instância registra `[rate-limit] armazenamento indisponível` com o código do erro, sem chave, IP ou e-mail, e passa a limitar **em memória** até o banco voltar. O login não é bloqueado por falha do limitador. Se o banco inteiro cair, o login já falha de qualquer forma.
+- **IP confiável**: na Vercel (`VERCEL=1`), que sobrescreve `x-forwarded-for` e não repassa o valor enviado pelo cliente, usa o primeiro `x-forwarded-for` (ou `x-real-ip`). Num proxy próprio que faça o mesmo, defina `TRUST_PROXY=true`. Sem proxy confiável (ex.: `next dev`), os cabeçalhos são ignorados e o limite por IP não é aplicado, para não aceitar IP forjado nem juntar todos os clientes num único contador. O limite por e-mail continua valendo. Valores que não são IP válido são descartados.
+- **Deploy**: a migração `auth_rate_limit` precisa estar aplicada no banco de produção. Até lá, vale o fail-soft acima.
 
 ## Primeiro acesso (tabela de usuários vazia)
 

@@ -29,12 +29,24 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 const createSession = jest.fn();
+const deleteSession = jest.fn();
 jest.mock("../session", () => ({
   createSession: (...args: unknown[]) => createSession(...args),
-  deleteSession: jest.fn(),
+  deleteSession: () => deleteSession(),
 }));
+// Auditoria (issue #56): verificada pelas chamadas; a gravação real está em record.test.ts.
+const recordAudit = jest.fn();
+const purgeExpiredAuditSafely = jest.fn();
+jest.mock("@/modules/auditoria/record", () => ({
+  recordAudit: (...args: unknown[]) => recordAudit(...args),
+  purgeExpiredAuditSafely: () => purgeExpiredAuditSafely(),
+  requestIp: async () => null,
+}));
+const getCurrentUser = jest.fn();
+jest.mock("../dal", () => ({ getCurrentUser: () => getCurrentUser() }));
 
-import { login } from "../actions";
+import { hashEmail } from "@/modules/auditoria/events";
+import { login, logout } from "../actions";
 import { hashPassword } from "../password";
 import { loginAttemptsByEmail, loginAttemptsByIp } from "../limits";
 
@@ -57,7 +69,7 @@ beforeEach(async () => {
   requestHeaders = new Headers({ "x-forwarded-for": "10.0.0.1" });
   await loginAttemptsByIp.reset("10.0.0.1");
   await loginAttemptsByEmail.reset("ana@x.com");
-  findUnique.mockResolvedValue({ id: "u1", passwordHash: hash, active: true });
+  findUnique.mockResolvedValue({ id: "u1", passwordHash: hash, active: true, role: "RECEPCAO" });
   createSession.mockResolvedValue(true);
 });
 
@@ -123,5 +135,54 @@ describe("login", () => {
     delete process.env.VERCEL;
     for (let i = 0; i < 31; i++) await login(undefined, form(`invalido-${i}`, ""));
     await expect(login(undefined, form("ana@x.com", "senha-correta-1"))).rejects.toThrow("NEXT_REDIRECT");
+  });
+});
+
+describe("auditoria do login e do logout (issue #56)", () => {
+  const lastAudit = () => recordAudit.mock.calls.at(-1)?.[0];
+
+  it("login bem-sucedido registra quem entrou e dispara o expurgo", async () => {
+    await expect(login(undefined, form("ana@x.com", "senha-correta-1"))).rejects.toThrow("NEXT_REDIRECT");
+    expect(lastAudit()).toEqual({ action: "LOGIN", result: "SUCESSO", actorId: "u1", actorRole: "RECEPCAO", targetUserId: "u1" });
+    expect(purgeExpiredAuditSafely).toHaveBeenCalled();
+  });
+
+  it("falha guarda o e-mail só como hash; o alvo aparece só quando a conta existe", async () => {
+    await login(undefined, form(" Ana@X.com ", "errada-1"));
+    expect(lastAudit()).toEqual({ action: "LOGIN", result: "FALHA", targetUserId: "u1", emailHash: hashEmail("ana@x.com") });
+
+    findUnique.mockResolvedValueOnce(null);
+    await login(undefined, form("nao-existe@x.com", "errada-1"));
+    expect(lastAudit()).toEqual({ action: "LOGIN", result: "FALHA", targetUserId: null, emailHash: hashEmail("nao-existe@x.com") });
+
+    const recorded = JSON.stringify(recordAudit.mock.calls);
+    expect(recorded).not.toMatch(/ana@x\.com|nao-existe|errada-1|senha-correta/i);
+    expect(purgeExpiredAuditSafely).not.toHaveBeenCalled();
+  });
+
+  it("a resposta ao cliente é a mesma com ou sem conta (o registro não vaza para a tela)", async () => {
+    const existente = await login(undefined, form("ana@x.com", "errada-1"));
+    findUnique.mockResolvedValueOnce(null);
+    const inexistente = await login(undefined, form("ana@x.com", "errada-1"));
+    expect(existente).toEqual(inexistente);
+  });
+
+  it("tentativa bloqueada pelo limite é registrada como BLOQUEADO", async () => {
+    for (let i = 0; i < 5; i++) await login(undefined, form("ana@x.com", `errada-${i}`));
+    await login(undefined, form("ana@x.com", "senha-correta-1"));
+    expect(lastAudit()).toMatchObject({ action: "LOGIN", result: "BLOQUEADO", emailHash: hashEmail("ana@x.com") });
+    await loginAttemptsByEmail.reset("ana@x.com");
+  });
+
+  it("logout registra quem saiu; sem sessão, não registra", async () => {
+    getCurrentUser.mockResolvedValueOnce({ id: "u1", name: "Ana", email: "ana@x.com", role: "ADMIN" });
+    await expect(logout()).rejects.toThrow("NEXT_REDIRECT:/login");
+    expect(deleteSession).toHaveBeenCalled();
+    expect(lastAudit()).toEqual({ action: "LOGOUT", result: "SUCESSO", actorId: "u1", actorRole: "ADMIN", targetUserId: "u1" });
+
+    recordAudit.mockClear();
+    getCurrentUser.mockResolvedValueOnce(null);
+    await expect(logout()).rejects.toThrow("NEXT_REDIRECT:/login");
+    expect(recordAudit).not.toHaveBeenCalled();
   });
 });

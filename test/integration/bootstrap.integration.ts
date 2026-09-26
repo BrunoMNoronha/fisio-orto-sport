@@ -31,6 +31,24 @@ describe("primeiro acesso no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
     await admin.query(
       `ALTER TABLE "${schema}"."User" ALTER COLUMN role TYPE "${schema}"."Role" USING role::text::"${schema}"."Role"`,
     );
+    // createFirstAdmin grava a auditoria na mesma transação (issue #56): cópia vazia de AuditLog,
+    // com os enums no schema temporário, como em User.
+    for (const type of ["AuditAction", "AuditResult"]) {
+      const values = await admin.query<{ label: string }>(
+        `SELECT e.enumlabel AS label FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+         JOIN pg_namespace n ON n.oid = t.typnamespace
+         WHERE t.typname = $1 AND n.nspname = 'public' ORDER BY e.enumsortorder`,
+        [type],
+      );
+      await admin.query(`CREATE TYPE "${schema}"."${type}" AS ENUM (${values.rows.map((row) => `'${row.label}'`).join(", ")})`);
+    }
+    await admin.query(`CREATE TABLE "${schema}"."AuditLog" (LIKE public."AuditLog" INCLUDING ALL)`);
+    await admin.query(
+      `ALTER TABLE "${schema}"."AuditLog"
+         ALTER COLUMN action TYPE "${schema}"."AuditAction" USING action::text::"${schema}"."AuditAction",
+         ALTER COLUMN result TYPE "${schema}"."AuditResult" USING result::text::"${schema}"."AuditResult",
+         ALTER COLUMN "actorRole" TYPE "${schema}"."Role" USING "actorRole"::text::"${schema}"."Role"`,
+    );
     prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url! }, { schema }) });
   });
 
@@ -42,6 +60,7 @@ describe("primeiro acesso no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
 
   beforeEach(async () => {
     await admin.query(`DELETE FROM "${schema}"."User"`);
+    await admin.query(`DELETE FROM "${schema}"."AuditLog"`);
   });
 
   const data = (i: number) => ({ name: `Admin ${i}`, email: `admin-${i}@teste.local`, passwordHash: "x" });
@@ -52,6 +71,8 @@ describe("primeiro acesso no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
     assert.deepEqual(users, [{ id, role: "ADMIN" }]);
     await assert.rejects(createFirstAdmin(prisma, data(1)), SetupClosedError);
     assert.equal(await prisma.user.count(), 1);
+    const logs = await prisma.auditLog.findMany({ select: { action: true, actorId: true, targetUserId: true } });
+    assert.deepEqual(logs, [{ action: "PRIMEIRO_ADMIN_CRIADO", actorId: id, targetUserId: id }]);
   });
 
   it("chamadas simultâneas criam um único Administrador", async () => {
@@ -68,6 +89,8 @@ describe("primeiro acesso no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
       assert.ok(expected, `erro inesperado: ${error}`);
     }
     assert.equal(await prisma.user.count(), 1);
+    // Um único registro: as transações perdedoras foram desfeitas por inteiro.
+    assert.equal(await prisma.auditLog.count(), 1);
   });
 
   it("mesmo e-mail em paralelo não cria dois registros", async () => {

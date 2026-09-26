@@ -540,3 +540,47 @@ model AuthRateLimit {
 
   @@index([resetAt])
 }
+
+// Trilha de auditoria de login e gestão de usuários (issue #56; decisões A2, A4–A8 em
+// docs/project/15-retencao-rastreabilidade-recuperacao.md). A aplicação só insere; um trigger no
+// PostgreSQL recusa UPDATE, TRUNCATE e DELETE de registros com menos de 7 dias (retenção A5).
+// actorId e targetUserId não têm chave estrangeira: o registro não depende do usuário existir.
+// Nunca guarda senha, token, user-agent ou conteúdo clínico; e-mail digitado só como SHA-256.
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  ACESSO_NEGADO
+  PRIMEIRO_ADMIN_CRIADO
+  USUARIO_CRIADO
+  USUARIO_EDITADO
+  PERFIL_ALTERADO
+  USUARIO_ATIVADO
+  USUARIO_DESATIVADO
+  SENHA_REDEFINIDA
+  CLI_ADMIN_CRIADO
+  CLI_SENHA_REDEFINIDA
+}
+
+enum AuditResult {
+  SUCESSO
+  FALHA
+  BLOQUEADO
+  NEGADO
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  action       AuditAction
+  result       AuditResult
+  actorId      String?
+  actorRole    Role?
+  targetUserId String?
+  emailHash    String?     @db.Char(64)
+  ip           String?     @db.VarChar(45)
+  createdAt    DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([action, createdAt])
+}

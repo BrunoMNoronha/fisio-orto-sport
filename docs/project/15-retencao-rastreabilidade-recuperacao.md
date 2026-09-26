@@ -130,10 +130,10 @@ da decisão correspondente.
 | Tarefa | Natureza | Depende de | Aceite mínimo |
 |---|---|---|---|
 | T1 — Tabela de auditoria de acesso e registro nas leituras escolhidas | Auditoria de acesso | A1 (decidido: nenhuma leitura por ora) | **Adiada.** Leitura auditada gera registro com usuário, ação, alvo e data; falha ao registrar tem política definida; sem conteúdo clínico no registro; testes por perfil |
-| T2 — Eventos de segurança (login, logout, negação, gestão de usuários, `db:admin`) — **#56** | Auditoria de acesso | A2, A5–A8 ✓ | Eventos definidos registrados sem senha/token; testes |
+| T2 — Eventos de segurança (login, logout, negação, gestão de usuários, `db:admin`) — **#56** | Auditoria de acesso | A2, A5–A8 ✓ | Eventos definidos registrados sem senha/token; testes — **IMPLEMENTADO na #56** (código e testes; migração em produção pendente) |
 | T3 — Histórico de alterações de `Patient`, `Appointment` e `User` | Autoria de escrita | A3 | Cada alteração guarda autor, data e valores anteriores dos campos decididos; migração aditiva |
-| T4 — Consulta da auditoria — **#56** | Auditoria de acesso | A4 ✓; T2 | Somente ADMIN consulta, em tela; filtros por usuário, evento e período |
-| T5 — Expurgo dos registros de auditoria vencidos — **incluído na #56** | Retenção | A5 ✓ (7 dias) | Rotina documentada e testada em banco descartável |
+| T4 — Consulta da auditoria — **#56** | Auditoria de acesso | A4 ✓; T2 | Somente ADMIN consulta, em tela; filtros por usuário, evento e período — **IMPLEMENTADO na #56** (código e testes; migração em produção pendente) |
+| T5 — Expurgo dos registros de auditoria vencidos — **incluído na #56** | Retenção | A5 ✓ (7 dias) | Rotina documentada e testada em banco descartável — **IMPLEMENTADO na #56** (código e testes; migração em produção pendente) |
 | T6 — Configurar retenção/snapshots no Neon e cópia externa | Backup | B4/B5 (decidido: manter) | **Adiada** por risco aceito. Configuração lida de volta e registrada; custo aprovado |
 | T7 — Roteiro e primeiro teste de restauração | Backup | B3, B6, B7 | Restauração em branch isolado com evidência registrada; branch removido após conferência autorizada |
 | T8 — Fluxo de retenção/anonimização do prontuário | Retenção | R1–R5 | Somente após decisão e autorização expressa; teste só com dados fictícios |

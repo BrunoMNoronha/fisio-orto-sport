@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
+import { writeAudit } from "@/modules/auditoria/write";
 
 // Autorização do primeiro acesso (issue #35). O cadastro do primeiro Administrador pela tela
 // de login só é aceito com o código definido em SETUP_TOKEN no servidor. Sem a variável (ou
@@ -30,12 +31,21 @@ type FirstAdminData = { name: string; email: string; passwordHash: string };
 
 // A tabela vazia é reconferida dentro de uma transação serializável, para que duas chamadas
 // simultâneas não criem dois administradores. Lança SetupClosedError se já houver usuário;
-// P2002 e P2034 (conflito de serialização) sobem para quem chamou.
-export async function createFirstAdmin(db: PrismaClient, data: FirstAdminData): Promise<string> {
+// P2002 e P2034 (conflito de serialização) sobem para quem chamou. O registro de auditoria vai na
+// mesma transação (A8): se ele falhar, o Administrador não é criado.
+export async function createFirstAdmin(db: PrismaClient, data: FirstAdminData, ip: string | null = null): Promise<string> {
   return db.$transaction(
     async (tx) => {
       if ((await tx.user.count()) > 0) throw new SetupClosedError();
       const created = await tx.user.create({ data: { ...data, role: "ADMIN" }, select: { id: true } });
+      await writeAudit(tx, {
+        action: "PRIMEIRO_ADMIN_CRIADO",
+        result: "SUCESSO",
+        actorId: created.id,
+        actorRole: "ADMIN",
+        targetUserId: created.id,
+        ip,
+      });
       return created.id;
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

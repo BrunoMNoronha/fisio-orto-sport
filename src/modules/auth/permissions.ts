@@ -11,6 +11,8 @@ export const PERMISSIONS = [
   "agenda:gerir",
   "clinico:ler",
   "clinico:gerir",
+  // Trilha de auditoria de login e gestão de usuários (issue #56, decisão A4): só Administrador.
+  "auditoria:ler",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

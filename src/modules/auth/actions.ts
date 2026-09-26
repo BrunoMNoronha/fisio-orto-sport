@@ -4,7 +4,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { hashEmail } from "@/modules/auditoria/events";
+import { purgeExpiredAuditSafely, recordAudit, requestIp } from "@/modules/auditoria/record";
 import { SetupClosedError, createFirstAdmin, isSetupEnabled, isValidSetupToken } from "./bootstrap";
+import { getCurrentUser } from "./dal";
 import { getDummyHash, hashPassword, verifyPassword } from "./password";
 import { clientIpFrom } from "./client-ip";
 import { loginAttemptsByEmail, loginAttemptsByIp, setupAttemptsByIp } from "./limits";
@@ -28,26 +31,47 @@ async function withinIpLimit(limiter: typeof loginAttemptsByIp) {
   return ip === null || (await limiter.consume(ip));
 }
 
+// Tentativa sem sucesso: o e-mail digitado vai para a auditoria só como hash (A6). A resposta ao
+// cliente não muda, então o registro não revela se a conta existe.
+async function auditLoginFailure(result: "FALHA" | "BLOQUEADO", typedEmail: string, targetUserId?: string) {
+  await recordAudit({
+    action: "LOGIN",
+    result,
+    targetUserId: targetUserId ?? null,
+    emailHash: typedEmail.trim() ? hashEmail(typedEmail) : null,
+  });
+}
+
 export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const rawEmail = formData.get("email");
   const typedEmail = typeof rawEmail === "string" ? rawEmail.slice(0, 254) : "";
 
-  if (!(await withinIpLimit(loginAttemptsByIp))) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
+  if (!(await withinIpLimit(loginAttemptsByIp))) {
+    await auditLoginFailure("BLOQUEADO", typedEmail);
+    return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
+  }
 
   const parsed = loginSchema.safeParse({ email: rawEmail, password: formData.get("password") });
-  if (!parsed.success) return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
+  if (!parsed.success) {
+    await auditLoginFailure("FALHA", typedEmail);
+    return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
+  }
 
   // Conta toda tentativa antes do scrypt (atômico, vale para chamadas simultâneas) e zera no sucesso.
-  if (!(await loginAttemptsByEmail.consume(parsed.data.email))) return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
+  if (!(await loginAttemptsByEmail.consume(parsed.data.email))) {
+    await auditLoginFailure("BLOQUEADO", typedEmail);
+    return { error: TOO_MANY_ATTEMPTS, email: typedEmail };
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
-    select: { id: true, passwordHash: true, active: true },
+    select: { id: true, passwordHash: true, active: true, role: true },
   });
 
   // Sempre executa o scrypt, mesmo sem usuário, para não revelar por tempo se o e-mail existe.
   const passwordOk = await verifyPassword(parsed.data.password, user?.passwordHash ?? (await getDummyHash()));
   if (!user || !user.active || !passwordOk) {
+    await auditLoginFailure("FALHA", typedEmail, user?.id);
     return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
   }
 
@@ -59,9 +83,15 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     // Conflito de serialização com uma alteração simultânea do usuário: trata como falha.
     if (!(error instanceof Prisma.PrismaClientKnownRequestError)) throw error;
   }
-  if (!created) return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
+  if (!created) {
+    await auditLoginFailure("FALHA", typedEmail, user.id);
+    return { error: GENERIC_LOGIN_ERROR, email: typedEmail };
+  }
 
   await loginAttemptsByEmail.reset(parsed.data.email);
+  await recordAudit({ action: "LOGIN", result: "SUCESSO", actorId: user.id, actorRole: user.role, targetUserId: user.id });
+  // Expurgo oportunista dos registros vencidos (A5): a cada login bem-sucedido e a cada consulta.
+  await purgeExpiredAuditSafely();
   redirect(safeRedirectPath(formData.get("next")));
 }
 
@@ -108,7 +138,7 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
 
   let userId: string;
   try {
-    userId = await createFirstAdmin(prisma, { ...data, passwordHash });
+    userId = await createFirstAdmin(prisma, { ...data, passwordHash }, await requestIp());
   } catch (error) {
     if (error instanceof SetupClosedError) return { error: SETUP_CLOSED, values };
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -126,6 +156,10 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
 }
 
 export async function logout() {
+  const user = await getCurrentUser();
   await deleteSession();
+  if (user) {
+    await recordAudit({ action: "LOGOUT", result: "SUCESSO", actorId: user.id, actorRole: user.role, targetUserId: user.id });
+  }
   redirect("/login");
 }

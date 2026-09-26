@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -23,6 +25,7 @@ export const metadata: Metadata = { title: "Usuários — TechLab+ Fisio OrtoSpo
 export default async function UsuariosPage() {
   const actor = await requirePermission("usuarios:ler");
   const canManage = can(actor.role, "usuarios:gerir");
+  const canAudit = can(actor.role, "auditoria:ler");
   const users = await listUsers();
 
   return (
@@ -34,7 +37,14 @@ export default async function UsuariosPage() {
             Contas de acesso da equipe e seus perfis.
           </p>
         </div>
-        {canManage && <CreateUserDialog />}
+        <div className="flex flex-wrap gap-2">
+          {canAudit && (
+            <Link href="/usuarios/auditoria" className={buttonVariants({ variant: "outline" })}>
+              Auditoria
+            </Link>
+          )}
+          {canManage && <CreateUserDialog />}
+        </div>
       </div>
 
       {users.length === 0 ? (

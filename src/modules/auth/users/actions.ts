@@ -6,7 +6,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import type { Role } from "@/generated/prisma/enums";
-import { AuthorizationError, assertPermission } from "../dal";
+import type { AuditAction } from "@/generated/prisma/enums";
+import { requestIp } from "@/modules/auditoria/record";
+import { writeAudit } from "@/modules/auditoria/write";
+import { AuthorizationError, assertPermission, type CurrentUser } from "../dal";
 import { hashPassword } from "../password";
 import { ROLES, can } from "../permissions";
 import { checkUserChange } from "../safeguards";
@@ -31,17 +34,19 @@ class SafeguardError extends Error {}
 // Não ecoa o valor informado.
 const DUPLICATE_CREFITO: UserActionState = { fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } };
 
-async function guard(): Promise<{ actorId: string } | UserActionState> {
+type Actor = { actorId: string; actorRole: CurrentUser["role"]; ip: string | null };
+
+async function guard(): Promise<Actor | UserActionState> {
   try {
     const actor = await assertPermission("usuarios:gerir");
-    return { actorId: actor.id };
+    return { actorId: actor.id, actorRole: actor.role, ip: await requestIp() };
   } catch (error) {
     if (error instanceof AuthorizationError) return { error: "Acesso negado." };
     throw error;
   }
 }
 
-function isActor(value: unknown): value is { actorId: string } {
+function isActor(value: unknown): value is Actor {
   return typeof value === "object" && value !== null && "actorId" in value;
 }
 
@@ -59,10 +64,22 @@ function entries(formData: FormData, keys: string[]) {
   return Object.fromEntries(keys.map((key) => [key, formData.get(key) ?? undefined]));
 }
 
+// Registro de auditoria de uma alteração de usuário, na transação dela (A8).
+function auditEntry(actor: Actor, action: AuditAction, targetUserId: string) {
+  return { action, result: "SUCESSO" as const, actorId: actor.actorId, actorRole: actor.actorRole, targetUserId, ip: actor.ip };
+}
+
+// Ação registrada: ativação/desativação, troca de perfil ou edição simples.
+function changeAction(target: { role: Role; active: boolean }, data: { role?: Role; active?: boolean }): AuditAction {
+  if (data.active !== undefined) return data.active ? "USUARIO_ATIVADO" : "USUARIO_DESATIVADO";
+  if (data.role !== undefined && data.role !== target.role) return "PERFIL_ALTERADO";
+  return "USUARIO_EDITADO";
+}
+
 // Aplica a mudança de perfil/status numa transação serializável, validando as salvaguardas
 // contra o estado atual do banco (evita corrida entre dois admins).
 async function changeUser(
-  actorId: string,
+  actor: Actor,
   id: string,
   data: { name?: string; role?: Role; crefito?: string | null; active?: boolean },
 ) {
@@ -71,10 +88,11 @@ async function changeUser(
       const target = await tx.user.findUnique({ where: { id }, select: { id: true, role: true, active: true } });
       if (!target) throw new SafeguardError("Usuário não encontrado.");
       const activeManagerCount = await tx.user.count({ where: { active: true, role: { in: MANAGER_ROLES } } });
-      const problem = checkUserChange({ actorId, target, next: data, activeManagerCount });
+      const problem = checkUserChange({ actorId: actor.actorId, target, next: data, activeManagerCount });
       if (problem) throw new SafeguardError(problem);
       await tx.user.update({ where: { id }, data });
       if (data.active === false) await tx.session.deleteMany({ where: { userId: id } });
+      await writeAudit(tx, auditEntry(actor, changeAction(target, data), id));
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
@@ -103,8 +121,12 @@ export async function createUser(_prev: UserActionState, formData: FormData): Pr
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { password, ...data } = parsed.data;
+  const passwordHash = await hashPassword(password);
   try {
-    await prisma.user.create({ data: { ...data, passwordHash: await hashPassword(password) } });
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({ data: { ...data, passwordHash }, select: { id: true } });
+      await writeAudit(tx, auditEntry(actor, "USUARIO_CRIADO", created.id));
+    });
   } catch (error) {
     if (isUniqueViolation(error)) {
       if (violatesCrefito(error)) return DUPLICATE_CREFITO;
@@ -124,7 +146,7 @@ export async function updateUser(_prev: UserActionState, formData: FormData): Pr
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { id, ...data } = parsed.data;
-  return runChange(() => changeUser(actor.actorId, id, data), "Usuário atualizado.");
+  return runChange(() => changeUser(actor, id, data), "Usuário atualizado.");
 }
 
 export async function setUserActive(_prev: UserActionState, formData: FormData): Promise<UserActionState> {
@@ -136,7 +158,7 @@ export async function setUserActive(_prev: UserActionState, formData: FormData):
 
   const { id, active } = parsed.data;
   return runChange(
-    () => changeUser(actor.actorId, id, { active }),
+    () => changeUser(actor, id, { active }),
     active ? "Usuário ativado." : "Usuário desativado.",
   );
 }
@@ -153,7 +175,10 @@ export async function resetPassword(_prev: UserActionState, formData: FormData):
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.user.updateMany({ where: { id }, data: { passwordHash } });
     // Encerra as sessões abertas com a senha antiga.
-    if (result.count > 0) await tx.session.deleteMany({ where: { userId: id } });
+    if (result.count > 0) {
+      await tx.session.deleteMany({ where: { userId: id } });
+      await writeAudit(tx, auditEntry(actor, "SENHA_REDEFINIDA", id));
+    }
     return result.count;
   });
   if (updated === 0) return { error: "Usuário não encontrado." };

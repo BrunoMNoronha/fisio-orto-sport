@@ -49,6 +49,8 @@ model User {
   treatmentSessionsAuthored       TreatmentSession[]        @relation("TreatmentSessionAuthor")
   treatmentSessionsInvalidated    TreatmentSession[]        @relation("TreatmentSessionInvalidatedBy")
   treatmentSessionChangesAuthored TreatmentSessionChange[]
+  reassessmentsAuthored           Reassessment[]
+  reassessmentChangesAuthored     ReassessmentChange[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -112,6 +114,7 @@ model Patient {
   assessments          Assessment[]
   therapyPlans         TherapyPlan[]
   treatmentSessions    TreatmentSession[]
+  reassessments        Reassessment[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -227,6 +230,7 @@ model Assessment {
   author                User               @relation(fields: [authorId], references: [id], onDelete: Restrict)
   changes               AssessmentChange[]
   therapyPlans          TherapyPlan[]
+  reassessments         Reassessment[]
 
   // Alvo da FK composta de TherapyPlan: a avaliação de origem é sempre do mesmo paciente.
   @@unique([id, patientId])
@@ -292,6 +296,7 @@ model TherapyPlan {
   revisions             TherapyPlanRevision[]
   statusChanges         TherapyPlanStatusChange[]
   treatmentSessions     TreatmentSession[]
+  reassessments         Reassessment[]
 
   // Alvo da FK composta de TreatmentSession: o plano é sempre do mesmo paciente.
   @@unique([id, patientId])
@@ -307,31 +312,38 @@ model TherapyPlan {
 // CHECKs manuais na migração: number >= 1, INICIAL só no número 1 e sem motivo, demais com motivo,
 // objetivos e conduta não vazios, plannedSessions entre 1 e 100 quando informado.
 model TherapyPlanRevision {
-  id                    String                  @id @default(cuid())
-  planId                String
-  number                Int
-  kind                  TherapyPlanRevisionKind
-  reason                String?                 @db.VarChar(500)
-  planDate              DateTime                @db.Date
-  goals                 String                  @db.VarChar(2000)
-  conduct               String                  @db.VarChar(4000)
-  techniques            String?                 @db.VarChar(4000)
-  exercises             String?                 @db.VarChar(4000)
-  plannedSessions       Int?                    @db.SmallInt
-  frequency             String?                 @db.VarChar(200)
-  reassessment          String?                 @db.VarChar(500)
-  notes                 String?                 @db.VarChar(4000)
-  authorId              String
-  authorNameSnapshot    String                  @db.VarChar(120)
-  authorCrefitoSnapshot String?                 @db.VarChar(20)
-  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
-  plan                  TherapyPlan             @relation(fields: [planId], references: [id], onDelete: Restrict)
-  author                User                    @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  treatmentSessions     TreatmentSession[]
+  id                       String                  @id @default(cuid())
+  planId                   String
+  number                   Int
+  kind                     TherapyPlanRevisionKind
+  reason                   String?                 @db.VarChar(500)
+  planDate                 DateTime                @db.Date
+  goals                    String                  @db.VarChar(2000)
+  conduct                  String                  @db.VarChar(4000)
+  techniques               String?                 @db.VarChar(4000)
+  exercises                String?                 @db.VarChar(4000)
+  plannedSessions          Int?                    @db.SmallInt
+  frequency                String?                 @db.VarChar(200)
+  reassessment             String?                 @db.VarChar(500)
+  notes                    String?                 @db.VarChar(4000)
+  authorId                 String
+  authorNameSnapshot       String                  @db.VarChar(120)
+  authorCrefitoSnapshot    String?                 @db.VarChar(20)
+  // Reavaliação que motivou esta revisão (Fase 4, #27). Única: uma revisão por reavaliação; a FK
+  // composta garante que a reavaliação é do mesmo plano.
+  reassessmentId           String?
+  createdAt                DateTime                @default(now()) @db.Timestamptz(3)
+  plan                     TherapyPlan             @relation(fields: [planId], references: [id], onDelete: Restrict)
+  author                   User                    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  treatmentSessions        TreatmentSession[]
+  motivatingReassessment   Reassessment?           @relation("RevisionFromReassessment", fields: [reassessmentId, planId], references: [id, planId], onDelete: Restrict)
+  reassessmentsReferencing Reassessment[]          @relation("ReassessmentPlanRevision")
 
   @@unique([planId, number])
   // Alvo da FK composta de TreatmentSession: a revisão aplicada é sempre do mesmo plano.
   @@unique([id, planId])
+  // Uma revisão por reavaliação (reassessmentId já determina o plano; o par serve à FK composta).
+  @@unique([reassessmentId, planId])
   @@index([authorId])
 }
 
@@ -428,5 +440,92 @@ model TreatmentSessionChange {
   editor                User             @relation(fields: [editorId], references: [id], onDelete: Restrict)
 
   @@unique([sessionId, version, field])
+  @@index([editorId])
+}
+
+enum ReassessmentGoalsStatus {
+  ATINGIDOS
+  PARCIALMENTE_ATINGIDOS
+  NAO_ATINGIDOS
+}
+
+enum ReassessmentConclusion {
+  CONTINUIDADE
+  AJUSTE_PLANO
+  INDICACAO_ALTA
+}
+
+// Reavaliação (Fase 4, #27, dado clínico sensível, `clinico:*`): novo evento clínico ligado a um plano
+// (mesmo paciente), à revisão do plano aplicável na data (mesmo plano) e à avaliação de origem do plano.
+// referenceSnapshot congela, na criação, o conteúdo comparável da avaliação de origem (e sua versão) e da
+// reavaliação anterior do mesmo plano: edições posteriores nesses registros não mudam a comparação.
+// Conclusão só documenta (inclusive a indicação de alta): não encerra plano, não inativa paciente e não
+// mexe na agenda. Revisão do plano motivada por ela aponta para cá (TherapyPlanRevision.reassessmentId).
+// Editável com histórico por campo (ReassessmentChange, com motivo) e checagem otimista por `version`.
+// CHECKs manuais: textos obrigatórios e nome do autor não vazios, version >= 1.
+model Reassessment {
+  id                     String                  @id @default(cuid())
+  patientId              String
+  planId                 String
+  planRevisionId         String
+  assessmentId           String
+  previousReassessmentId String?
+  referenceSnapshot      Json
+  reassessmentDate       DateTime                @db.Date
+  inspection             String?                 @db.VarChar(4000)
+  palpation              String?                 @db.VarChar(4000)
+  functionalGait         String?                 @db.VarChar(4000)
+  rangeOfMotion          String?                 @db.VarChar(4000)
+  muscleStrength         String?                 @db.VarChar(4000)
+  specialTests           String?                 @db.VarChar(4000)
+  painLimitations        String?                 @db.VarChar(4000)
+  progressSummary        String                  @db.VarChar(4000)
+  goalsStatus            ReassessmentGoalsStatus
+  goalsJustification     String                  @db.VarChar(2000)
+  conclusion             ReassessmentConclusion
+  conclusionSummary      String                  @db.VarChar(2000)
+  version                Int                     @default(1)
+  authorId               String
+  authorNameSnapshot     String                  @db.VarChar(120)
+  authorCrefitoSnapshot  String?                 @db.VarChar(20)
+  createdAt              DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                @default(now()) @db.Timestamptz(3)
+  patient                Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  plan                   TherapyPlan             @relation(fields: [planId, patientId], references: [id, patientId], onDelete: Restrict)
+  planRevision           TherapyPlanRevision     @relation("ReassessmentPlanRevision", fields: [planRevisionId, planId], references: [id, planId], onDelete: Restrict)
+  assessment             Assessment              @relation(fields: [assessmentId, patientId], references: [id, patientId], onDelete: Restrict)
+  previousReassessment   Reassessment?           @relation("ReassessmentPrevious", fields: [previousReassessmentId, planId], references: [id, planId], onDelete: Restrict)
+  nextReassessments      Reassessment[]          @relation("ReassessmentPrevious")
+  author                 User                    @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  changes                ReassessmentChange[]
+  resultingRevision      TherapyPlanRevision?    @relation("RevisionFromReassessment")
+
+  // Alvo das FKs compostas (revisão motivada e reavaliação anterior): sempre do mesmo plano.
+  @@unique([id, planId])
+  @@index([patientId, reassessmentDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([planId, reassessmentDate(sort: Desc), createdAt(sort: Desc)])
+  @@index([planRevisionId, planId])
+  @@index([assessmentId, patientId])
+  @@index([previousReassessmentId, planId])
+  @@index([authorId])
+}
+
+// Histórico da reavaliação: uma linha por campo alterado em cada correção (append-only), com motivo.
+model ReassessmentChange {
+  id                    String       @id @default(cuid())
+  reassessmentId        String
+  version               Int
+  field                 String       @db.VarChar(40)
+  previousValue         String?      @db.VarChar(4000)
+  newValue              String?      @db.VarChar(4000)
+  reason                String       @db.VarChar(500)
+  editorId              String
+  editorNameSnapshot    String       @db.VarChar(120)
+  editorCrefitoSnapshot String?      @db.VarChar(20)
+  changedAt             DateTime     @default(now()) @db.Timestamptz(3)
+  reassessment          Reassessment @relation(fields: [reassessmentId], references: [id], onDelete: Restrict)
+  editor                User         @relation(fields: [editorId], references: [id], onDelete: Restrict)
+
+  @@unique([reassessmentId, version, field])
   @@index([editorId])
 }

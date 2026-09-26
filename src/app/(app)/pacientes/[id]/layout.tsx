@@ -33,6 +33,7 @@ export default async function PacienteLayout({ children, params }: LayoutProps<"
           { href: `/pacientes/${patient.id}/avaliacoes`, label: "Avaliações" },
           { href: `/pacientes/${patient.id}/planos`, label: "Planos" },
           { href: `/pacientes/${patient.id}/sessoes`, label: "Sessões" },
+          { href: `/pacientes/${patient.id}/reavaliacoes`, label: "Reavaliações" },
         ]
       : []),
     ...(can(actor.role, "agenda:ler")

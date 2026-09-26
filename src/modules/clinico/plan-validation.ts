@@ -122,6 +122,13 @@ export const revisePlanSchema = planFields.extend({
   kind: z.enum(REVISION_KINDS, { error: "Selecione o tipo de revisão." }),
   reason,
   baseRevision: z.coerce.number({ error: "Dados inválidos." }).int().min(1, { error: "Dados inválidos." }),
+  // Reavaliação que motivou a revisão (#27), quando a revisão parte de uma conclusão "Ajuste do plano".
+  reassessmentId: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || null)
+    .refine((value) => value === null || isPlausibleId(value), { error: "Dados inválidos." }),
 });
 
 export const changePlanStatusSchema = z.object({

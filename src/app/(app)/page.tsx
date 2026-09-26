@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRightIcon, CalendarCheckIcon, CalendarRangeIcon, UsersIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -17,8 +16,6 @@ import { parseAgendaFilter, toLocalDate } from "@/modules/agenda/validation";
 import { listPatients } from "@/modules/pacientes/queries";
 import { listPatientsSchema } from "@/modules/pacientes/validation";
 import { formatTime } from "./agenda/format";
-
-const modulos = ["Reavaliação"];
 
 export default async function Home() {
   const user = await requireUser();
@@ -91,7 +88,7 @@ export default async function Home() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {canAgenda && (
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle>Agenda de hoje</CardTitle>
               <CardDescription>Atendimentos confirmados para hoje.</CardDescription>
@@ -129,25 +126,6 @@ export default async function Home() {
             </CardContent>
           </Card>
         )}
-        <Card className={canAgenda ? undefined : "lg:col-span-3"}>
-          <CardHeader>
-            <CardTitle>Em construção</CardTitle>
-            <CardDescription>Próximos módulos do sistema.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col gap-2">
-              {modulos.map((modulo) => (
-                <li
-                  key={modulo}
-                  className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2.5 text-sm"
-                >
-                  {modulo}
-                  <Badge variant="outline">Em breve</Badge>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

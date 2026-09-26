@@ -115,6 +115,8 @@ export async function listPlanRevisions(patientId: string, planId: string) {
       authorNameSnapshot: true,
       authorCrefitoSnapshot: true,
       createdAt: true,
+      // Reavaliação que motivou a revisão (#27), quando houver.
+      motivatingReassessment: { select: { id: true, reassessmentDate: true } },
     },
   });
 }

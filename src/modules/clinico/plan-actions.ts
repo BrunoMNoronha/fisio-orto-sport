@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
 import {
@@ -27,6 +28,7 @@ const PLAN_NOT_FOUND = "Plano não encontrado.";
 const PLAN_CONFLICT =
   "Este plano foi revisado ou mudou de estado enquanto você editava. Recarregue a página para ver a revisão vigente; suas alterações não foram salvas.";
 const PLAN_CLOSED = "Plano encerrado não recebe revisão. Reabra o plano antes de revisar.";
+const REVISION_EXISTS = "Já existe uma revisão do plano criada a partir desta reavaliação.";
 
 const CONTENT_SELECT = {
   planDate: true,
@@ -150,9 +152,13 @@ export async function revisePlan(
   if (!isActor(actor)) return actor;
   if (!isPlausibleId(patientId) || !isPlausibleId(planId)) return { error: PLAN_NOT_FOUND };
 
-  const parsed = revisePlanSchema.safeParse(planFormEntries(formData, ["kind", "reason", "baseRevision"]));
+  const parsed = revisePlanSchema.safeParse(
+    planFormEntries(formData, ["kind", "reason", "baseRevision", "reassessmentId"]),
+  );
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
-  const { kind, reason, baseRevision, ...data } = parsed.data;
+  const { kind: chosenKind, reason, baseRevision, reassessmentId, ...data } = parsed.data;
+  // Revisão motivada por reavaliação é sempre uma mudança clínica (também garantido por CHECK).
+  const kind = reassessmentId ? "MUDANCA_CLINICA" : chosenKind;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -171,6 +177,21 @@ export async function revisePlan(
       if (plan.status !== "ATIVO") throw new ClinicoRuleError(PLAN_CLOSED);
       if (plan.currentRevision !== baseRevision) throw new ClinicoRuleError(PLAN_CONFLICT);
       assertNotBeforeAssessment(data.planDate, plan.assessment.assessmentDate);
+      if (reassessmentId) {
+        // Só uma reavaliação deste plano, com conclusão "Ajuste do plano" e ainda sem revisão.
+        const reassessment = await tx.reassessment.findFirst({
+          where: { id: reassessmentId, planId, patientId },
+          select: { conclusion: true, reassessmentDate: true, resultingRevision: { select: { id: true } } },
+        });
+        if (!reassessment) throw new ClinicoRuleError("Reavaliação não encontrada neste plano.");
+        if (reassessment.conclusion !== "AJUSTE_PLANO") {
+          throw new ClinicoRuleError("Só uma reavaliação com conclusão \"Ajuste do plano\" pode originar esta revisão.");
+        }
+        if (reassessment.resultingRevision) throw new ClinicoRuleError(REVISION_EXISTS);
+        if (data.planDate.getTime() < reassessment.reassessmentDate.getTime()) {
+          throw new PlanFieldError("planDate", "A data da revisão não pode ser anterior à data da reavaliação que a motivou.");
+        }
+      }
       const current = plan.revisions[0];
       if (current && samePlanContent(current, data)) {
         throw new ClinicoRuleError("Nenhuma alteração em relação à revisão vigente. Altere algum campo para revisar.");
@@ -192,6 +213,7 @@ export async function revisePlan(
           number,
           kind,
           reason,
+          reassessmentId,
           ...content(data),
           authorId: actor.id,
           authorNameSnapshot: author.name,
@@ -201,10 +223,15 @@ export async function revisePlan(
       });
     });
   } catch (error) {
+    // Duas revisões concorrentes a partir da mesma reavaliação: a unicidade barra a segunda.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" && reassessmentId) {
+      return { error: REVISION_EXISTS };
+    }
     return failure(error);
   }
 
   revalidate(patientId);
+  if (reassessmentId) revalidatePath(`/pacientes/${patientId}/reavaliacoes`, "layout");
   redirect(`/pacientes/${patientId}/planos/${planId}`);
 }
 

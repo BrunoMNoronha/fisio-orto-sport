@@ -55,6 +55,12 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
                   <Link href={`/pacientes/${patient.id}/sessoes/nova?plano=${plan.id}`} className={buttonVariants()}>
                     Registrar sessão
                   </Link>
+                  <Link
+                    href={`/pacientes/${patient.id}/reavaliacoes/nova?plano=${plan.id}`}
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Nova reavaliação
+                  </Link>
                   <Link href={`${base}/${plan.id}/revisar`} className={buttonVariants({ variant: "outline" })}>
                     Revisar plano
                   </Link>

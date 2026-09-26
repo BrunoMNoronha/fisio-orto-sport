@@ -17,8 +17,10 @@ jest.mock("@/modules/auth/dal", () => {
 
 jest.mock("server-only", () => ({}));
 
+const findUniqueMock = jest.fn();
 const prismaMock = {
   $transaction: jest.fn(),
+  $executeRaw: jest.fn(),
   patient: { findUnique: jest.fn(), findMany: jest.fn() },
   user: { findUnique: jest.fn() },
   appointment: {
@@ -26,7 +28,9 @@ const prismaMock = {
     update: jest.fn(),
     updateMany: jest.fn(),
     findFirst: jest.fn(),
-    findUnique: jest.fn(),
+    findUnique: findUniqueMock,
+    // Releitura depois do lock por profissional: segue o mesmo mock de findUnique.
+    findUniqueOrThrow: jest.fn((...args: unknown[]): unknown => findUniqueMock(...args)),
     delete: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -377,5 +381,29 @@ describe("searchActivePatients", () => {
     as(null);
     await expect(searchActivePatients("ana")).resolves.toEqual({ error: "Acesso negado." });
     expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("lock por profissional", () => {
+  beforeEach(() => as("RECEPCAO"));
+
+  it("criar trava o profissional antes de checar conflito", async () => {
+    prismaMock.appointment.findFirst.mockResolvedValue(null);
+    prismaMock.appointment.create.mockResolvedValue({ id: "a9" });
+    await expect(createAppointment(undefined, form(newAppointment))).rejects.toThrow("NEXT_REDIRECT");
+    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prismaMock.appointment.findFirst.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("reagendar trava origem e destino em ordem fixa e relê o status depois do lock", async () => {
+    prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f2", status: "AGENDADO" });
+    prismaMock.appointment.findFirst.mockResolvedValue(null);
+    prismaMock.appointment.update.mockResolvedValue({ id: "a1" });
+    await expect(rescheduleAppointment(undefined, form({ id: "a1", ...slot }))).rejects.toThrow("NEXT_REDIRECT");
+    const keys = prismaMock.$executeRaw.mock.calls.map((call: unknown[]) => call[1]);
+    expect(keys).toEqual(["agenda:f1", "agenda:f2"]);
+    expect(prismaMock.appointment.findUniqueOrThrow).toHaveBeenCalled();
   });
 });

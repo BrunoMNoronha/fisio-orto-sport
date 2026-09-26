@@ -20,7 +20,7 @@ a leitura de código não detectaria. Esta versão incorpora esses resultados. V
 | Aspecto | Status | Notas |
 |---------|--------|-------|
 | **Dependências diretas** | ✅ SAUDÁVEL | Versões atualizadas |
-| **Dependências transitivas** | 🔴 3 VULNERABILIDADES | 2 altas + 1 moderada, via `prisma` (mysql2, deepmerge-ts) |
+| **Dependências transitivas** | 🟠 1 EXCEÇÃO | Em 26/09 (#36): `mysql2` remediado por override; `deepmerge-ts` (alta, só no CLI `prisma`) segue como exceção documentada — audit ainda falha |
 | **Configuração** | ⚠️ INCOMPLETA | Vercel + PostgreSQL gerenciado pendente |
 | **Variáveis de Ambiente** | ⚠️ DISCREPÂNCIA | 2 variáveis não utilizadas; 1 documentação desatualizada |
 | **Schema/Migrations** | ✅ PRONTO | 7 migrações sequenciais, aplicadas e verificadas em banco local |
@@ -101,6 +101,30 @@ de `prisma` 7.x que resolva as transitivas. Recomendação: manter 7.10.0, monit
 changelog do Prisma, e reavaliar quando 8.x sair da fase RC (ou quando 7.x receber um patch).
 Não atualizar para uma pre-release em produção só para resolver uma vulnerabilidade em
 dependência de build-time não utilizada em runtime.
+
+### ✅ Tratamento em 2026-09-26 (issue #36 / COR-02)
+
+**Estado atual e alcance** (revalidado com `pnpm audit --prod --json`, `prisma@7.10.0`, `@prisma/client@7.10.0`, `@prisma/adapter-pg@7.10.0`):
+
+- `prisma` é devDependency, mas aparece no grafo `--prod` porque `@prisma/client` declara `prisma` como peer opcional. Na Vercel ele roda só no build (`prisma generate`); migrações e seed rodam localmente.
+- Nenhum dos 45 `*.nft.json` do `pnpm build` (arquivos que a Vercel empacota por rota) referencia `mysql2`, `deepmerge-ts` ou o CLI `prisma`. A aplicação usa o client gerado + `@prisma/adapter-pg`.
+- `prisma@7.10.0` (último 7.x estável) fixa `mysql2@3.15.3` e `@prisma/config@7.10.0` fixa `deepmerge-ts@7.1.5` em versão exata; o próximo `prisma` é `8.0.0-rc.*`.
+
+| Alerta | Versão antes | Alcance | Decisão | Depois |
+|---|---|---|---|---|
+| GHSA-3f6p-5ww8-9rcr (alta, `mysql2`) | 3.15.3 | Só o CLI conectando a um servidor MySQL. O projeto é 100% PostgreSQL | **Remediado**: override `prisma>mysql2: ^3.24.4` em `pnpm-workspace.yaml` (mesma major, restrito ao CLI) | 3.24.4 |
+| GHSA-rgwj-5xj2-c3m3 (moderada, `mysql2`) | 3.15.3 | Idem, e só com `compress: true` | **Remediado** pelo mesmo override | 3.24.4 |
+| GHSA-ggr8-5vv4-36mx (alta, `deepmerge-ts`) | 7.1.5 | `@prisma/config` mescla a config do CLI (`prisma.config.ts`, versionado e sem grafos recursivos), só em build/terminal | **Exceção técnica** (abaixo) | 7.1.5 |
+
+**Exceção: `deepmerge-ts` (GHSA-ggr8-5vv4-36mx)**
+
+- **Justificativa**: a correção só existe em `deepmerge-ts@8`, uma major com mudança de comportamento (Maps passam a ser mesclados em profundidade). `@prisma/config` fixa `7.1.5` e não foi testado com a 8, e forçar a major contraria o escopo da issue. O ataque exige que o atacante controle os dois objetos mesclados com auto-referência. Aqui a entrada é o `prisma.config.ts` do próprio repositório, fora do runtime.
+- **Mitigação**: o CLI `prisma` fica fora do bundle de runtime (conferido nos traces acima); o `prisma.config.ts` só muda por PR revisado; migrações e seed rodam localmente.
+- **Reavaliar** quando sair um `prisma` estável (7.x ou 8.x) com `deepmerge-ts >= 8`, quando o CLI passar a rodar em runtime ou se a config passar a vir de fonte não confiável. Na mesma ocasião, remover o override do `mysql2` se o `prisma` já trouxer `>= 3.23.1`.
+
+**Resultado**: `pnpm audit --prod` passou de 2 altas + 1 moderada para **1 alta** (a exceção acima). O audit **continua falhando** (exit 1) e não deve ser declarado limpo.
+
+**Sem regressão**: `prisma generate` e `prisma validate` ok; 12 migrações aplicadas do zero em PostgreSQL descartável (`migrate status`: em dia); `pnpm test:integration` 40/40 no mesmo banco; `pnpm lint`, `pnpm typecheck`, `pnpm exec jest --runInBand` (558 testes) e `pnpm build` ok. No lockfile só mudaram `mysql2` e as dependências dele (`sql-escaper` no lugar de `denque`/`seq-queue`/`sqlstring`).
 
 ### 📋 Dependências Desatualizadas (`pnpm outdated`)
 

@@ -5,3 +5,8 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+
+# Issue #36: prisma 7.10.0 fixa mysql2 3.15.3 (GHSA-3f6p-5ww8-9rcr, GHSA-rgwj-5xj2-c3m3).
+# Override restrito ao CLI e dentro da mesma major. Remover quando o prisma trouxer mysql2 >= 3.23.1.
+overrides:
+  prisma>mysql2: ^3.24.4

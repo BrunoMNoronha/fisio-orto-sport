@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { AppointmentActionState } from "@/modules/agenda/actions";
 import { startsInPast } from "@/modules/agenda/validation";
+import { PatientCombobox } from "./patient-combobox";
 
 type Action = (prev: AppointmentActionState, formData: FormData) => Promise<AppointmentActionState>;
 type Option = { id: string; label: string };
@@ -57,7 +58,7 @@ export function AppointmentForm({
   action,
   initial,
   professionals,
-  patients,
+  patientPicker,
   patientName,
   appointmentId,
   cancelHref,
@@ -66,13 +67,15 @@ export function AppointmentForm({
   action: Action;
   initial: AppointmentFormValues;
   professionals: Option[];
-  patients?: Option[];
+  // Criação: busca de paciente ativo no servidor, com a pré-seleção (se houver).
+  patientPicker?: { initial: Option | null };
   patientName?: string;
   appointmentId?: string;
   cancelHref: string;
   submitLabel: string;
 }) {
   const [values, setValues] = useState(initial);
+  const [patient, setPatient] = useState<Option | null>(patientPicker?.initial ?? null);
   const [state, formAction, pending] = useActionState(action, undefined);
   const errors = state?.fieldErrors;
   const minute = useClientMinute();
@@ -87,7 +90,7 @@ export function AppointmentForm({
     };
   }
 
-  function select(name: "patientId" | "professionalId", label: string, options: Option[], empty: string) {
+  function select(name: "professionalId", label: string, options: Option[], empty: string) {
     const id = `agendamento-${name}`;
     return (
       <div className="flex flex-col gap-2 sm:col-span-3">
@@ -126,8 +129,16 @@ export function AppointmentForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        {patients ? (
-          select("patientId", "Paciente *", patients, "Selecione um paciente ativo")
+        {patientPicker ? (
+          <PatientCombobox
+            name="patientId"
+            value={patient}
+            errors={errors?.patientId}
+            onChange={(option) => {
+              setPatient(option);
+              setValues((current) => ({ ...current, patientId: option.id }));
+            }}
+          />
         ) : (
           <p className="text-sm sm:col-span-3">
             <span className="text-muted-foreground">Paciente: </span>
@@ -149,7 +160,7 @@ export function AppointmentForm({
         </Alert>
       )}
 
-      {patients && (
+      {patientPicker && (
         <div className="flex flex-col gap-2">
           <Label htmlFor="agendamento-notes">Observação administrativa (opcional)</Label>
           <Textarea

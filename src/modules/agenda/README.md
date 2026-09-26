@@ -8,8 +8,8 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 |---|---|
 | `validation.ts` | Schemas zod (mensagens em pt-BR), conversão data/hora ↔ instante no fuso da clínica, filtro da listagem e `overlaps()`. |
 | `rules.ts` (`server-only`) | Regras executadas na transação: paciente ativo, profissional apto e ausência de conflito; detecção da violação da constraint do banco. |
-| `queries.ts` (`server-only`) | `listAgenda()`, `getAppointment()`, `listProfessionals()` e `listPatientAppointments()` (próximos ou anteriores de um paciente, para a ficha) exigem `agenda:ler`; `listActivePatientOptions()` exige `agenda:gerir`. `select` explícito; do paciente só `id` e `fullName`. |
-| `actions.ts` | `createAppointment`, `rescheduleAppointment` e `cancelAppointment`. Todas exigem `agenda:gerir` no servidor. **Não há exclusão física.** |
+| `queries.ts` (`server-only`) | `listAgenda()`, `getAppointment()`, `listProfessionals()` e `listPatientAppointments()` (próximos ou anteriores de um paciente, para a ficha) exigem `agenda:ler`; `getActivePatientOption()` (pré-seleção por `?patientId=`, só se ativo) exige `agenda:gerir`. `select` explícito; do paciente só `id` e `fullName`. |
+| `actions.ts` | `createAppointment`, `rescheduleAppointment`, `cancelAppointment` e `searchActivePatients` (busca de paciente do formulário). Todas exigem `agenda:gerir` no servidor. **Não há exclusão física.** |
 | `src/app/(app)/agenda/**` | Agenda (`/agenda`), detalhe (`/agenda/[id]`), novo (`/agenda/novo`) e reagendar (`/agenda/[id]/reagendar`). |
 
 ## Regras
@@ -24,7 +24,7 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 - **Início no passado** é permitido (lançamento retroativo): o formulário só mostra um aviso, sem bloquear.
 - **Visões** (`/agenda?view=dia|semana|lista&date=YYYY-MM-DD&professionalId=`; `parseAgendaView()`): **dia** (padrão, hoje) em grade com uma coluna por fisioterapeuta ativo, faixa 07:00–20:00 ampliada se houver agendamento fora dela e linha do horário atual; **semana** de segunda a domingo, cada dia leva à visão do dia; **lista** com período `from`/`to` (padrão: 7 dias a partir de hoje; máximo 31 dias). Todas incluem cancelados, marcados como tal. Na grade do dia, quem tem `agenda:gerir` clica num horário vazio para abrir `/agenda/novo` com data, profissional e início (`start=HH:MM`) preenchidos; o fim continua informado à mão.
 - **Autoria**: `createdById`/`updatedById` (FK `Restrict`). Não é trilha de auditoria.
-- A lista de pacientes no formulário traz até 500 pacientes ativos, por nome.
+- **Escolha do paciente** (issue #38): não há lista fixa. O campo busca no servidor (`searchActivePatients`) pelo nome, sem diferenciar acentos nem maiúsculas (mesma `searchName` da lista de pacientes). Traz só pacientes `ATIVO`, só `id` e nome, em ordem `fullName, id` e com até 20 resultados por consulta; se houver mais, o formulário pede para refinar. No cliente (`patient-combobox.tsx`), o padrão ARIA combobox + listbox tem setas, Enter para escolher (sem enviar o formulário) e Escape para fechar. A busca espera 250 ms depois da digitação, e só a resposta da busca mais recente é aplicada. Há estados de carregamento, vazio e erro, e a contagem de resultados é anunciada numa região `polite`. O paciente escolhido fica num campo oculto, separado do texto digitado, então refinar a busca ou receber um erro de validação não o perde. A regra de paciente ativo continua sendo validada em `createAppointment`.
 
 ## Permissões
 

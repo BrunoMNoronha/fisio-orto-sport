@@ -73,15 +73,16 @@ export async function listProfessionals() {
   });
 }
 
-// Opções para o formulário: somente pacientes ativos.
-export async function listActivePatientOptions() {
+// Pré-seleção do formulário (ex.: /agenda/novo?patientId=…): só se o paciente estiver ativo.
+// A escolha em si é feita pela busca `searchActivePatients` (actions.ts), sem lista fixa.
+export async function getActivePatientOption(id: string | undefined) {
   await requirePermission("agenda:gerir");
-  return prisma.patient.findMany({
-    where: { status: "ATIVO" },
-    orderBy: [{ fullName: "asc" }, { id: "asc" }],
-    take: 500,
+  if (!id || id.length > 64) return null;
+  const patient = await prisma.patient.findFirst({
+    where: { id, status: "ATIVO" },
     select: { id: true, fullName: true },
   });
+  return patient ? { id: patient.id, label: patient.fullName } : null;
 }
 
 export type AgendaItem = Awaited<ReturnType<typeof listAgenda>>[number];

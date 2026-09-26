@@ -292,7 +292,7 @@ A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um
 | `pnpm db:up` / `pnpm db:down` | Sobe/derruba o PostgreSQL local |
 | `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Migrações, geração do client e Prisma Studio |
 | `pnpm db:seed` | Cria o primeiro Administrador a partir do `.env` |
-| `pnpm db:admin --email <e-mail> [--name "<nome>"]` | Cria o Administrador, se o e-mail não existir, ou redefine a senha dele (reativa e encerra as sessões). Pede confirmação e a senha sem eco. Para o Neon, defina `DATABASE_URL` com a URL direta só nesse terminal |
+| `pnpm db:admin --email <e-mail> [--name "<nome>"]` | Cria o Administrador, se o e-mail não existir, ou redefine a senha dele (reativa e encerra as sessões). Recusa e-mail de outro perfil (não promove ninguém). Mostra só host e banco; pede confirmação (`sim` no banco local, o **nome do banco** no remoto) e a senha sem eco, nunca por argumento. Para o Neon, defina `DATABASE_URL` com a URL direta só nesse terminal |
 
 ---
 

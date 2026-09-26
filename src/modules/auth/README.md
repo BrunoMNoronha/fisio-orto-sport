@@ -94,7 +94,18 @@ Alternativa sem expor a tela: rodar `pnpm db:seed` contra o banco antes de publi
 ### Recuperação de acesso de Administrador
 
 - Outro Administrador ativo redefine a senha em `/usuarios` (as sessões do usuário são encerradas).
-- Sem nenhum Administrador utilizável, o primeiro acesso pela web **não** serve (a tabela não está vazia). Pelo terminal, com `DATABASE_URL` do banco alvo definida só naquela sessão, rode `pnpm db:seed` com `SEED_ADMIN_*` apontando para um **e-mail novo**: o seed cria esse Administrador sem alterar os existentes. Depois, entre com ele e desative ou redefina a conta antiga em `/usuarios`.
+- Sem nenhum Administrador utilizável, o primeiro acesso pela web **não** serve (a tabela não está vazia). Pelo terminal, com `DATABASE_URL` do banco alvo definida só naquela sessão, rode `pnpm db:admin --email <e-mail do Administrador>`. Ele redefine a senha, reativa a conta e encerra as sessões dela; se o e-mail não existir, cria um Administrador novo. Alternativa: `pnpm db:seed` com `SEED_ADMIN_*` apontando para um e-mail novo.
+
+### `pnpm db:admin` (issue #40)
+
+Núcleo em `admin-cli.ts` (testável); `prisma/admin.ts` é só a entrada com o prompt.
+
+- **Alvo**: mostra só `host/banco` e se é local ou REMOTO, nunca usuário, senha ou parâmetros. `DATABASE_URL` inválida é recusada sem ecoar o valor.
+- **Confirmação** antes de qualquer escrita: `sim` no banco local; no remoto, digitar o nome do banco.
+- **Senha**: só pelo prompt, sem eco no terminal e duas vezes. Nunca por argumento (não fica no histórico) e nunca na saída; o banco recebe só o hash scrypt.
+- **Comportamento**: e-mail novo cria um ADMIN ativo. E-mail de ADMIN troca a senha, reativa e apaga as sessões na mesma transação, reconferindo o perfil na escrita. E-mail de **outro perfil** é recusado sem perguntar nada: promover alguém a ADMIN é feito em `/usuarios`.
+- **Abortos**: argumentos inválidos, confirmação diferente, senha fora de 8 a 128 caracteres, senhas diferentes, Ctrl+C ou fim da entrada encerram sem gravar (código 1, ou 130 no cancelamento). Tabela ausente, e-mail criado em paralelo (P2002) e falha do banco viram mensagens curtas, sem despejar o erro inteiro.
+- **Testes**: `__tests__/admin-cli.test.ts` cobre o núcleo; `test/integration/admin-cli.integration.ts` roda o script de verdade contra o banco de integração.
 
 ## Acesso rápido em desenvolvimento
 

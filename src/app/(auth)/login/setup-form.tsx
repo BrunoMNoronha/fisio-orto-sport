@@ -17,7 +17,8 @@ function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   );
 }
 
-// Só aparece quando não existe nenhum usuário; cria o primeiro Administrador e já entra.
+// Só aparece quando não existe nenhum usuário e SETUP_TOKEN está configurado; cria o primeiro
+// Administrador e já entra. O código nunca volta no estado (o campo é limpo a cada envio).
 export function SetupForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(setupFirstAdmin, undefined);
   const errors = state?.fieldErrors;
@@ -31,6 +32,21 @@ export function SetupForm({ next }: { next: string }) {
         </Alert>
       )}
       <div className="flex flex-col gap-2">
+        <Label htmlFor="setupToken">Código de configuração</Label>
+        <Input
+          id="setupToken"
+          name="setupToken"
+          type="password"
+          autoComplete="off"
+          aria-describedby="setupToken-ajuda"
+          required
+          autoFocus
+        />
+        <p id="setupToken-ajuda" className="text-sm text-muted-foreground">
+          Fornecido pelo responsável técnico.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
         <Label htmlFor="name">Nome</Label>
         <Input
           id="name"
@@ -40,7 +56,6 @@ export function SetupForm({ next }: { next: string }) {
           aria-invalid={errors?.name ? true : undefined}
           aria-describedby={errors?.name ? "name-erro" : undefined}
           required
-          autoFocus
         />
         <FieldError id="name-erro" messages={errors?.name} />
       </div>

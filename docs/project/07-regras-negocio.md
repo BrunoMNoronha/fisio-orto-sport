@@ -10,9 +10,10 @@
 - Anamnese vigente usa versionamento append-only; paciente inativo continua consultável, mas não recebe nova versão.
 - Avaliação inicial (decisões de 18/09 e 26/09/2026): exige data clínica, anamnese de referência do mesmo paciente e diagnóstico fisioterapêutico; os demais campos são opcionais, e em branco significa "não informado". A avaliação é editável, com histórico por campo (valor anterior, autor, CREFITO, data). O paciente pode ter várias avaliações iniciais, sem vínculo com a agenda. O paciente inativo não recebe avaliação nem edição.
 - Plano terapêutico (decisões de 26/09/2026): decorre de uma avaliação do mesmo paciente (versão registrada). Obrigatórios: data, objetivos e conduta. Quantidade prevista de 1 a 100, só informativa. Frequência e reavaliação em texto livre. Revisões imutáveis com tipo (correção ou mudança clínica) e motivo; a vigente é a de maior número. Pode haver vários planos, Ativo ou Encerrado, e encerrar e reabrir pedem motivo. Encerrar não é alta. Data não futura e não anterior à avaliação. Paciente inativo não recebe escrita.
+- Sessões de atendimento (decisões de 26/09/2026): exigem plano ativo e a revisão exata aplicada, momento clínico não futuro (nem antes do início do plano), responsável fisioterapeuta e evolução obrigatória. O Fisioterapeuta registra por si, e o Admin escolhe o fisioterapeuta. A sessão é corrigível com motivo e histórico por campo, e a invalidação (com motivo) a tira da contagem. Só atendimentos válidos contam, e a previsão do plano é informativa. Não há vínculo com a agenda, e uma chave única evita duplicidade.
 - Snapshot de CREFITO nos registros clínicos, anulável: o Administrador pode registrar sem CREFITO. Na avaliação, vale para o autor e para cada edição.
 
-Fontes: `README.md`, `src/modules/agenda/README.md`, `src/modules/clinico/README.md`, issues #24 e #25.
+Fontes: `README.md`, `src/modules/agenda/README.md`, `src/modules/clinico/README.md`, issues #24, #25 e #26.
 
 ## DECISÃO TÉCNICA
 

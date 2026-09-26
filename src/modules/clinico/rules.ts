@@ -38,6 +38,14 @@ export async function assertPatientCanReceivePlan(tx: Tx, patientId: string) {
   await assertPatientActive(tx, patientId, PATIENT_INACTIVE_PLAN);
 }
 
+export const PATIENT_INACTIVE_SESSION =
+  "Paciente inativo não pode receber novo atendimento, correção nem invalidação. Reative o cadastro antes.";
+
+// Registrar, corrigir e invalidar atendimento: mesma regra (e mesmo lock) dos demais registros clínicos.
+export async function assertPatientCanReceiveSession(tx: Tx, patientId: string) {
+  await assertPatientActive(tx, patientId, PATIENT_INACTIVE_SESSION);
+}
+
 async function assertPatientActive(tx: Tx, patientId: string, inactiveMessage: string) {
   const [patient] = await tx.$queryRaw<{ status: PatientStatus }[]>`
     SELECT "status" FROM "Patient" WHERE "id" = ${patientId} FOR UPDATE`;

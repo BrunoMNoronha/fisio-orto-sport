@@ -2,7 +2,7 @@
 
 Registros clínicos do paciente. **Dados pessoais sensíveis (LGPD art. 11)**: toda leitura exige `clinico:ler` e toda escrita exige `clinico:gerir`, checados no servidor.
 
-Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisioterapêutica inicial** (Fase 4, issue #24) e **plano terapêutico** com revisões (Fase 4, issue #25). Sessões, evolução, reavaliação e alta continuam para depois.
+Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisioterapêutica inicial** (Fase 4, issue #24) e **plano terapêutico** com revisões (Fase 4, issue #25) e **sessões de atendimento com evolução clínica** (Fase 4, issue #26). Reavaliação e alta continuam para depois.
 
 ## Peças
 
@@ -18,6 +18,10 @@ Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisiote
 | `plan-validation.ts` | Schemas do plano (criação com `assessmentId`; revisão com `kind`, `reason` e `baseRevision`; encerramento e reabertura), limites (`PLAN_LIMITS`), rótulos e `samePlanContent()`. |
 | `plan-queries.ts` (`server-only`) | `listPlans()` (10 por página, só metadados), `getPlan()` (origem e revisão vigente), `getPlanRevision()`, `listPlanRevisions()`, `listPlanStatusChanges()` e `listPlanOriginOptions()`. Todas filtram pelo paciente. |
 | `plan-actions.ts` | `createPlan`, `revisePlan` e `changePlanStatus`, todas com `clinico:gerir`. |
+| `session-validation.ts` | Schemas do atendimento: data e hora no fuso da clínica viram `occurredAt`, criação com plano, revisão e `requestId`, correção com `version` e motivo, e invalidação. Também traz limites, rótulos e `formatOccurredAt()`. |
+| `session-queries.ts` (`server-only`) | `listSessions()` (histórico paginado, com evolução), `getSession()` (com a revisão exata aplicada), `listSessionChanges()`, `countValidSessions()`, `listSessionPlanOptions()` e `listProfessionalOptions()`. |
+| `session-actions.ts` | `createSession`, `updateSession` e `invalidateSession`, todas com `clinico:gerir`. |
+| `src/app/(app)/pacientes/[id]/sessoes/**` | Histórico (`/sessoes?pagina=N`), nova (`/nova?plano=<id>`), detalhe (`/[sessaoId]`) e correção (`/[sessaoId]/editar`). |
 | `src/app/(app)/pacientes/[id]/planos/**` | Lista, novo (`/novo?avaliacao=<id>`), detalhe (`/[planoId]`), nova revisão (`/[planoId]/revisar`) e revisão específica (`/[planoId]/revisoes/[numero]`). |
 | `src/app/(app)/pacientes/[id]/avaliacoes/**` | Lista (`/avaliacoes?pagina=N`), nova (`/nova`), detalhe (`/[avaliacaoId]`) e edição (`/[avaliacaoId]/editar`). |
 | `src/app/(app)/pacientes/[id]/anamnese/**` | Versão vigente (`/anamnese`), nova versão (`/nova`), histórico (`/historico`) e versão específica (`/historico/[versaoId]`). |
@@ -71,6 +75,24 @@ Decisões de Bruno para a #25, em 26/09 (as de autoria, CREFITO e paciente inati
 - **CHECKs manuais** (migração `plano_terapeutico`): `TherapyPlan_assessmentVersion_positive`, `TherapyPlan_currentRevision_positive`, `TherapyPlanRevision_kind_matches_number` (INICIAL só na 1ª e sem motivo; as demais com motivo), objetivos e conduta não vazios, `TherapyPlanRevision_plannedSessions_range` (1–100), `TherapyPlanStatusChange_changes_status`, motivo e nomes não vazios. A migração também cria o índice único `Assessment(id, patientId)`, alvo da FK composta. É uma mudança só aditiva.
 - **Integração** (`test/integration/plano.integration.ts`): cobre a FK composta, os CHECKs, o `Restrict`, a origem preservada após editar a avaliação, revisões concorrentes, encerramento concorrente com revisão e inativação concorrente.
 
+## Sessões de atendimento (`TreatmentSession`)
+
+Decisões de Bruno para a #26, em 26/09. As de autoria, CREFITO e paciente inativo seguem a #24. O modelo se chama `TreatmentSession` para não se confundir com `Session`, a sessão de login.
+
+- **Plano ativo obrigatório:** todo atendimento aponta para um plano `ATIVO` do paciente e para a **revisão exata aplicada**. A vigente vem sugerida, e dá para escolher outra do mesmo plano em lançamento retroativo. FKs compostas garantem no banco que o plano é do mesmo paciente e a revisão é do mesmo plano. Plano encerrado não recebe atendimento (reabra antes). Não há atendimento avulso. Nova revisão do plano não muda a referência de atendimentos anteriores. Para evitar corrida, o registro trava o plano com `FOR SHARE`: um encerramento concorrente espera, ou é esperado e relido.
+- **Momento clínico:** `occurredAt` vem da data e hora digitadas no fuso `America/Sao_Paulo`. Não pode ser no futuro, nem antes do início do plano (data da revisão 1). A revisão escolhida também não pode ter data posterior ao dia do atendimento. `createdAt` é o lançamento técnico. O histórico ordena por `occurredAt`, depois `createdAt` e depois `id`, todos decrescentes, e mostra os dois momentos.
+- **Responsável × autor:** o responsável é um usuário `FISIOTERAPEUTA`, com nome e CREFITO gravados como snapshot. O Fisioterapeuta registra por si: não há seletor, e a action recusa outro responsável. O Administrador escolhe o fisioterapeuta sem se apresentar como tal. Fisioterapeutas hoje inativos aparecem marcados, para lançamento retroativo. O autor do lançamento (quem digitou) fica separado, com nome e CREFITO (anulável).
+- **Conteúdo:** a evolução clínica é **obrigatória**. Técnicas e exercícios realizados, observações e próximos passos são opcionais. Nada é copiado da conduta prevista no plano. A evolução existe só por atendimento nesta entrega, sem gráfico nem conclusão automática de melhora.
+- **Correção:** o atendimento é editável, exceto plano e revisão, e cada correção exige motivo. `TreatmentSessionChange` guarda uma linha por campo alterado, com valor anterior, valor novo, motivo e assinatura de quem corrigiu. Data, hora e responsável ficam gravados em forma legível. A checagem otimista usa `version` (`UPDATE ... WHERE version = <carregada> AND status = 'VALIDO'`).
+- **Invalidação:** serve para o atendimento lançado por engano e exige motivo. O registro continua consultável, mas não conta mais e não pode ser corrigido. É irreversível e não há exclusão. Ela incrementa `version`, então uma correção aberta em paralelo conflita.
+- **Contagem:** só atendimentos `VALIDO` contam. Correções não somam, e invalidados saem da conta. O detalhe do plano mostra "N de M previstas" (quantidade da revisão vigente). Passar da previsão só gera um aviso: sem bloqueio, cobrança ou alta.
+- **Duplicidade:** cada formulário leva uma chave (`requestId`, gerada no servidor ao abrir a página), e `idempotencyKey` é única. O reenvio (duplo clique, rede) devolve o atendimento já criado. Desabilitar o botão é só proteção de interface.
+- **Agenda:** nesta fatia não há vínculo com `Appointment`. Agendamentos não geram atendimentos, e atendimentos não mudam a agenda.
+- **Paciente inativo:** consulta liberada, mas nada de registrar, corrigir ou invalidar (`assertPatientCanReceiveSession`, `FOR UPDATE` no paciente).
+- **CHECKs manuais** (migração `sessoes_atendimento`): evolução, nomes e chave não vazios, `version >= 1`, `TreatmentSession_invalidation_consistent` (VALIDO sem dados de invalidação; INVALIDADO com motivo, data e autor), versão de correção `>= 2` e motivo não vazio. A migração também cria os índices únicos `TherapyPlan(id, patientId)` e `TherapyPlanRevision(id, planId)`, alvos das FKs compostas. É uma mudança só aditiva.
+- **Integração** (`test/integration/sessoes.integration.ts`): cobre as FKs compostas, a idempotência, os CHECKs, o `Restrict`, a referência preservada após nova revisão, o encerramento concorrente (`FOR SHARE`), a correção concorrente com invalidação e a inativação concorrente.
+- **Fora do escopo:** presença e faltas, vínculo com a agenda, cobrança, pacotes e convênio, reavaliação, alta, anexos, impressão/PDF, assinatura digital e evolução independente de atendimento.
+
 ## Privacidade
 
 - Nenhum dado clínico em URL, metadata de página (títulos genéricos), logs ou mensagens de erro. As mensagens nunca ecoam o conteúdo enviado.
@@ -87,9 +109,11 @@ Decisões de Bruno para a #25, em 26/09 (as de autoria, CREFITO e paciente inati
 | Criar e editar avaliação (`clinico:gerir`) | ✓ | — | ✓ |
 | Ver planos, revisões e histórico de estado (`clinico:ler`) | ✓ | — | ✓ |
 | Criar, revisar, encerrar e reabrir plano (`clinico:gerir`) | ✓ | — | ✓ |
+| Ver sessões, evolução e correções (`clinico:ler`) | ✓ | — | ✓ |
+| Registrar, corrigir e invalidar sessão (`clinico:gerir`) | ✓ (escolhe o fisioterapeuta) | — | ✓ (como responsável por si) |
 
-A Recepção não vê as abas Anamnese, Avaliações e Planos nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
+A Recepção não vê as abas Anamnese, Avaliações, Planos e Sessões nem os atalhos clínicos na ficha, é redirecionada para `/acesso-negado` por URL direta e recebe "Acesso negado." ao chamar a action diretamente. Usuário inativo perde a sessão e não acessa nada.
 
 ## Fora do escopo (por ora)
 
-Sessões, evolução, reavaliação e alta (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+Reavaliação e alta (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.

@@ -32,10 +32,12 @@ describe("Home", () => {
     expect(screen.getByText("Nenhum atendimento hoje.")).toBeInTheDocument();
   });
 
-  it("lista os módulos em construção (Avaliações e Planos já estão disponíveis)", async () => {
+  it("lista os módulos em construção (Avaliações, Planos e Sessões já estão disponíveis)", async () => {
     render(await Home());
     expect(screen.getAllByText("Em breve")).toHaveLength(1);
     expect(screen.queryByText("Avaliações")).not.toBeInTheDocument();
     expect(screen.queryByText("Planos terapêuticos")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sessões e evolução clínica")).not.toBeInTheDocument();
+    expect(screen.getByText("Reavaliação")).toBeInTheDocument();
   });
 });

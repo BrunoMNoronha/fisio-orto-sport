@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isSetupEnabled } from "@/modules/auth/bootstrap";
 import { getCurrentUser } from "@/modules/auth/dal";
 import { listDevUsers } from "@/modules/auth/dev-login";
 import { safeRedirectPath } from "@/modules/auth/redirect-path";
@@ -17,8 +18,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const nextPath = safeRedirectPath(next);
   if (await getCurrentUser()) redirect(nextPath);
 
-  // Sem nenhum usuário no banco, o login dá lugar ao cadastro do primeiro Administrador.
+  // Sem nenhum usuário no banco, o login dá lugar ao cadastro do primeiro Administrador,
+  // que só é oferecido com SETUP_TOKEN configurado no servidor.
   const needsSetup = !(await hasAnyUser());
+  const setupEnabled = needsSetup && isSetupEnabled();
   const devUsers = !needsSetup && process.env.NODE_ENV === "development" ? await listDevUsers() : [];
 
   return (
@@ -31,14 +34,16 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <span className="text-lg font-semibold">{needsSetup ? "Primeiro acesso" : "Acesse sua conta"}</span>
           </CardTitle>
           <CardDescription>
-            {needsSetup
-              ? "Nenhum usuário cadastrado. Crie a conta do Administrador para começar."
-              : "Entre com seu e-mail e senha."}
+            {!needsSetup
+              ? "Entre com seu e-mail e senha."
+              : setupEnabled
+                ? "Nenhum usuário cadastrado. Informe o código de configuração e crie a conta do Administrador."
+                : "O sistema ainda não foi configurado. Procure o responsável técnico."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {needsSetup ? (
-            <SetupForm next={nextPath} />
+            setupEnabled && <SetupForm next={nextPath} />
           ) : (
             <>
               <LoginForm next={nextPath} />

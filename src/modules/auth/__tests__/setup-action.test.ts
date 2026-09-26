@@ -1,5 +1,5 @@
 /** @jest-environment node */
-// Cadastro do primeiro Administrador: só funciona com a tabela de usuários vazia.
+// Cadastro do primeiro Administrador: exige SETUP_TOKEN e só funciona com a tabela de usuários vazia.
 const tx = { user: { count: jest.fn(), create: jest.fn() } };
 const prismaMock = {
   user: { findFirst: jest.fn() },
@@ -48,7 +48,8 @@ function form(fields: Record<string, string>) {
   return fd;
 }
 
-const valid = { name: "Ana Souza", email: "Ana@X.com", password: "senha-forte-1", next: "/" };
+const TOKEN = "t".repeat(24) + "-codigo-de-setup";
+const valid = { setupToken: TOKEN, name: "Ana Souza", email: "Ana@X.com", password: "senha-forte-1", next: "/" };
 
 function prismaError(code: string) {
   const error = new Prisma.PrismaClientKnownRequestError("erro", { code, clientVersion: "test" });
@@ -58,6 +59,7 @@ function prismaError(code: string) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  process.env.SETUP_TOKEN = TOKEN;
   setupAttemptsByIp.reset("ip:10.0.0.9");
   prismaMock.user.findFirst.mockResolvedValue(null);
   tx.user.count.mockResolvedValue(0);
@@ -91,7 +93,10 @@ describe("setupFirstAdmin", () => {
   });
 
   it("valida os campos e devolve o que foi digitado, sem tocar no banco", async () => {
-    const state = await setupFirstAdmin(undefined, form({ name: "A", email: "sem-arroba", password: "123" }));
+    const state = await setupFirstAdmin(
+      undefined,
+      form({ setupToken: TOKEN, name: "A", email: "sem-arroba", password: "123" }),
+    );
     expect(state?.fieldErrors?.name).toBeDefined();
     expect(state?.fieldErrors?.email).toBeDefined();
     expect(state?.fieldErrors?.password).toBeDefined();
@@ -132,5 +137,44 @@ describe("setupFirstAdmin", () => {
     expect(state?.error).toMatch(/Muitas tentativas/i);
     expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["ausente", undefined],
+    ["vazio", ""],
+    ["curto demais", "curto-demais"],
+  ])("com SETUP_TOKEN %s, recusa sem tocar no banco nem gerar hash", async (_caso, token) => {
+    if (token === undefined) delete process.env.SETUP_TOKEN;
+    else process.env.SETUP_TOKEN = token;
+    const state = await setupFirstAdmin(undefined, form({ ...valid, setupToken: token ?? "" }));
+    expect(state?.error).toMatch(/não está habilitado/i);
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["errado", { setupToken: TOKEN + "x" }],
+    ["ausente", { setupToken: undefined }],
+  ])("com código %s, recusa em banco vazio sem tocar no banco nem gerar hash", async (_caso, extra) => {
+    const fields: Record<string, string> = {};
+    for (const [key, value] of Object.entries({ ...valid, ...extra })) if (value !== undefined) fields[key] = value;
+    const state = await setupFirstAdmin(undefined, form(fields));
+    expect(state?.error).toMatch(/Código de configuração inválido/i);
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(hashPassword).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("não devolve o código nem a senha no estado", async () => {
+    const wrong = await setupFirstAdmin(undefined, form({ ...valid, setupToken: "outro-codigo" }));
+    tx.user.count.mockResolvedValue(1);
+    const closed = await setupFirstAdmin(undefined, form(valid));
+    for (const state of [wrong, closed]) {
+      const text = JSON.stringify(state);
+      expect(text).not.toContain(TOKEN);
+      expect(text).not.toContain("outro-codigo");
+      expect(text).not.toContain(valid.password);
+    }
   });
 });

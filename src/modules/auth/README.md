@@ -14,6 +14,7 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `safeguards.ts` | Regras puras: ninguém desativa ou rebaixa a si mesmo, e ninguém remove o último Administrador ativo. |
 | `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração), `logout` e `setupFirstAdmin` (primeiro acesso). |
 | `setup.ts` (`server-only`) | `hasAnyUser()`: diz se a tabela de usuários já tem alguém (decide login × primeiro acesso). |
+| `bootstrap.ts` (`server-only`) | Autorização do primeiro acesso por `SETUP_TOKEN` (`isSetupEnabled`, `isValidSetupToken`) e `createFirstAdmin` (transação serializável). |
 | `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
 | `src/proxy.ts` | Checagem **otimista** (presença do cookie). Não substitui a DAL. |
@@ -60,12 +61,28 @@ Recuperação de senha por e-mail, troca de senha pelo próprio usuário, OAuth/
 
 ## Primeiro acesso (tabela de usuários vazia)
 
-- Enquanto **não existe nenhum usuário**, `/login` mostra o formulário de cadastro (`setup-form.tsx`) no lugar do de login. O acesso rápido de desenvolvimento também some, porque não haveria quem listar.
-- `setupFirstAdmin` cria o usuário com perfil **ADMIN** (nome, e-mail e senha; mesma política de senha do cadastro comum) e já abre a sessão, redirecionando para o `?next=` validado.
-- A action **não exige autenticação** — não há quem autentique no primeiro acesso. A única barreira é a tabela estar vazia, reconferida com `count()` **dentro de uma transação serializável** antes do `create`, para que duas requisições simultâneas não criem dois administradores. `P2002` (e-mail já criado por outra requisição) e o conflito de serialização `P2034` são tratados sem vazar detalhes.
-- A action segue acessível por POST depois do primeiro cadastro, então antes do scrypt ela aplica um limite de **10 tentativas por IP a cada 15 min** (`setupAttemptsByIp`) e uma checagem barata (`hasAnyUser()`); com usuário cadastrado, recusa sem gerar hash nem abrir transação. A reconferência dentro da transação continua sendo a que vale.
+Mecanismo escolhido na issue #35: **código de configuração no servidor** (`SETUP_TOKEN`), com o provisionamento por terminal (`pnpm db:seed`) como alternativa.
+
+- Enquanto **não existe nenhum usuário**, `/login` troca o login pelo primeiro acesso. O acesso rápido de desenvolvimento também some, porque não haveria quem listar.
+- **Sem `SETUP_TOKEN`** (ou com menos de 32 caracteres), o primeiro acesso pela web fica **desligado**: a tela diz que o sistema não foi configurado e a action recusa qualquer POST sem consultar o banco nem gerar hash. Esse é o estado seguro padrão, inclusive em produção.
+- **Com `SETUP_TOKEN`**, o formulário (`setup-form.tsx`) pede o código de configuração, nome, e-mail e senha. `setupFirstAdmin` compara o código em tempo constante (SHA-256 + `timingSafeEqual`), cria o usuário **ADMIN** (mesma política de senha do cadastro comum) e já abre a sessão, redirecionando para o `?next=` validado. Código errado responde "Código de configuração inválido." O código nunca é registrado em log nem devolvido no estado da action.
+- `createFirstAdmin` reconfere a tabela vazia com `count()` **dentro de uma transação serializável** antes do `create`, para que duas requisições simultâneas não criem dois administradores (coberto em `test/integration/bootstrap.integration.ts`). `P2002` (e-mail já criado por outra requisição) e o conflito de serialização `P2034` são tratados sem vazar detalhes.
+- A action segue acessível por POST depois do primeiro cadastro. Antes do scrypt ela aplica, nesta ordem: limite de **10 tentativas por IP a cada 15 min** (`setupAttemptsByIp`), `SETUP_TOKEN` configurado, código válido e uma checagem barata (`hasAnyUser()`). Com usuário cadastrado, recusa sem gerar hash nem abrir transação.
 - Depois do primeiro usuário, a tela volta ao login normal e novos usuários passam a ser criados só em `/usuarios` (`usuarios:gerir`).
-- **Risco aceito**: entre o deploy e o primeiro cadastro, quem alcançar `/login` cria o Administrador. Em ambiente exposto, faça o primeiro acesso logo após o deploy (ou rode o seed antes de publicar).
+
+### Procedimento de primeiro acesso
+
+1. Gere um código longo e aleatório, por exemplo `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
+2. Defina `SETUP_TOKEN` só no ambiente que vai receber o primeiro acesso (`.env` local ou variável do ambiente na hospedagem) e publique/reinicie para a variável valer.
+3. Abra `/login`, informe o código e cadastre o Administrador.
+4. Remova `SETUP_TOKEN` do ambiente. Com usuário cadastrado ele já não tem efeito, mas mantê-lo só amplia o que precisa ser guardado.
+
+Alternativa sem expor a tela: rodar `pnpm db:seed` contra o banco antes de publicar (ver `SEED_ADMIN_*` no `.env.example`).
+
+### Recuperação de acesso de Administrador
+
+- Outro Administrador ativo redefine a senha em `/usuarios` (as sessões do usuário são encerradas).
+- Sem nenhum Administrador utilizável, o primeiro acesso pela web **não** serve (a tabela não está vazia). Pelo terminal, com `DATABASE_URL` do banco alvo definida só naquela sessão, rode `pnpm db:seed` com `SEED_ADMIN_*` apontando para um **e-mail novo**: o seed cria esse Administrador sem alterar os existentes. Depois, entre com ele e desative ou redefina a conta antiga em `/usuarios`.
 
 ## Acesso rápido em desenvolvimento
 

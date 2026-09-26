@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
+import { SetupClosedError, createFirstAdmin, isSetupEnabled, isValidSetupToken } from "./bootstrap";
 import { getDummyHash, hashPassword, verifyPassword } from "./password";
 import { loginAttemptsByIp, loginFailuresByEmail, setupAttemptsByIp } from "./rate-limit";
 import { safeRedirectPath } from "./redirect-path";
@@ -67,18 +68,19 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
 // --- Primeiro acesso ---------------------------------------------------------------
 // Enquanto a tabela de usuários está vazia, a tela de login mostra o cadastro do primeiro
-// Administrador. A action não exige autenticação (não há quem autentique), então a única
-// barreira é a tabela vazia: ela é reconferida dentro de uma transação serializável, para
-// que duas chamadas simultâneas não criem dois administradores.
+// Administrador. Não há quem autentique, então a autorização é o código SETUP_TOKEN definido
+// no servidor (ver bootstrap.ts); sem ele, o primeiro acesso pela web fica desligado. A tabela
+// vazia é reconferida numa transação serializável, para que duas chamadas simultâneas não
+// criem dois administradores.
 export type SetupState =
   | { error?: string; fieldErrors?: FieldErrors; values?: { name?: string; email?: string } }
   | undefined;
 
+const SETUP_DISABLED = "O primeiro acesso não está habilitado neste servidor. Procure o responsável técnico.";
+const SETUP_INVALID_TOKEN = "Código de configuração inválido.";
 const SETUP_CLOSED = "O primeiro usuário já foi cadastrado. Atualize a página para entrar.";
 const SETUP_RETRY = "Não foi possível concluir o cadastro. Tente novamente.";
 const SETUP_TOO_MANY_ATTEMPTS = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-
-class SetupClosedError extends Error {}
 
 export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Promise<SetupState> {
   const rawName = formData.get("name");
@@ -88,11 +90,13 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
     email: typeof rawEmail === "string" ? rawEmail.slice(0, 254) : undefined,
   };
 
-  // A action continua acessível por POST depois do primeiro cadastro. Limite por IP e
-  // checagem barata antes do scrypt evitam que ela vire um gerador de custo anônimo.
+  // A action continua acessível por POST depois do primeiro cadastro. Limite por IP, código de
+  // configuração e checagem barata antes do scrypt evitam que ela vire um gerador de custo anônimo.
   const ipKey = `ip:${await clientIp()}`;
   if (setupAttemptsByIp.isBlocked(ipKey)) return { error: SETUP_TOO_MANY_ATTEMPTS, values };
   setupAttemptsByIp.hit(ipKey);
+  if (!isSetupEnabled()) return { error: SETUP_DISABLED, values };
+  if (!isValidSetupToken(formData.get("setupToken"))) return { error: SETUP_INVALID_TOKEN, values };
   if (await hasAnyUser()) return { error: SETUP_CLOSED, values };
 
   const parsed = firstAdminSchema.safeParse({
@@ -107,17 +111,7 @@ export async function setupFirstAdmin(_prev: SetupState, formData: FormData): Pr
 
   let userId: string;
   try {
-    userId = await prisma.$transaction(
-      async (tx) => {
-        if ((await tx.user.count()) > 0) throw new SetupClosedError();
-        const created = await tx.user.create({
-          data: { ...data, role: "ADMIN", passwordHash },
-          select: { id: true },
-        });
-        return created.id;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+    userId = await createFirstAdmin(prisma, { ...data, passwordHash });
   } catch (error) {
     if (error instanceof SetupClosedError) return { error: SETUP_CLOSED, values };
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

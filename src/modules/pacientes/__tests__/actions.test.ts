@@ -81,7 +81,7 @@ beforeEach(() => {
   prismaMock.patient.updateMany.mockResolvedValue({ count: 1 });
 });
 
-describe.each(["ADMIN", "RECEPCAO"])("%s (pacientes:gerir)", (role) => {
+describe.each(["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"])("%s (pacientes:gerir)", (role) => {
   beforeEach(() => as(role));
 
   it("cria paciente com autoria e vai para a ficha", async () => {
@@ -127,7 +127,8 @@ describe.each(["ADMIN", "RECEPCAO"])("%s (pacientes:gerir)", (role) => {
   });
 });
 
-describe.each([["FISIOTERAPEUTA"], [null]])("sem pacientes:gerir (%s)", (role) => {
+// Sem sessão válida (ou usuário inativo, cuja sessão é descartada) nada é gravado.
+describe.each([[null]])("sem pacientes:gerir (%s)", (role) => {
   beforeEach(() => as(role));
 
   it.each([
@@ -142,8 +143,8 @@ describe.each([["FISIOTERAPEUTA"], [null]])("sem pacientes:gerir (%s)", (role) =
   });
 });
 
-describe("regras de cadastro", () => {
-  beforeEach(() => as("RECEPCAO"));
+describe.each(["RECEPCAO", "FISIOTERAPEUTA"])("regras de cadastro (%s)", (role) => {
+  beforeEach(() => as(role));
 
   it("CPF duplicado vira erro de campo, sem ecoar o CPF", async () => {
     prismaMock.patient.create.mockRejectedValueOnce(prismaError("P2002"));

@@ -21,8 +21,10 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: PERMISSIONS,
   // Recepção: dados cadastrais e agenda; sem dados clínicos.
   RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir"],
-  // Fisioterapeuta: leitura de pacientes e agenda; dados clínicos de todos os pacientes.
-  FISIOTERAPEUTA: ["pacientes:ler", "agenda:ler", "clinico:ler", "clinico:gerir"],
+  // Fisioterapeuta: tudo o que a Recepção pode (cadastro e agenda de todos os pacientes e
+  // profissionais, decisão da issue #31) mais os dados clínicos. Nunca `usuarios:*`.
+  // Contrato testado: permissões de RECEPCAO ⊆ permissões de FISIOTERAPEUTA.
+  FISIOTERAPEUTA: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "clinico:ler", "clinico:gerir"],
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

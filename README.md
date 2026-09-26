@@ -202,6 +202,8 @@ Responsável principalmente por:
 
 ### Fisioterapeuta
 
+Tem também todos os acessos da Recepção (cadastro de pacientes e agenda de qualquer profissional); não gerencia usuários.
+
 Responsável principalmente por:
 
 - avaliações;

@@ -26,12 +26,14 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 - **Autoria**: `createdById`/`updatedById` (FK `Restrict`). Não é trilha de auditoria.
 - A lista de pacientes no formulário traz até 500 pacientes ativos, por nome.
 
-## Permissões (matriz vigente, sem alteração)
+## Permissões
 
 | Ação | Administrador | Recepção | Fisioterapeuta |
 |---|:-:|:-:|:-:|
 | Ver agenda e agendamentos (`agenda:ler`) | ✓ | ✓ | ✓ |
-| Criar, reagendar e cancelar (`agenda:gerir`) | ✓ | ✓ | — |
+| Criar, reagendar e cancelar (`agenda:gerir`) | ✓ | ✓ | ✓ (desde a #31, para qualquer profissional apto) |
+
+Quem opera (autor em `createdById`, `updatedById` e `cancelledById`) é o usuário logado, que pode ser diferente do **profissional atendente** (`professionalId`). O profissional precisa ser um fisioterapeuta ativo; isso é regra de elegibilidade (`rules.ts`), não de autorização do operador.
 
 ## Fora do escopo (por ora)
 

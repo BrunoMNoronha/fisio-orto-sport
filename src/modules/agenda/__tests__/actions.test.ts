@@ -98,7 +98,8 @@ afterEach(() => {
 });
 
 describe("autorização (agenda:gerir)", () => {
-  it.each([null, "FISIOTERAPEUTA"])("perfil %s é bloqueado em todas as actions", async (role) => {
+  // Sem sessão válida (ou usuário inativo) nada é gravado.
+  it.each([null])("perfil %s é bloqueado em todas as actions", async (role) => {
     as(role);
     await expect(createAppointment(undefined, form(newAppointment))).resolves.toEqual({ error: "Acesso negado." });
     await expect(rescheduleAppointment(undefined, form({ id: "a1", ...slot }))).resolves.toEqual({
@@ -109,9 +110,45 @@ describe("autorização (agenda:gerir)", () => {
     expect(prismaMock.appointment.updateMany).not.toHaveBeenCalled();
   });
 
-  it.each(["ADMIN", "RECEPCAO"])("perfil %s pode criar", async (role) => {
+  it.each(["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"])("perfil %s pode criar", async (role) => {
     as(role);
     await expectRedirect(createAppointment(undefined, form(newAppointment)), "/agenda/a1");
+  });
+});
+
+// Issue #31: o Fisioterapeuta gere a agenda no mesmo alcance da Recepção, inclusive de outro
+// profissional. O autor (createdById/updatedById/cancelledById) é o operador autenticado, não o
+// profissional atendente.
+describe("Fisioterapeuta gerindo a agenda de outro profissional", () => {
+  beforeEach(() => as("FISIOTERAPEUTA"));
+
+  it("cria para outro fisioterapeuta, com o operador como autor", async () => {
+    await expectRedirect(createAppointment(undefined, form(newAppointment)), "/agenda/a1");
+    expect(prismaMock.appointment.create.mock.calls[0][0].data).toMatchObject({
+      professionalId: "f1",
+      createdById: "u-FISIOTERAPEUTA",
+      updatedById: "u-FISIOTERAPEUTA",
+    });
+  });
+
+  it("reagenda e cancela registrando o operador", async () => {
+    await expectRedirect(rescheduleAppointment(undefined, form({ id: "a1", ...slot })), "/agenda/a1");
+    expect(prismaMock.appointment.update.mock.calls[0][0].data).toMatchObject({ professionalId: "f1", updatedById: "u-FISIOTERAPEUTA" });
+    await expect(cancelAppointment(undefined, form({ id: "a1" }))).resolves.toMatchObject({ ok: true });
+    expect(prismaMock.appointment.updateMany.mock.calls[0][0].data).toMatchObject({
+      cancelledById: "u-FISIOTERAPEUTA",
+      updatedById: "u-FISIOTERAPEUTA",
+    });
+  });
+
+  it("as regras de negócio continuam valendo (conflito e profissional inativo)", async () => {
+    prismaMock.appointment.findFirst.mockResolvedValueOnce({ id: "outro" });
+    expect((await createAppointment(undefined, form(newAppointment)))?.fieldErrors).toBeDefined();
+    prismaMock.user.findUnique.mockResolvedValueOnce({ role: "FISIOTERAPEUTA", active: false });
+    expect(await createAppointment(undefined, form(newAppointment))).toMatchObject({
+      fieldErrors: { professionalId: ["Profissional inativo não pode receber agendamentos."] },
+    });
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
   });
 });
 

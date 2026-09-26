@@ -24,6 +24,12 @@ const LABELS: Record<string, string> = {
   historico: "Histórico",
   agendamentos: "Agendamentos",
   documentos: "Documentos",
+  avaliacoes: "Avaliações",
+}
+
+// Rótulos que dependem do segmento anterior (ex.: "nova" em avaliacoes não é "Nova versão").
+const CONTEXT_LABELS: Record<string, string> = {
+  "avaliacoes/nova": "Nova avaliação",
 }
 
 export function AppBreadcrumb() {
@@ -41,7 +47,7 @@ export function AppBreadcrumb() {
         </BreadcrumbItem>
         {segments.map((segment, index) => {
           const href = "/" + segments.slice(0, index + 1).join("/")
-          const label = LABELS[segment] ?? "Detalhes"
+          const label = CONTEXT_LABELS[`${segments[index - 1]}/${segment}`] ?? LABELS[segment] ?? "Detalhes"
           const last = index === segments.length - 1
           return (
             <Fragment key={href}>

@@ -32,8 +32,9 @@ describe("Home", () => {
     expect(screen.getByText("Nenhum atendimento hoje.")).toBeInTheDocument();
   });
 
-  it("lista os módulos em construção", async () => {
+  it("lista os módulos em construção (Avaliações já está disponível)", async () => {
     render(await Home());
-    expect(screen.getAllByText("Em breve")).toHaveLength(3);
+    expect(screen.getAllByText("Em breve")).toHaveLength(2);
+    expect(screen.queryByText("Avaliações")).not.toBeInTheDocument();
   });
 });

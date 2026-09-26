@@ -18,27 +18,29 @@ enum Role {
 }
 
 model User {
-  id                         String        @id @default(cuid())
+  id                         String             @id @default(cuid())
   name                       String
   // Sempre gravado normalizado (trim + minúsculas).
-  email                      String        @unique
+  email                      String             @unique
   passwordHash               String
   role                       Role
   // Registro no conselho (CREFITO). Obrigatório no formulário para FISIOTERAPEUTA; nulo nos
   // demais perfis. Texto curto normalizado (trim + maiúsculas), único quando informado.
-  crefito                    String?       @unique @db.VarChar(20)
-  active                     Boolean       @default(true)
-  createdAt                  DateTime      @default(now())
-  updatedAt                  DateTime      @updatedAt
+  crefito                    String?            @unique @db.VarChar(20)
+  active                     Boolean            @default(true)
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
   sessions                   Session[]
-  patientsCreated            Patient[]     @relation("PatientCreatedBy")
-  patientsUpdated            Patient[]     @relation("PatientUpdatedBy")
+  patientsCreated            Patient[]          @relation("PatientCreatedBy")
+  patientsUpdated            Patient[]          @relation("PatientUpdatedBy")
   // Agenda: o próprio usuário FISIOTERAPEUTA ativo é o profissional atendente.
-  appointmentsAsProfessional Appointment[] @relation("AppointmentProfessional")
-  appointmentsCreated        Appointment[] @relation("AppointmentCreatedBy")
-  appointmentsUpdated        Appointment[] @relation("AppointmentUpdatedBy")
-  appointmentsCancelled      Appointment[] @relation("AppointmentCancelledBy")
+  appointmentsAsProfessional Appointment[]      @relation("AppointmentProfessional")
+  appointmentsCreated        Appointment[]      @relation("AppointmentCreatedBy")
+  appointmentsUpdated        Appointment[]      @relation("AppointmentUpdatedBy")
+  appointmentsCancelled      Appointment[]      @relation("AppointmentCancelledBy")
   anamnesesAuthored          Anamnesis[]
+  assessmentsAuthored        Assessment[]
+  assessmentChangesAuthored  AssessmentChange[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -99,6 +101,7 @@ model Patient {
   updatedBy            User          @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   appointments         Appointment[]
   anamneses            Anamnesis[]
+  assessments          Assessment[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -152,28 +155,90 @@ enum PainType {
 // CHECKs manuais na migração (não representados aqui): painIntensity entre 0 e 10 e
 // chiefComplaint não vazia.
 model Anamnesis {
-  id                          String     @id @default(cuid())
+  id                          String       @id @default(cuid())
   patientId                   String
   authorId                    String
-  authorNameSnapshot          String     @db.VarChar(120)
-  assessmentDate              DateTime   @db.Date
-  chiefComplaint              String     @db.VarChar(500)
-  currentIllnessHistory       String?    @db.VarChar(4000)
-  personalPathologicalHistory String?    @db.VarChar(4000)
-  surgeries                   String?    @db.VarChar(2000)
-  currentMedications          String?    @db.VarChar(2000)
-  habitsPhysicalActivity      String?    @db.VarChar(2000)
-  painIntensity               Int?       @db.SmallInt
-  painLocation                String?    @db.VarChar(200)
-  painTypes                   PainType[] @default([])
-  functionalLimitations       String?    @db.VarChar(2000)
-  patientGoals                String?    @db.VarChar(2000)
-  clinicalNotes               String?    @db.VarChar(4000)
-  createdAt                   DateTime   @default(now()) @db.Timestamptz(3)
-  patient                     Patient    @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  author                      User       @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  authorNameSnapshot          String       @db.VarChar(120)
+  assessmentDate              DateTime     @db.Date
+  chiefComplaint              String       @db.VarChar(500)
+  currentIllnessHistory       String?      @db.VarChar(4000)
+  personalPathologicalHistory String?      @db.VarChar(4000)
+  surgeries                   String?      @db.VarChar(2000)
+  currentMedications          String?      @db.VarChar(2000)
+  habitsPhysicalActivity      String?      @db.VarChar(2000)
+  painIntensity               Int?         @db.SmallInt
+  painLocation                String?      @db.VarChar(200)
+  painTypes                   PainType[]   @default([])
+  functionalLimitations       String?      @db.VarChar(2000)
+  patientGoals                String?      @db.VarChar(2000)
+  clinicalNotes               String?      @db.VarChar(4000)
+  createdAt                   DateTime     @default(now()) @db.Timestamptz(3)
+  patient                     Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  author                      User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  assessments                 Assessment[]
 
+  // Alvo da FK composta de Assessment: a anamnese de referência é sempre do mesmo paciente.
+  @@unique([id, patientId])
   @@index([patientId])
   @@index([patientId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([authorId])
+}
+
+// Avaliação fisioterapêutica inicial (Fase 4, dado clínico sensível, protegido por `clinico:*`).
+// Editável, com histórico por campo em AssessmentChange (decisão D2). Não há exclusão.
+// A anamnese de referência é fixada na criação e, pela FK composta (anamnesisId, patientId),
+// sempre pertence ao mesmo paciente. `version` serve à checagem otimista de edições concorrentes.
+// assessmentDate é a data clínica (não futura no calendário de America/Sao_Paulo); createdAt e
+// updatedAt são técnicos. Autoria (nome e CREFITO) é snapshot do usuário no servidor (D1/D3).
+// CHECKs manuais na migração (não representados aqui): diagnóstico e nome do autor não vazios,
+// version >= 1.
+model Assessment {
+  id                    String             @id @default(cuid())
+  patientId             String
+  anamnesisId           String
+  assessmentDate        DateTime           @db.Date
+  inspection            String?            @db.VarChar(4000)
+  palpation             String?            @db.VarChar(4000)
+  functionalGait        String?            @db.VarChar(4000)
+  rangeOfMotion         String?            @db.VarChar(4000)
+  muscleStrength        String?            @db.VarChar(4000)
+  specialTests          String?            @db.VarChar(4000)
+  diagnosis             String             @db.VarChar(2000)
+  therapeuticGoals      String?            @db.VarChar(2000)
+  clinicalNotes         String?            @db.VarChar(4000)
+  version               Int                @default(1)
+  authorId              String
+  authorNameSnapshot    String             @db.VarChar(120)
+  authorCrefitoSnapshot String?            @db.VarChar(20)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime           @default(now()) @db.Timestamptz(3)
+  patient               Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  anamnesis             Anamnesis          @relation(fields: [anamnesisId, patientId], references: [id, patientId], onDelete: Restrict)
+  author                User               @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  changes               AssessmentChange[]
+
+  @@index([patientId, assessmentDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([anamnesisId, patientId])
+  @@index([authorId])
+}
+
+// Histórico da avaliação: uma linha por campo alterado em cada edição (append-only).
+// `version` é a versão da avaliação produzida pela edição; agrupa os campos de uma mesma edição.
+// Valores guardados como texto (datas em AAAA-MM-DD); NULL = "não informado".
+model AssessmentChange {
+  id                    String     @id @default(cuid())
+  assessmentId          String
+  version               Int
+  field                 String     @db.VarChar(40)
+  previousValue         String?    @db.VarChar(4000)
+  newValue              String?    @db.VarChar(4000)
+  editorId              String
+  editorNameSnapshot    String     @db.VarChar(120)
+  editorCrefitoSnapshot String?    @db.VarChar(20)
+  changedAt             DateTime   @default(now()) @db.Timestamptz(3)
+  assessment            Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  editor                User       @relation(fields: [editorId], references: [id], onDelete: Restrict)
+
+  @@unique([assessmentId, version, field])
+  @@index([editorId])
 }

@@ -53,7 +53,7 @@ Atualizado em 2026-09-19 com base no código, documentação dos módulos, hist�
 
 **Status: PLANEJADO**
 
-- [ ] Avaliação inicial;
+- [x] Avaliação inicial (issue #24: criação, lista, detalhe e edição com histórico por campo; implementada e testada, publicação pendente);
 - [ ] Plano terapêutico;
 - [ ] Registro de sessões;
 - [ ] Evoluções;

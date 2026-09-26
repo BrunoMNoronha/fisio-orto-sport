@@ -12,4 +12,4 @@ Aplicar mínimo necessário, controle de acesso por perfil, criptografia em trâ
 
 ## PENDENTE / TBD
 
-Prazo de retenção do prontuário e política de exclusão/anonimização ainda não foram definidos. Verificar norma COFFITO antes de decidir. Não há auditoria de leitura. Perguntas, estado verificado e tarefas derivadas em [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md) (issue #41).
+Prazo de retenção do prontuário: nenhum definido. Decisão de Bruno (26/09/2026): guardar tudo, sem exclusão nem anonimização, até haver orientação especializada (LGPD e norma COFFITO), que segue pendente. Pedidos do titular seguem fluxo manual aprovado pelo ADMIN. Leituras não são auditadas por decisão; login e gestão de usuários são (#56). Decisões e tarefas derivadas em [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md) (issue #41).

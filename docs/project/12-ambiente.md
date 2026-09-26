@@ -24,9 +24,18 @@ O checklist antigo de Agenda no `README.md` estava divergente do código e da do
   uma vez, `pnpm db:seed`. Antes de cada migração futura, criar um ponto de
   restauração no Neon.
 
+## CONFIRMADO — BACKUP E OBSERVABILIDADE (Bruno, 2026-09-26)
+
+Backup: PITR de 6 h no Neon, sem snapshots nem cópia externa (risco aceito);
+voltar a operar em até 1 dia útil; Bruno executa e testa; um teste de
+restauração em branch isolado antes do uso com dados reais (#42).
+Observabilidade: logs nativos da Vercel sob demanda, sem alertas. Detalhes e
+inventário de variáveis em
+[15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md).
+
 ## PENDENTE / TBD
 
-Domínio próprio, política formal de backup e observabilidade.
+Domínio próprio. Primeiro teste de restauração (#42).
 
 ## FREEZE OPERACIONAL DE PRODUÇÃO — 2026-09-19 (SUSPENSO)
 

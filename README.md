@@ -268,6 +268,7 @@ pnpm install              # também gera o Prisma Client (postinstall)
 pnpm db:up                # sobe o PostgreSQL via Docker Compose
 pnpm db:migrate           # aplica as migrações do Prisma
 pnpm db:seed              # cria o primeiro Administrador (idempotente)
+pnpm db:admin --email <e-mail>  # cria o Administrador ou redefine a senha dele (pede a senha no terminal)
 pnpm dev                  # http://localhost:3000 → /login
 ```
 
@@ -291,6 +292,7 @@ A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um
 | `pnpm db:up` / `pnpm db:down` | Sobe/derruba o PostgreSQL local |
 | `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Migrações, geração do client e Prisma Studio |
 | `pnpm db:seed` | Cria o primeiro Administrador a partir do `.env` |
+| `pnpm db:admin --email <e-mail> [--name "<nome>"]` | Cria o Administrador, se o e-mail não existir, ou redefine a senha dele (reativa e encerra as sessões). Pede confirmação e a senha sem eco. Para o Neon, defina `DATABASE_URL` com a URL direta só nesse terminal |
 
 ---
 

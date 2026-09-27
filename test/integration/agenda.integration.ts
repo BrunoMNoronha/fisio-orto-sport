@@ -26,6 +26,7 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
   const clients: PrismaClient[] = [];
   let prisma: PrismaClient;
   let other: Client;
+  let otherPid: number;
   let monitor: Client;
   const suffix = Date.now();
   let actorId: string;
@@ -74,10 +75,14 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
     });
   }
 
+  // Espera até `other` ficar aguardando lock ou bloquear outra sessão. Olhar só para ela importa: com
+  // as suítes rodando em paralelo no mesmo banco, qualquer espera de lock alheia liberaria o teste cedo.
   async function waitForLockWait() {
     for (let i = 0; i < 100; i++) {
       const { rows } = await monitor.query(
-        `SELECT count(*)::int AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()`,
+        `SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND (pid = $1 OR $1 = ANY(pg_blocking_pids(pid)))`,
+        [otherPid],
       );
       if (rows[0].n > 0) return;
       await new Promise((r) => setTimeout(r, 50));
@@ -89,6 +94,7 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
     prisma = client();
     other = new Client({ connectionString: url });
     await other.connect();
+    otherPid = (await other.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
     monitor = new Client({ connectionString: url });
     await monitor.connect();
     const user = (name: string, role: "FISIOTERAPEUTA" | "RECEPCAO") =>

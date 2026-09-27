@@ -1,5 +1,12 @@
 import { toInstant } from "@/modules/agenda/validation";
-import { HOUR_HEIGHT_PX, assignLanes, dayHourRange, groupByProfessional, placeOnGrid } from "../day-layout";
+import {
+  HOUR_HEIGHT_PX,
+  assignLanes,
+  blockMinutesOnDay,
+  dayHourRange,
+  groupByProfessional,
+  placeOnGrid,
+} from "../day-layout";
 
 const slot = (start: string, end: string, professional = { id: "f1", name: "Ana" }) => ({
   startsAt: toInstant("2026-09-21", start),
@@ -62,5 +69,34 @@ describe("groupByProfessional", () => {
       ["f2", 0],
       ["f9", 1],
     ]);
+  });
+});
+
+describe("blockMinutesOnDay (MEL-02)", () => {
+  const dayStart = toInstant("2026-09-21", "00:00");
+  const dayEnd = toInstant("2026-09-22", "00:00");
+  const block = (startDate: string, start: string, endDate: string, end: string) => ({
+    startsAt: toInstant(startDate, start),
+    endsAt: toInstant(endDate, end),
+  });
+
+  it("recorta bloqueios de vários dias ao dia exibido", () => {
+    expect(blockMinutesOnDay(block("2026-09-20", "10:00", "2026-09-23", "10:00"), dayStart, dayEnd)).toEqual({
+      start: 0,
+      end: 24 * 60,
+    });
+    expect(blockMinutesOnDay(block("2026-09-21", "14:00", "2026-09-22", "09:00"), dayStart, dayEnd)).toEqual({
+      start: 14 * 60,
+      end: 24 * 60,
+    });
+    expect(blockMinutesOnDay(block("2026-09-20", "14:00", "2026-09-21", "09:30"), dayStart, dayEnd)).toEqual({
+      start: 0,
+      end: 9 * 60 + 30,
+    });
+  });
+
+  it("bloqueio que só encosta no dia não aparece", () => {
+    expect(blockMinutesOnDay(block("2026-09-20", "08:00", "2026-09-21", "00:00"), dayStart, dayEnd)).toBeNull();
+    expect(blockMinutesOnDay(block("2026-09-22", "00:00", "2026-09-22", "08:00"), dayStart, dayEnd)).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import {
   addDays,
   appointmentSchema,
+  blockSchema,
   cancelSchema,
   filterBounds,
   isValidTime,
@@ -221,5 +222,37 @@ describe("startsInPast", () => {
   it("data ou hora incompletas não são passado", () => {
     expect(startsInPast("", "15:00", now)).toBe(false);
     expect(startsInPast("2026-09-18", "", now)).toBe(false);
+  });
+});
+
+describe("blockSchema (MEL-02)", () => {
+  const base = { professionalId: "f1", startDate: "2026-09-21", startTime: "08:00", endDate: "2026-09-21", endTime: "12:00" };
+
+  it("converte do fuso America/Sao_Paulo (UTC-3) para instantes", () => {
+    const parsed = blockSchema.parse({ ...base, reason: "  Curso  " });
+    expect(parsed).toEqual({
+      professionalId: "f1",
+      startsAt: new Date("2026-09-21T11:00:00.000Z"),
+      endsAt: new Date("2026-09-21T15:00:00.000Z"),
+      reason: "Curso",
+    });
+  });
+
+  it("aceita vários dias e dia inteiro (00:00 até 00:00 do dia seguinte); motivo vazio vira null", () => {
+    const parsed = blockSchema.parse({ ...base, startTime: "00:00", endDate: "2026-09-22", endTime: "00:00", reason: "" });
+    expect(parsed.endsAt.getTime() - parsed.startsAt.getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(parsed.reason).toBeNull();
+  });
+
+  it("recusa fim igual/anterior ao início e período acima do limite técnico", () => {
+    expect(blockSchema.safeParse({ ...base, endTime: "08:00" }).success).toBe(false);
+    expect(blockSchema.safeParse({ ...base, endDate: "2026-09-20" }).success).toBe(false);
+    const tooLong = blockSchema.safeParse({ ...base, endDate: "2027-09-23" });
+    expect(tooLong.success).toBe(false);
+  });
+
+  it("campos inválidos não quebram a validação", () => {
+    const result = blockSchema.safeParse({ professionalId: "", startDate: "x", startTime: "25:00", endDate: "", endTime: "" });
+    expect(result.success).toBe(false);
   });
 });

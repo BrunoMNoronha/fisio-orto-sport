@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
-import { listAgenda, listProfessionals } from "@/modules/agenda/queries";
+import { listAgenda, listProfessionals, listScheduleBlocks } from "@/modules/agenda/queries";
 import { parseAgendaView } from "@/modules/agenda/validation";
 import { getAgendaPreferences } from "@/modules/configuracoes/queries";
 import { firstParam } from "@/modules/pacientes/validation";
@@ -24,8 +24,9 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
     from: firstParam(raw.from),
     to: firstParam(raw.to),
   });
-  const [items, professionals, preferences] = await Promise.all([
+  const [items, blocks, professionals, preferences] = await Promise.all([
     listAgenda(filter),
+    view === "lista" ? Promise.resolve([]) : listScheduleBlocks(filter),
     listProfessionals(),
     getAgendaPreferences(),
   ]);
@@ -47,13 +48,19 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
         <AgendaDayGrid
           date={date}
           items={items}
+          blocks={blocks}
           professionals={columns}
           canManage={canManage}
           range={{ startHour: preferences.dayStartHour, endHour: preferences.dayEndHour }}
         />
       )}
       {view === "semana" && (
-        <AgendaWeekView from={filter.from} today={today} items={items} professionalId={filter.professionalId} />
+        <AgendaWeekView
+          from={filter.from}
+          today={today}
+          items={items}
+          blocks={blocks}
+          professionalId={filter.professionalId} />
       )}
       {view === "lista" && <AgendaListView items={items} />}
     </div>

@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, initials } from "@/lib/utils";
-import type { AgendaItem } from "@/modules/agenda/queries";
-import { APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
-import { HOUR_HEIGHT_PX, assignLanes, dayHourRange, groupByProfessional, placeOnGrid } from "./day-layout";
-import { formatTime } from "./format";
+import type { AgendaItem, ScheduleBlockItem } from "@/modules/agenda/queries";
+import { APPOINTMENT_STATUS_LABELS, addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
+import {
+  HOUR_HEIGHT_PX,
+  assignLanes,
+  blockMinutesOnDay,
+  dayHourRange,
+  groupByProfessional,
+  placeOnGrid,
+} from "./day-layout";
+import { formatDateTime, formatTime } from "./format";
 
 type Props = {
   date: string;
   items: AgendaItem[];
+  // Bloqueios ativos (MEL-02) que tocam o dia.
+  blocks?: ScheduleBlockItem[];
   professionals: { id: string; name: string }[];
   canManage: boolean;
   // Faixa visual configurada; sem ela, o padrão 07:00–20:00.
@@ -19,13 +28,16 @@ type Props = {
 const pad = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
 // Grade do dia: uma coluna por profissional, horários em linhas de 1 h.
-export function AgendaDayGrid({ date, items, professionals, canManage, range, now = new Date() }: Props) {
+export function AgendaDayGrid({ date, items, blocks = [], professionals, canManage, range, now = new Date() }: Props) {
   const columns = groupByProfessional(items, professionals);
   const { startHour, endHour } = dayHourRange(items, range);
   const hours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
   const height = hours.length * HOUR_HEIGHT_PX;
   const nowTop = toLocalDate(now) === date ? placeOnGrid({ startsAt: now, endsAt: now }, startHour).top : -1;
   const showNow = nowTop >= 0 && nowTop <= height;
+  const dayStart = toInstant(date, "00:00");
+  const dayEnd = toInstant(addDays(date, 1), "00:00");
+  const pxPerMinute = HOUR_HEIGHT_PX / 60;
 
   if (columns.length === 0) {
     return (
@@ -97,6 +109,31 @@ export function AgendaDayGrid({ date, items, professionals, canManage, range, no
                   />
                 ),
               )}
+
+              {blocks
+                .filter((block) => block.professional.id === professional.id)
+                .map((block) => {
+                  const minutes = blockMinutesOnDay(block, dayStart, dayEnd);
+                  if (!minutes) return null;
+                  const start = Math.max(minutes.start, startHour * 60);
+                  const end = Math.min(minutes.end, endHour * 60);
+                  if (end <= start) return null;
+                  const label = `Bloqueado de ${formatDateTime(block.startsAt)} a ${formatDateTime(block.endsAt)}${block.reason ? `: ${block.reason}` : ""}`;
+                  return (
+                    <Link
+                      key={block.id}
+                      href={`/agenda/bloqueios?${new URLSearchParams({ professionalId: professional.id })}`}
+                      aria-label={`${label}, ${professional.name}`}
+                      title={label}
+                      className="absolute inset-x-0 z-[1] overflow-hidden border-y border-dashed border-muted-foreground/40 bg-[repeating-linear-gradient(135deg,var(--muted)_0_6px,transparent_6px_12px)] px-2 py-1 text-xs text-muted-foreground"
+                      style={{ top: (start - startHour * 60) * pxPerMinute, height: (end - start) * pxPerMinute }}
+                    >
+                      <span className="rounded bg-card/90 px-1 font-medium">
+                        Bloqueado{block.reason ? ` · ${block.reason}` : ""}
+                      </span>
+                    </Link>
+                  );
+                })}
 
               {placed.map(({ item, lane }) => {
                 const { top, height: boxHeight } = placeOnGrid(item, startHour);

@@ -6,7 +6,7 @@
 - Sessões registram profissional, técnicas, exercícios e evolução.
 - Reavaliação retorna ao plano.
 - Tratamento termina em alta ou continuidade.
-- Agenda usa fisioterapeuta ativo, horários explícitos em `America/Sao_Paulo`, intervalo semiaberto `[início, fim)`, conflito por profissional e cancelamento sem exclusão física. Presença (MEL-01, 27/09/2026): compareceu, faltou (avisou) ou faltou (sem aviso), marcada a partir do início do horário por quem gere a agenda; só registro, sem cobrança nem bloqueio. Agendamento com atendimento válido ou presença marcada não é cancelado nem reagendado.
+- Agenda usa fisioterapeuta ativo, horários explícitos em `America/Sao_Paulo`, intervalo semiaberto `[início, fim)`, conflito por profissional e cancelamento sem exclusão física. Presença (MEL-01, 27/09/2026): compareceu, faltou (avisou) ou faltou (sem aviso), marcada a partir do início do horário por quem gere a agenda; só registro, sem cobrança nem bloqueio. Agendamento com atendimento válido ou presença marcada não é cancelado nem reagendado. Disponibilidade (MEL-02, 27/09/2026): o profissional pode ter bloqueios de horário; não se agenda nem se reagenda sobre bloqueio, e bloqueio sobre agendamento ativo é recusado com a lista dos agendamentos (nada é cancelado em silêncio). O conflito do paciente com outro horário sobreposto é aviso, que a pessoa confirma. Encaixe não tem regra extra.
 - Anamnese vigente usa versionamento append-only; paciente inativo continua consultável, mas não recebe nova versão.
 - Avaliação inicial (decisões de 18/09 e 26/09/2026): exige data clínica, anamnese de referência do mesmo paciente e diagnóstico fisioterapêutico; os demais campos são opcionais, e em branco significa "não informado". A avaliação é editável, com histórico por campo (valor anterior, autor, CREFITO, data). O paciente pode ter várias avaliações iniciais, sem vínculo com a agenda. O paciente inativo não recebe avaliação nem edição.
 - Plano terapêutico (decisões de 26/09/2026): decorre de uma avaliação do mesmo paciente (versão registrada). Obrigatórios: data, objetivos e conduta. Quantidade prevista de 1 a 100, só informativa. Frequência e reavaliação em texto livre. Revisões imutáveis com tipo (correção ou mudança clínica) e motivo; a vigente é a de maior número. Pode haver vários planos, Ativo ou Encerrado, e encerrar e reabrir pedem motivo. Encerrar não é alta. Data não futura e não anterior à avaliação. Paciente inativo não recebe escrita.
@@ -24,4 +24,4 @@ Fonte: `src/modules/pacientes/README.md` e `src/modules/auth/README.md`.
 
 ## PENDENTE / TBD
 
-Duração padrão, antecedência/motivo obrigatório de cancelamento, conflito por paciente e horário de funcionamento ainda precisam de decisão.
+Antecedência/motivo obrigatório de cancelamento ainda precisa de decisão. Horário de funcionamento é posterior ao MVP (DEC-01). A duração sugerida é configuração (#63), não regra.

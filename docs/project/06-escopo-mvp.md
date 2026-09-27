@@ -130,7 +130,29 @@ recuperação em [evidencias/mel-01-agenda-sessao](evidencias/mel-01-agenda-sess
 - **Atendimento sem vínculo:** continua permitido (retroativo). Registros
   anteriores à MEL-01 ficam sem vínculo, sem backfill.
 
+## Regras da MEL-02 (#45)
+
+Decisor: Bruno M Noronha, em 27/09/2026, respondendo no chat às opções
+preparadas a partir do código, antes do schema. Detalhes técnicos em
+`src/modules/agenda/README.md`; migração e recuperação em
+[evidencias/mel-02-bloqueios](evidencias/mel-02-bloqueios.md).
+
+- **Bloqueio sobre agendamento existente:** é recusado. A tela lista os
+  agendamentos ativos do período para reagendar ou cancelar antes. Nenhum
+  agendamento é cancelado ou alterado automaticamente.
+- **Encaixe:** sem regra extra. Como não há horário de funcionamento nem
+  duração padrão no MVP, qualquer horário válido é aceito; só barram o conflito
+  do profissional e o bloqueio. O conflito do paciente só avisa.
+- **Gestão do bloqueio:** criar (intervalo `[início, fim)`, pode durar vários
+  dias, motivo opcional) e remover (remoção lógica com autor e data). Sem
+  edição: remove-se e cria-se outro.
+- **Quem gere:** `agenda:gerir` (Recepção, Fisioterapeuta e Administrador),
+  para qualquer fisioterapeuta ativo, sem permissão nova.
+- **Conflito do paciente (DEC-01):** aviso com a lista dos horários
+  sobrepostos; a pessoa confirma e o agendamento segue. Vale para criar e
+  reagendar. O conflito por profissional continua barrado.
+
 ## PENDENTE / TBD
 
-Na MEL-02, falta a regra de encaixe: agendamento fora da grade ou menor que o
-padrão.
+Nenhuma regra da MEL-01 ou da MEL-02 pendente. Horário de funcionamento e
+visão mensal continuam posteriores ao MVP.

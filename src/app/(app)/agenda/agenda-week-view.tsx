@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { AgendaItem } from "@/modules/agenda/queries";
-import { addDays, toLocalDate } from "@/modules/agenda/validation";
+import type { AgendaItem, ScheduleBlockItem } from "@/modules/agenda/queries";
+import { addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
 import { agendaHref, formatDayMonth, formatTime, formatWeekdayShort } from "./format";
 
-type Props = { from: string; today: string; items: AgendaItem[]; professionalId?: string };
+type Props = {
+  from: string;
+  today: string;
+  items: AgendaItem[];
+  blocks?: ScheduleBlockItem[];
+  professionalId?: string;
+};
 
 // Semana de segunda a domingo; cada dia leva à visão diária.
-export function AgendaWeekView({ from, today, items, professionalId }: Props) {
+export function AgendaWeekView({ from, today, items, blocks = [], professionalId }: Props) {
   const days = Array.from({ length: 7 }, (_, index) => addDays(from, index));
   const byDay = new Map<string, AgendaItem[]>();
   for (const item of items) {
@@ -19,6 +25,10 @@ export function AgendaWeekView({ from, today, items, professionalId }: Props) {
     <div className="grid gap-3 md:grid-cols-7">
       {days.map((day) => {
         const dayItems = byDay.get(day) ?? [];
+        // Bloqueios (MEL-02) que tocam o dia; podem atravessar vários dias.
+        const dayStart = toInstant(day, "00:00");
+        const dayEnd = toInstant(addDays(day, 1), "00:00");
+        const dayBlocks = blocks.filter((block) => block.startsAt < dayEnd && block.endsAt > dayStart);
         const isToday = day === today;
         return (
           <section
@@ -33,8 +43,27 @@ export function AgendaWeekView({ from, today, items, professionalId }: Props) {
               <span className="text-xs font-medium uppercase text-muted-foreground">{formatWeekdayShort(day)}</span>
               <span className={cn("text-sm font-semibold", isToday && "text-primary")}>{formatDayMonth(day)}</span>
             </Link>
+            {dayBlocks.length > 0 && (
+              <ul className="flex flex-col gap-1 px-2 pt-2">
+                {dayBlocks.map((block) => (
+                  <li
+                    key={block.id}
+                    className="rounded-md border border-dashed border-muted-foreground/40 px-2 py-1 text-xs text-muted-foreground"
+                  >
+                    <span className="font-medium">Bloqueado</span>{" "}
+                    <span className="tabular-nums">
+                      {block.startsAt <= dayStart ? "00:00" : formatTime(block.startsAt)}–
+                      {block.endsAt >= dayEnd ? "24:00" : formatTime(block.endsAt)}
+                    </span>
+                    {!professionalId && <span className="block truncate">{block.professional.name}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
             {dayItems.length === 0 ? (
-              <p className="px-3 py-4 text-xs text-muted-foreground">Livre</p>
+              dayBlocks.length > 0 ? null : (
+                <p className="px-3 py-4 text-xs text-muted-foreground">Livre</p>
+              )
             ) : (
               <ul className="flex flex-col gap-1.5 p-2">
                 {dayItems.map((item) => {

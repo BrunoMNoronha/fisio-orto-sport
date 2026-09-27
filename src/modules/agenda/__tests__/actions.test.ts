@@ -31,7 +31,17 @@ const prismaMock = {
     update: jest.fn(),
     updateMany: jest.fn(),
     findFirst: jest.fn(),
+    findMany: jest.fn(),
     findUnique: findUniqueMock,
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  // Bloqueios (MEL-02).
+  scheduleBlock: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    updateMany: jest.fn(),
     delete: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -58,11 +68,13 @@ jest.mock("next/navigation", () => ({
 import {
   cancelAppointment,
   createAppointment,
+  createScheduleBlock,
+  removeBlock,
   rescheduleAppointment,
   searchActivePatients,
   setAttendance,
 } from "../actions";
-import { CONFLICT_MESSAGE } from "../rules";
+import { BLOCKED_MESSAGE, CONFLICT_MESSAGE } from "../rules";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -101,6 +113,11 @@ beforeEach(() => {
   prismaMock.patient.findUnique.mockResolvedValue({ status: "ATIVO" });
   prismaMock.user.findUnique.mockResolvedValue({ role: "FISIOTERAPEUTA", active: true });
   prismaMock.appointment.findFirst.mockResolvedValue(null);
+  prismaMock.appointment.findMany.mockResolvedValue([]);
+  prismaMock.scheduleBlock.findFirst.mockResolvedValue(null);
+  prismaMock.scheduleBlock.create.mockResolvedValue({ id: "b1" });
+  prismaMock.scheduleBlock.updateMany.mockResolvedValue({ count: 1 });
+  prismaMock.scheduleBlock.findUnique.mockResolvedValue(null);
   prismaMock.appointment.create.mockResolvedValue({ id: "a1" });
   prismaMock.appointment.findUnique.mockResolvedValue({ status: "AGENDADO" });
   prismaMock.appointment.update.mockResolvedValue({ id: "a1" });
@@ -113,6 +130,8 @@ afterEach(() => {
   // Nenhuma action da agenda exclui fisicamente.
   expect(prismaMock.appointment.delete).not.toHaveBeenCalled();
   expect(prismaMock.appointment.deleteMany).not.toHaveBeenCalled();
+  expect(prismaMock.scheduleBlock.delete).not.toHaveBeenCalled();
+  expect(prismaMock.scheduleBlock.deleteMany).not.toHaveBeenCalled();
 });
 
 describe("autorização (agenda:gerir)", () => {
@@ -520,5 +539,174 @@ describe("lock por profissional", () => {
     expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(
       prismaMock.$executeRaw.mock.invocationCallOrder[1],
     );
+  });
+});
+
+describe("MEL-02: bloqueio impede agendar e reagendar", () => {
+  it("criar sobre bloqueio ativo é recusado, sem gravar", async () => {
+    prismaMock.scheduleBlock.findFirst.mockResolvedValue({ id: "b1" });
+    expect(await createAppointment(undefined, form(newAppointment))).toEqual({
+      fieldErrors: { startTime: [BLOCKED_MESSAGE] },
+    });
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+    // Checagem de bloqueio: mesmo profissional, só ativos, intervalo [início, fim).
+    expect(prismaMock.scheduleBlock.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { professionalId: "f1", removedAt: null, startsAt: { lt: ENDS }, endsAt: { gt: STARTS } },
+      }),
+    );
+  });
+
+  it("reagendar para horário bloqueado é recusado, sem gravar", async () => {
+    prismaMock.scheduleBlock.findFirst.mockResolvedValue({ id: "b1" });
+    expect(await rescheduleAppointment(undefined, form({ id: "a1", ...slot }))).toEqual({
+      fieldErrors: { startTime: [BLOCKED_MESSAGE] },
+    });
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it("a checagem de bloqueio roda depois do lock por profissional", async () => {
+    await expect(createAppointment(undefined, form(newAppointment))).rejects.toThrow("NEXT_REDIRECT");
+    expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prismaMock.scheduleBlock.findFirst.mock.invocationCallOrder[0],
+    );
+  });
+});
+
+describe("MEL-02: conflito do paciente é aviso", () => {
+  const other = { id: "a7", startsAt: STARTS, endsAt: ENDS, professional: { name: "Dra. Outra" } };
+
+  it("sem confirmação, avisa e não grava", async () => {
+    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    const result = await createAppointment(undefined, form(newAppointment));
+    expect(result).toMatchObject({
+      patientConflicts: [{ id: "a7", label: "21/09/2026 09:00–10:00 com Dra. Outra" }],
+    });
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ patientId: "p1", status: "AGENDADO", startsAt: { lt: ENDS }, endsAt: { gt: STARTS } }),
+      }),
+    );
+  });
+
+  it("com confirmação, agenda mesmo assim (encaixe)", async () => {
+    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    await expectRedirect(createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" })), "/agenda/a1");
+    expect(prismaMock.appointment.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirmação não libera conflito do profissional nem bloqueio", async () => {
+    prismaMock.appointment.findFirst.mockResolvedValueOnce({ id: "outro" });
+    expect(await createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" }))).toEqual({
+      fieldErrors: { startTime: [CONFLICT_MESSAGE] },
+    });
+    prismaMock.scheduleBlock.findFirst.mockResolvedValueOnce({ id: "b1" });
+    expect(await createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" }))).toEqual({
+      fieldErrors: { startTime: [BLOCKED_MESSAGE] },
+    });
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+  });
+
+  it("reagendar avisa pelo paciente do próprio agendamento, ignorando ele mesmo", async () => {
+    prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f1", patientId: "p9" });
+    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    const result = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
+    expect(result?.patientConflicts).toHaveLength(1);
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ patientId: "p9", id: { not: "a1" } }) }),
+    );
+    await expectRedirect(
+      rescheduleAppointment(undefined, form({ id: "a1", ...slot, confirmPatientConflict: "1" })),
+      "/agenda/a1",
+    );
+    expect(prismaMock.appointment.update).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("MEL-02: createScheduleBlock", () => {
+  const block = {
+    professionalId: "f1",
+    startDate: "2026-09-21",
+    startTime: "08:00",
+    endDate: "2026-09-25",
+    endTime: "18:00",
+    reason: "Férias",
+  };
+
+  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("%s cria bloqueio com autoria (agenda:gerir)", async (role) => {
+    as(role);
+    await expectRedirect(createScheduleBlock(undefined, form(block)), "/agenda/bloqueios?professionalId=f1");
+    expect(prismaMock.scheduleBlock.create).toHaveBeenCalledWith({
+      data: {
+        professionalId: "f1",
+        startsAt: new Date("2026-09-21T11:00:00.000Z"),
+        endsAt: new Date("2026-09-25T21:00:00.000Z"),
+        reason: "Férias",
+        createdById: `u-${role}`,
+      },
+      select: { id: true },
+    });
+  });
+
+  it("sem sessão é negado antes do banco", async () => {
+    as(null);
+    expect(await createScheduleBlock(undefined, form(block))).toEqual({ error: "Acesso negado." });
+    expect(await removeBlock(undefined, form({ id: "b1" }))).toEqual({ error: "Acesso negado." });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(prismaMock.scheduleBlock.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("fim igual ou anterior ao início é recusado", async () => {
+    const result = await createScheduleBlock(undefined, form({ ...block, endDate: "2026-09-21", endTime: "08:00" }));
+    expect(result?.fieldErrors?.endTime).toEqual(["O fim do bloqueio deve ser posterior ao início."]);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("com agendamento ativo no período, recusa e lista os agendamentos (nada é cancelado)", async () => {
+    prismaMock.appointment.findMany.mockResolvedValue([
+      { id: "a3", startsAt: STARTS, endsAt: ENDS, patient: { fullName: "Ana Souza" } },
+    ]);
+    const result = await createScheduleBlock(undefined, form(block));
+    expect(result).toMatchObject({ conflicts: [{ id: "a3", label: "21/09/2026 09:00–10:00 · Ana Souza" }] });
+    expect(result?.error).toMatch(/Reagende ou cancele/);
+    expect(prismaMock.scheduleBlock.create).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ professionalId: "f1", status: "AGENDADO" }) }),
+    );
+  });
+
+  it("trava o profissional antes de checar os agendamentos", async () => {
+    await expect(createScheduleBlock(undefined, form(block))).rejects.toThrow("NEXT_REDIRECT");
+    expect(prismaMock.$executeRaw.mock.calls[0][1]).toBe("agenda:f1");
+    expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prismaMock.appointment.findMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("profissional inativo não recebe bloqueio", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({ role: "FISIOTERAPEUTA", active: false });
+    expect((await createScheduleBlock(undefined, form(block)))?.fieldErrors?.professionalId).toBeDefined();
+    expect(prismaMock.scheduleBlock.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("MEL-02: removeBlock", () => {
+  it("remove logicamente com autor e data", async () => {
+    expect(await removeBlock(undefined, form({ id: "b1" }))).toEqual({ ok: true, message: "Bloqueio removido." });
+    expect(prismaMock.scheduleBlock.updateMany).toHaveBeenCalledWith({
+      where: { id: "b1", removedAt: null },
+      data: { removedAt: expect.any(Date), removedById: "u-RECEPCAO" },
+    });
+  });
+
+  it("já removido ou inexistente", async () => {
+    prismaMock.scheduleBlock.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.scheduleBlock.findUnique.mockResolvedValueOnce({ id: "b1" });
+    expect(await removeBlock(undefined, form({ id: "b1" }))).toEqual({ error: "Este bloqueio já foi removido." });
+    expect(await removeBlock(undefined, form({ id: "zz" }))).toEqual({ error: "Bloqueio não encontrado." });
   });
 });

@@ -20,6 +20,9 @@ const url = process.env.INTEGRATION_DATABASE_URL;
 if (process.env.CI && !url) throw new Error("INTEGRATION_DATABASE_URL é obrigatória na CI.");
 
 const CONFLICT = { fieldErrors: { startTime: [CONFLICT_MESSAGE] } };
+// Mesmo paciente em dois profissionais no mesmo horário: desde a MEL-02 (#45) é aviso, e estes
+// testes de independência entre profissionais simulam o encaixe já confirmado.
+const ENCAIXE = { allowPatientConflict: true };
 
 describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não definida" }, () => {
   // Vários clientes = instâncias diferentes da aplicação disputando o mesmo horário.
@@ -250,11 +253,11 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
   it("reagendamentos cruzados entre dois profissionais em paralelo não travam (ordem fixa dos locks)", async () => {
     for (let round = 0; round < 5; round++) {
       const at = newDay();
-      const fromA = await insertAppointment(prisma, booking(fisioA, at(8), at(9)), actorId);
-      const fromB = await insertAppointment(prisma, booking(fisioB, at(8), at(9)), actorId);
+      const fromA = await insertAppointment(prisma, booking(fisioA, at(8), at(9)), actorId, ENCAIXE);
+      const fromB = await insertAppointment(prisma, booking(fisioB, at(8), at(9)), actorId, ENCAIXE);
       const results = await Promise.all([
-        outcome(moveAppointment(prisma, fromA, { professionalId: fisioB, startsAt: at(11), endsAt: at(12) }, actorId)),
-        outcome(moveAppointment(client(), fromB, { professionalId: fisioA, startsAt: at(11), endsAt: at(12) }, actorId)),
+        outcome(moveAppointment(prisma, fromA, { professionalId: fisioB, startsAt: at(11), endsAt: at(12) }, actorId, ENCAIXE)),
+        outcome(moveAppointment(client(), fromB, { professionalId: fisioA, startsAt: at(11), endsAt: at(12) }, actorId, ENCAIXE)),
       ]);
       assert.deepEqual(results, [{ ok: null }, { ok: null }]);
     }
@@ -274,8 +277,8 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
   it("profissionais distintos são independentes, inclusive em paralelo", async () => {
     const at = newDay();
     const results = await Promise.all([
-      outcome(insertAppointment(prisma, booking(fisioA, at(9), at(10)), actorId)),
-      outcome(insertAppointment(client(), booking(fisioB, at(9), at(10)), actorId)),
+      outcome(insertAppointment(prisma, booking(fisioA, at(9), at(10)), actorId, ENCAIXE)),
+      outcome(insertAppointment(client(), booking(fisioB, at(9), at(10)), actorId, ENCAIXE)),
     ]);
     assert.ok(results.every((result) => "ok" in result));
     assert.equal((await activeIn(fisioA, at(0), at(24))).length, 1);

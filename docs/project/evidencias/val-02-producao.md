@@ -19,6 +19,20 @@ acesso ou ação que Claude não executa), **LIMITAÇÃO**.
 O alvo mudou desde o registro original da issue (09dc016 → e39ae21), por isso
 foi revalidado. Se `main` mudar, repetir esta seção.
 
+**Revalidação de 27/09/2026, ~14:00 UTC.** O alvo mudou para
+`7c4d4c798e483c8f0ff989d27e5df2184613ef4d` (merge da PR #60). Desde `e39ae21`, a
+diferença é só de documentação (`docs/project/`), sem código nem migração.
+
+| Item | Valor |
+|---|---|
+| Deployment GitHub | 6693027901, Production, `success` (27/09/2026 13:49 UTC) |
+| URL do deployment | https://fisio-orto-sport-hzni5fp6b-bruno-m-noronha.vercel.app |
+| CI | run 36323725948, `success`: 61 suítes / 628 testes Jest; 65 de integração, 0 falhas |
+| Rotas sem sessão | `/login` 200; `/`, `/pacientes`, `/agenda` → 307 para `/login` (tabela do item 2 continua válida) |
+
+O conector da Vercel ainda responde 403 para variáveis e logs (itens 4 e 8), e
+a leitura de produção no Neon segue bloqueada pela permissão da sessão (item 7).
+
 ## 2. Acesso sem sessão — COMPROVADO
 
 | Rota | Resposta |

@@ -15,7 +15,8 @@ Autenticação (e-mail e senha), sessão, perfis, permissões e gestão de usuá
 | `actions.ts` | `login` (mensagem genérica, tempo constante contra enumeração), `logout` e `setupFirstAdmin` (primeiro acesso). |
 | `setup.ts` (`server-only`) | `hasAnyUser()`: diz se a tabela de usuários já tem alguém (decide login × primeiro acesso). |
 | `bootstrap.ts` (`server-only`) | Autorização do primeiro acesso por `SETUP_TOKEN` (`isSetupEnabled`, `isValidSetupToken`) e `createFirstAdmin` (transação serializável). |
-| `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar e redefinir a senha. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
+| `users/actions.ts` | Criar, editar (nome, perfil e CREFITO), ativar/desativar, redefinir a senha e excluir conta desativada. Todas exigem `usuarios:gerir` no servidor. Desativar ou redefinir a senha encerra as sessões do usuário. |
+| `users/delete.ts` | Exclusão de usuário desativado (issue #76): catálogo de vínculos (`USER_LINKS`, todas as FKs para `User` exceto `Session`) e a transação `deleteDeactivatedUser`. Ver "Exclusão de usuário" abaixo. |
 | `rate-limit.ts` / `limits.ts` | Limites de tentativas em janela fixa, guardados no PostgreSQL (`AuthRateLimit`), com reserva em memória. `limits.ts` (`server-only`) define os limites do login e do primeiro acesso. |
 | `client-ip.ts` | IP do cliente, lido dos cabeçalhos só atrás de proxy confiável (Vercel ou `TRUST_PROXY=true`). |
 | `redirect-path.ts` | Aceita só caminhos internos no `?next=` (evita redirecionamento aberto). |
@@ -49,6 +50,32 @@ Contrato: toda permissão da Recepção também é do Fisioterapeuta, que soma a
 - **Único quando informado** (`@unique`; vários `NULL` são aceitos). A duplicidade responde "Já existe um usuário com este CREFITO." sem ecoar o valor. A action distingue o P2002 do CREFITO do P2002 do e-mail procurando `crefito` em `error.meta`, formato conferido contra o PostgreSQL real em `test/integration/cadastro-complementar.integration.ts`.
 - Fisioterapeutas cadastrados antes da 2c ficam com `NULL`, e a lista de usuários mostra "CREFITO não informado". Editar um deles exige informar o CREFITO.
 - Quem edita: só `usuarios:gerir` (Administrador), com a matriz inalterada. A anamnese **não** guarda o CREFITO na assinatura (append-only inalterado).
+
+## Exclusão de usuário (issue #76)
+
+- **Quem:** o Administrador (`usuarios:gerir`), pelo botão "Excluir". O botão aparece só em contas
+  desativadas que não são a dele. A confirmação diz que a exclusão é definitiva, e cancelar não
+  altera nada.
+- **Quando é permitido:** a conta está **desativada**, não é a do próprio executor e **não tem
+  vínculo de negócio**. Vínculo de negócio é qualquer registro de pacientes, agenda, bloqueios,
+  prontuário (inclusive históricos de edição e invalidação) ou configurações da clínica que aponte
+  para ela.
+- **Com vínculo:** a exclusão é recusada, e a mensagem cita só as categorias, sem mostrar registros.
+  A conta continua desativada. Nada é apagado em cascata, transferido para outra conta ou
+  anonimizado.
+- **Na exclusão:** as sessões de login residuais e o usuário são removidos, e o evento
+  `USUARIO_EXCLUIDO` é gravado **na mesma transação**. Se a auditoria falhar, nada é excluído. Os
+  eventos anteriores ficam (`AuditLog` guarda ids, sem FK), e a consulta mostra "Usuário excluído"
+  com o início do id.
+- **Concorrência:**
+  - a linha do usuário é travada (`FOR UPDATE`) antes das checagens;
+  - reativação, gravação de vínculo novo (a FK trava a mesma linha) e outra exclusão esperam e
+    depois veem o estado confirmado;
+  - as FKs `Restrict` são a última barreira.
+- **Catálogo:** a integração compara `USER_LINKS` com as FKs reais para `User`. Uma FK nova sem
+  entrada no catálogo faz o teste falhar.
+- **Fora do escopo:** exclusão em massa, exclusão de conta ativa, anonimização e transferência de
+  autoria. O `pnpm db:reset` (#62) continua preservando todos os usuários.
 
 ## Fora do escopo (por ora)
 

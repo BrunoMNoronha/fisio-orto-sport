@@ -49,7 +49,8 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
     listAuditUserOptions(),
   ]);
   const names = new Map(users.map((user) => [user.id, user.name]));
-  const nameOf = (id: string | null) => (id ? (names.get(id) ?? "—") : "—");
+  // Conta excluída (issue #76): o evento continua, identificado pelo início do id.
+  const nameOf = (id: string | null) => (id ? (names.get(id) ?? `Usuário excluído (${id.slice(0, 8)}…)`) : "—");
   const filtered = Boolean(filters.userId || filters.action || filters.from || filters.to);
 
   function pageHref(target: number) {

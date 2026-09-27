@@ -14,6 +14,7 @@ Bruno em 26/09/2026, registradas em
 | `ACESSO_NEGADO` | `auth/dal.ts` (`requirePermission`, `requireRole`, `assertPermission`) | `NEGADO`. Só para usuário logado sem a permissão; sem sessão não gera registro |
 | `PRIMEIRO_ADMIN_CRIADO` | `auth/bootstrap.ts` | `SUCESSO` |
 | `USUARIO_CRIADO`, `USUARIO_EDITADO`, `PERFIL_ALTERADO`, `USUARIO_ATIVADO`, `USUARIO_DESATIVADO`, `SENHA_REDEFINIDA` | `auth/users/actions.ts` | `SUCESSO` |
+| `USUARIO_EXCLUIDO` (issue #76) | `auth/users/delete.ts`, na transação da exclusão | `SUCESSO` |
 | `CLI_ADMIN_CRIADO`, `CLI_SENHA_REDEFINIDA` | `auth/admin-cli.ts` (`pnpm db:admin`) | `SUCESSO`, sem ator nem IP |
 | `CONFIGURACAO_ALTERADA` | `configuracoes/write.ts` (issue #63) | `SUCESSO`, na mesma transação da gravação. `details` traz a versão e os nomes dos campos alterados, nunca os valores |
 
@@ -64,7 +65,9 @@ antes de listar.
 ## Consulta (A4)
 
 `/usuarios/auditoria`, permissão `auditoria:ler` (só Administrador). Filtros por usuário (quem agiu
-ou alvo), ação e período (datas no fuso da clínica), 50 registros por página.
+ou alvo), ação e período (datas no fuso da clínica), 50 registros por página. Eventos de uma conta
+excluída (issue #76) continuam listados, com "Usuário excluído" e o início do id no lugar do nome.
+Ela não aparece mais no filtro por usuário.
 
 ## Testes
 

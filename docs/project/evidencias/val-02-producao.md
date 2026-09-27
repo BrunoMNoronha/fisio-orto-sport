@@ -135,7 +135,7 @@ ponto passado: `create_snapshot` do `main` com `timestamp` e depois
 | Data do teste | 27/09/2026, 13:43–13:45 UTC |
 | Ponto pedido | 2026-09-27T12:43:00Z (1 h antes, dentro da janela de 6 h) |
 | Ponto efetivo | LSN `0/20EDCE0`, última escrita em 2026-09-26T21:10:32Z (nenhuma escrita depois disso até o ponto pedido) |
-| Snapshot | `snap-snowy-leaf-acggldg8` (`restore-test-20260927`), expira em 2026-09-29T13:43Z |
+| Snapshot | `snap-snowy-leaf-acggldg8` (`restore-test-20260927`), excluído após o teste |
 | Branch criado | `br-restless-recipe-acfsn25f` (`restore-test-20260927`), não primário, não finalizado |
 | Tempo até o branch ficar consultável | ~15 s depois do snapshot; RTO de 1 dia útil atendido com folga |
 | `main` depois da restauração | Continua primário/default; `/login` em produção responde 200 |
@@ -159,8 +159,9 @@ Contagens no branch restaurado (nenhum dado pessoal lido):
 - [ ] Conferir as variáveis (item 4).
 - [x] Branch `restore-test-20260927` excluído em 2026-09-27T13:45Z, com
       autorização de Bruno no chat. Só o `main` permanece; `/login` respondeu
-      200 depois. O snapshot `snap-snowy-leaf-acggldg8` expira sozinho em
-      29/09.
+      200 depois. Snapshot `snap-snowy-leaf-acggldg8` excluído em
+      2026-09-27T13:46Z, também com autorização de Bruno; o projeto ficou sem
+      snapshots.
 
 ## 8. Aviso SSL nos logs — CLASSIFICADO, sem correção agora
 

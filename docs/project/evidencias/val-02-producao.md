@@ -157,8 +157,10 @@ Contagens no branch restaurado (nenhum dado pessoal lido):
 - [ ] Rodar a consulta do passo 3 no `main` e completar a coluna `—`. Ela ficou
       bloqueada pela permissão de leitura em produção da sessão.
 - [ ] Conferir as variáveis (item 4).
-- [ ] Excluir o branch `restore-test-20260927`. O snapshot expira sozinho em
-      29/09, ou pode ser apagado junto. Anotar a data aqui: ____.
+- [x] Branch `restore-test-20260927` excluído em 2026-09-27T13:45Z, com
+      autorização de Bruno no chat. Só o `main` permanece; `/login` respondeu
+      200 depois. O snapshot `snap-snowy-leaf-acggldg8` expira sozinho em
+      29/09.
 
 ## 8. Aviso SSL nos logs — CLASSIFICADO, sem correção agora
 
@@ -185,5 +187,5 @@ anotar se há algo além do aviso SSL.
 - READY e CI verdes não equivalem a teste funcional: itens 5 e 6 seguem sem
   comprovação.
 - Restauração demonstrada em branch isolado (item 7). Faltam a comparação
-  completa das contagens com o `main` e a remoção do branch.
+  completa das contagens com o `main`; o branch já foi removido.
 - Variáveis e logs de runtime não conferidos por falta de acesso ao painel.

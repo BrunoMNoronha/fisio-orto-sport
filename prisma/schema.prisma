@@ -51,6 +51,7 @@ model User {
   treatmentSessionChangesAuthored TreatmentSessionChange[]
   reassessmentsAuthored           Reassessment[]
   reassessmentChangesAuthored     ReassessmentChange[]
+  clinicSettingsUpdated           ClinicSettings[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -559,6 +560,7 @@ enum AuditAction {
   SENHA_REDEFINIDA
   CLI_ADMIN_CRIADO
   CLI_SENHA_REDEFINIDA
+  CONFIGURACAO_ALTERADA
 }
 
 enum AuditResult {
@@ -577,10 +579,36 @@ model AuditLog {
   targetUserId String?
   emailHash    String?     @db.Char(64)
   ip           String?     @db.VarChar(45)
+  // Resumo sem valores (issue #63): versão e nomes dos campos alterados de uma configuração.
+  details      String?     @db.VarChar(500)
   createdAt    DateTime    @default(now()) @db.Timestamptz(3)
 
   @@index([createdAt])
   @@index([actorId, createdAt])
   @@index([targetUserId, createdAt])
   @@index([action, createdAt])
+}
+
+// Configurações da clínica (issue #63): uma única linha (id = 1, garantido por CHECK). Sem linha,
+// a aplicação usa os padrões de src/modules/configuracoes/settings.ts; uma leitura nunca grava.
+// `version` protege contra sobrescrita entre dois administradores (a gravação exige a versão lida).
+model ClinicSettings {
+  id                       Int      @id @default(1)
+  displayName              String?  @db.VarChar(120)
+  legalName                String?  @db.VarChar(160)
+  // Só dígitos.
+  cnpj                     String?  @db.Char(14)
+  phone                    String?  @db.VarChar(11)
+  email                    String?  @db.VarChar(254)
+  address                  String?  @db.VarChar(300)
+  // Faixa visual da grade do dia, em horas inteiras; não é horário de funcionamento.
+  agendaDayStartHour       Int      @default(7)
+  agendaDayEndHour         Int      @default(20)
+  // Duração sugerida para novos agendamentos; null = desligada.
+  suggestedDurationMinutes Int?
+  printShowClinicInfo      Boolean  @default(false)
+  version                  Int      @default(1)
+  updatedAt                DateTime @updatedAt @db.Timestamptz(3)
+  updatedById              String
+  updatedBy                User     @relation(fields: [updatedById], references: [id], onDelete: Restrict)
 }

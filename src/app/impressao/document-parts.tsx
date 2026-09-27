@@ -1,5 +1,6 @@
 import { BrandLogo } from "@/components/brand-logo";
 import { cn } from "@/lib/utils";
+import { identityLines, type ClinicIdentity as Identity } from "@/modules/configuracoes/settings";
 
 // Folha A4. Na tela aparece como papel sobre fundo cinza; na impressão ocupa a página
 // (a margem é o padding, já que @page não tem margem).
@@ -16,10 +17,33 @@ export function Sheet({ className, children }: { className?: string; children: R
   );
 }
 
-export function DocumentHeader({ title }: { title?: React.ReactNode }) {
+// Identificação da clínica configurada (issue #63). Só as linhas com algum dado aparecem; sem
+// configuração, o cabeçalho fica como antes (só a marca). Reimpressões usam a identificação vigente.
+export function ClinicIdentity({ clinic, className }: { clinic: Identity; className?: string }) {
+  const { title, lines } = identityLines(clinic);
+  return (
+    <div className={cn("grid gap-0.5 text-[8.5pt] leading-tight", className)}>
+      {title && <p className="text-[10pt] font-semibold">{title}</p>}
+      {lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
+  );
+}
+
+export function DocumentHeader({ title, clinic }: { title?: React.ReactNode; clinic?: Identity | null }) {
   return (
     <header className="flex flex-col items-center gap-3 text-center">
-      <BrandLogo />
+      {clinic ? (
+        // Marca e identificação lado a lado: o cabeçalho quase não cresce, e documentos de uma
+        // página (termo) continuam cabendo no A4.
+        <div className="flex w-full items-center justify-between gap-6">
+          <BrandLogo className="shrink-0" />
+          <ClinicIdentity clinic={clinic} className="min-w-0 text-right" />
+        </div>
+      ) : (
+        <BrandLogo />
+      )}
       {title && <h1 className="text-[12.5pt] font-bold uppercase tracking-wide">{title}</h1>}
     </header>
   );

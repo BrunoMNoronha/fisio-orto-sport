@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { requireUser } from "@/modules/auth/dal";
 import { ROLE_LABELS, can } from "@/modules/auth/permissions";
+import { getClinicDisplayName } from "@/modules/configuracoes/queries";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
@@ -13,12 +14,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (can(user.role, "pacientes:ler")) allowed.push("pacientes");
   if (can(user.role, "agenda:ler")) allowed.push("agenda");
   if (can(user.role, "usuarios:ler")) allowed.push("usuarios");
+  if (can(user.role, "configuracoes:ler")) allowed.push("configuracoes");
+  const clinicName = await getClinicDisplayName();
 
   return (
     <SidebarProvider>
       <AppSidebar
         allowed={allowed}
         user={{ name: user.name, email: user.email, roleLabel: ROLE_LABELS[user.role] }}
+        clinicName={clinicName}
       />
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 rounded-t-xl border-b bg-background/80 px-4 backdrop-blur">

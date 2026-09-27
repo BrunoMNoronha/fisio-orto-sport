@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/modules/auth/dal";
+import { getPrintIdentity } from "@/modules/configuracoes/queries";
 import { getCurrentAnamnesis } from "@/modules/clinico/queries";
 import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
 import { getAnamnesisAuthor } from "@/modules/pacientes/documents";
@@ -41,12 +42,16 @@ export default async function AnamneseImpressaoPage({ params }: PageProps<"/impr
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
-  const [anamnesis, author] = await Promise.all([getCurrentAnamnesis(patient.id), getAnamnesisAuthor(patient.id)]);
+  const [anamnesis, author, clinic] = await Promise.all([
+    getCurrentAnamnesis(patient.id),
+    getAnamnesisAuthor(patient.id),
+    getPrintIdentity(),
+  ]);
   if (!anamnesis) notFound();
 
   return (
     <Sheet className="flex flex-col gap-5">
-      <DocumentHeader title="Ficha de anamnese fisioterapêutica" />
+      <DocumentHeader title="Ficha de anamnese fisioterapêutica" clinic={clinic} />
 
       <div className="grid grid-cols-6 gap-x-6 gap-y-1.5">
         <FillField label="Paciente" value={patient.fullName} className="col-span-6" />

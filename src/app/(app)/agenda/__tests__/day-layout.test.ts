@@ -15,6 +15,12 @@ describe("dayHourRange", () => {
   it("amplia para agendamentos fora da faixa", () => {
     expect(dayHourRange([slot("06:30", "07:30"), slot("20:00", "21:15")])).toEqual({ startHour: 6, endHour: 22 });
   });
+
+  it("usa a faixa configurada e continua ampliando para não esconder agendamentos (issue #63)", () => {
+    const range = { startHour: 9, endHour: 12 };
+    expect(dayHourRange([], range)).toEqual({ startHour: 9, endHour: 12 });
+    expect(dayHourRange([slot("07:15", "08:00"), slot("17:00", "18:30")], range)).toEqual({ startHour: 7, endHour: 19 });
+  });
 });
 
 describe("placeOnGrid", () => {

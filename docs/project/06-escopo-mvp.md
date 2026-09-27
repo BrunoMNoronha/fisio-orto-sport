@@ -4,7 +4,14 @@
 
 O MVP corresponde às Fases 1 a 4: Fundação, Pacientes, Agenda e Prontuário.
 
-Inclui, no escopo geral, cadastro/consulta/edição de pacientes, anamnese, agenda, agendamento, reagendamento, cancelamento, avaliação inicial, plano terapêutico, sessões, evoluções e reavaliação.
+No escopo geral, inclui:
+
+- cadastro, consulta e edição de pacientes;
+- anamnese;
+- agenda, com agendamento, reagendamento e cancelamento;
+- avaliação inicial, plano terapêutico, sessões, evoluções e reavaliação.
+
+Os complementos decididos na DEC-01 estão abaixo.
 
 ## IMPLEMENTADO
 
@@ -13,19 +20,96 @@ Inclui, no escopo geral, cadastro/consulta/edição de pacientes, anamnese, agen
 - Fase 2b: anamnese subjetiva versionada.
 - Fase 2c: sexo, profissão e CREFITO.
 - Fase 2d: documentos de impressão gerados na hora, sem armazenamento.
-- Fase 3, primeira fatia: agenda por profissional/período, criação, consulta, reagendamento, cancelamento e visões dia, semana e lista.
-- Fase 4, núcleo: avaliação inicial com histórico, plano terapêutico com revisões imutáveis, sessões com evolução/correção/invalidação e reavaliação comparativa com revisão motivada do plano (issues #24–#27).
-- Histórico clínico de sessões na ficha do paciente; agenda e sessões ainda sem vínculo.
+- Fase 3, primeira fatia:
+  - agenda por profissional e período;
+  - criação, consulta, reagendamento e cancelamento;
+  - visões dia, semana e lista.
+- Fase 4, núcleo (issues #24–#27):
+  - avaliação inicial com histórico;
+  - plano terapêutico com revisões imutáveis;
+  - sessões com evolução, correção e invalidação;
+  - reavaliação comparativa, com revisão motivada do plano.
+- Histórico clínico de sessões na ficha do paciente. Agenda e sessões ainda não
+  têm vínculo.
+- Publicação e fluxo autenticado verificados na VAL-02 (#42, 27/09/2026), com as
+  limitações registradas em [evidencias/val-02-producao](evidencias/val-02-producao.md).
 
 Fontes: `src/modules/*/README.md`, `git log`, `docs/project/roadmap.md`.
 
-## LIMITES VERIFICADOS EM 26/09/2026
+## Decisões de escopo (DEC-01, #43)
 
-Indicação de alta é documental; não encerra plano, inativa paciente ou altera agenda. O módulo próprio de profissionais ainda não foi implementado: profissionais são usuários fisioterapeutas. Publicação e funcionamento autenticado no ambiente publicado não foram verificados nesta revisão.
+Decisor: Bruno M Noronha, em 27/09/2026, respondendo no chat às opções
+preparadas a partir do estado do código. O aceite de cada item incluído é o
+critério descrito na tabela; os itens posteriores não têm aceite no MVP.
 
-Correções, melhorias e critérios de aceite estão no [roadmap](roadmap.md), com prioridade de estabilização antes da próxima fatia funcional.
+| Item | Decisão | Justificativa | Aceite / condição |
+|---|---|---|---|
+| Vínculo agenda–sessão | **Incluído no MVP** (MEL-01) | Dá continuidade ao atendimento, que hoje é lançado à mão sem relação com o horário marcado | O atendimento pode ser registrado a partir de um agendamento elegível, sem duplicar o registro. O lançamento retroativo sem agendamento continua possível. Dados administrativos do agendamento e conteúdo clínico continuam separados. Os efeitos de cancelar um agendamento ou inativar um paciente são definidos antes do schema |
+| Presença e faltas | **Incluído no MVP, só registro** (junto da MEL-01) | A clínica precisa saber quem compareceu, e a agenda hoje só tem `AGENDADO` e `CANCELADO` | O agendamento registra comparecimento ou falta, incluindo se a falta foi avisada ou não. Recepção e Fisioterapeuta marcam, dentro das permissões atuais de `agenda:gerir`. **Sem** cobrança, multa, limite de faltas ou bloqueio automático |
+| Disponibilidade | **Incluído no MVP: bloqueios + aviso** (MEL-02). **Horário de funcionamento: posterior** | Férias e ausências impedem o uso real da agenda. O conflito do paciente precisa ser visível, mas encaixes legítimos não devem ser barrados | Um profissional pode ter horários bloqueados, e não se agenda sobre um bloqueio (com testes de limites e concorrência). Agendar um paciente que já tem outro horário sobreposto mostra aviso e permite prosseguir. O conflito por profissional continua barrado como hoje |
+| Visão mensal da agenda | **Posterior ao MVP** | A lista de até 31 dias já cobre a consulta do mês | Rever se o uso mostrar necessidade (MEL-04) |
+| Alta operacional | **Posterior ao MVP** | Alta documental e encerramento manual do plano cobrem o fluxo atual, sem efeitos automáticos | Ver a seção abaixo |
+| Módulo próprio de profissionais | **Posterior ao MVP** | O profissional é o usuário `FISIOTERAPEUTA` com CREFITO, gerido em `/usuarios`, e isso atende o MVP | Especialidades, carga horária e outros dados profissionais ficam para depois. `src/modules/profissionais` continua reservado e sem implementação |
+
+### Encerramento de plano × alta
+
+- **Encerramento do plano** (implementado): é uma ação manual do
+  profissional, com motivo e assinatura (`TherapyPlanStatusChange`), e pode ser
+  revertida. Encerra só aquele plano. Não é alta, não inativa o paciente e não
+  mexe na agenda.
+- **Indicação de alta** (implementada): é uma conclusão possível da
+  reavaliação (`INDICACAO_ALTA`). Só documenta: não encerra plano, não inativa
+  paciente e não altera a agenda.
+- **Alta operacional** (posterior ao MVP): seria uma ação única com efeitos
+  (por exemplo, encerrar planos, tratar agendamentos futuros ou inativar o
+  paciente). Nenhum desses efeitos está decidido. Eles precisam ser definidos
+  numa decisão própria antes de qualquer implementação.
+
+### O que continua valendo
+
+- Matriz de perfis vigente (`src/modules/auth/permissions.ts`): Recepção com
+  cadastro e agenda, sem dados clínicos; Fisioterapeuta com cadastro, agenda e
+  clínico (#31), nunca `usuarios:*`; Administrador com tudo. Presença e
+  bloqueios usam as permissões de agenda existentes, sem criar perfil nem
+  permissão nova.
+- Decisões clínicas das issues #24–#27: autoria, CREFITO em snapshot, paciente
+  inativo só para consulta, revisões imutáveis e alta documental.
+- Financeiro, relatórios e indicadores, notificações e lembretes, WhatsApp,
+  assinatura digital, portal do paciente e teleatendimento: **posteriores ao
+  MVP** (FUT-01). Nenhum item incluído acopla atendimento a cobrança.
+
+## Critérios de conclusão do MVP
+
+O MVP está concluído quando **todos** os itens abaixo tiverem evidência
+registrada (issue ou PR com aceite verificado):
+
+1. Fases 1 a 4 conforme "Implementado" acima (já atendido).
+2. MEL-01 entregue: vínculo agenda–sessão e registro de presença e faltas, com
+   o aceite da tabela.
+3. MEL-02 entregue: bloqueios de horário por profissional e aviso de conflito
+   do paciente, com o aceite da tabela.
+4. Itens P1 de estabilização do [roadmap](roadmap.md) concluídos ou com exceção
+   técnica registrada.
+5. Tarefas da DEC-02 exigidas "antes do uso com dados reais"
+   ([15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md))
+   concluídas.
+6. Cada fatia nova atende a [definição de pronto](14-definicao-pronto.md): testes
+   unitários, lint, TypeScript, build, integração na CI e fluxo principal
+   testado.
+7. Fluxo por perfil revalidado depois de publicar MEL-01 e MEL-02, no mesmo
+   formato da VAL-02.
+
+MEL-03 (CREFITO na anamnese) e MEL-04 (verificação de experiência) não foram
+decididos na DEC-01. Se a clínica os incluir, passam a somar-se a esta lista.
 
 ## PENDENTE / TBD
 
-Bloqueios de horários, horário de funcionamento, controle de presença e visão mensal precisam ser decididos em relação ao MVP.
-Decidir também a inclusão do vínculo agenda–sessão e da alta operacional. Financeiro, relatórios/indicadores e evoluções como notificações, WhatsApp, assinatura digital, portal do paciente e teleatendimento permanecem posteriores ao MVP.
+Antes do schema da MEL-01:
+
+- estados exatos de presença;
+- quem corrige uma marcação;
+- efeitos de cancelar ou reagendar um agendamento já vinculado a um atendimento;
+- efeitos de inativar o paciente.
+
+Na MEL-02, falta a regra de encaixe: agendamento fora da grade ou menor que o
+padrão.

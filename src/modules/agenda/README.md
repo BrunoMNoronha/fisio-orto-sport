@@ -38,4 +38,8 @@ Quem opera (autor em `createdById`, `updatedById` e `cancelledById`) é o usuár
 
 ## Fora do escopo (por ora)
 
-Conflito por paciente (o mesmo paciente em dois profissionais no mesmo horário não é barrado), bloqueio de horários e horário de funcionamento, controle de presença, visão mensal, recorrência, notificações e lembretes, busca de pacientes no formulário (substituir a lista quando o volume crescer).
+**Ainda não implementados, mas incluídos no MVP pela DEC-01 (#43):** aviso de conflito por paciente (hoje o mesmo paciente em dois profissionais no mesmo horário não é barrado nem avisado), bloqueio de horários por profissional e registro de presença e faltas (MEL-01 e MEL-02 do roadmap).
+
+**Posteriores ao MVP:** horário de funcionamento e visão mensal.
+
+**Também fora do escopo:** recorrência, notificações e lembretes, busca de pacientes no formulário (substituir a lista quando o volume crescer).

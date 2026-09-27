@@ -12,6 +12,9 @@ Decisor das políticas de dados (retenção, auditoria, backup): Bruno M Noronha
 Responsável por backup, conferência e teste de restauração: Bruno M Noronha
 (Bruno, 26/09/2026).
 
+Decisor do escopo e dos critérios de conclusão do MVP (DEC-01): Bruno M Noronha
+(Bruno, 27/09/2026; ver [06-escopo-mvp](06-escopo-mvp.md)).
+
 ## PENDENTE / TBD
 
 PO, responsável técnico e aprovadores formais não foram identificados no repositório.

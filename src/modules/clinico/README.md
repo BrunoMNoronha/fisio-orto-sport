@@ -141,4 +141,4 @@ A Recepção não vê as abas Anamnese, Avaliações, Planos, Sessões e Reavali
 
 ## Fora do escopo (por ora)
 
-Alta operacional (Fase 4); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+Alta operacional (posterior ao MVP pela DEC-01, #43; efeitos a decidir antes de implementar); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.

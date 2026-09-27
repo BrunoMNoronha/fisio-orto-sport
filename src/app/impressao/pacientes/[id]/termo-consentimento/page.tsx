@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CLINIC_TIMEZONE } from "@/modules/agenda/validation";
 import { requirePermission } from "@/modules/auth/dal";
+import { getPrintIdentity } from "@/modules/configuracoes/queries";
 import { TERMO_SECTIONS, getAttendingPhysio } from "@/modules/pacientes/documents";
 import { getPatient } from "@/modules/pacientes/queries";
 import { formatCpf, formatPhone } from "@/modules/pacientes/validation";
@@ -27,7 +28,7 @@ export default async function TermoConsentimentoPage({
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
-  const physio = await getAttendingPhysio(patient.id);
+  const [physio, clinic] = await Promise.all([getAttendingPhysio(patient.id), getPrintIdentity()]);
 
   const guardian = patient.guardianName
     ? [patient.guardianName, patient.guardianRelationship].filter(Boolean).join(" — ")
@@ -36,6 +37,7 @@ export default async function TermoConsentimentoPage({
   return (
     <Sheet className="flex flex-col gap-3 p-[12mm] text-[9.5pt] leading-[1.35]">
       <DocumentHeader
+        clinic={clinic}
         title={
           <>
             Termo de ciência e consentimento

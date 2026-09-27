@@ -11,15 +11,17 @@ type Props = {
   items: AgendaItem[];
   professionals: { id: string; name: string }[];
   canManage: boolean;
+  // Faixa visual configurada; sem ela, o padrão 07:00–20:00.
+  range?: { startHour: number; endHour: number };
   now?: Date;
 };
 
 const pad = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
 // Grade do dia: uma coluna por profissional, horários em linhas de 1 h.
-export function AgendaDayGrid({ date, items, professionals, canManage, now = new Date() }: Props) {
+export function AgendaDayGrid({ date, items, professionals, canManage, range, now = new Date() }: Props) {
   const columns = groupByProfessional(items, professionals);
-  const { startHour, endHour } = dayHourRange(items);
+  const { startHour, endHour } = dayHourRange(items, range);
   const hours = Array.from({ length: endHour - startHour }, (_, index) => startHour + index);
   const height = hours.length * HOUR_HEIGHT_PX;
   const nowTop = toLocalDate(now) === date ? placeOnGrid({ startsAt: now, endsAt: now }, startHour).top : -1;

@@ -130,7 +130,10 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
               {items.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="whitespace-nowrap">{formatInstant(entry.createdAt)}</TableCell>
-                  <TableCell>{AUDIT_ACTION_LABELS[entry.action]}</TableCell>
+                  <TableCell>
+                    {AUDIT_ACTION_LABELS[entry.action]}
+                    {entry.details && <span className="block text-xs text-muted-foreground">{entry.details}</span>}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={entry.result === "SUCESSO" ? "secondary" : "outline"}>
                       {AUDIT_RESULT_LABELS[entry.result]}

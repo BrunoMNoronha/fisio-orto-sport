@@ -87,3 +87,53 @@ describe("AppointmentForm — paciente", () => {
     expect(screen.getByText("Ana Souza")).toBeInTheDocument();
   });
 });
+
+describe("AppointmentForm — duração sugerida (issue #63)", () => {
+  const blank: AppointmentFormValues = {
+    patientId: "",
+    professionalId: "",
+    date: "2099-01-10",
+    startTime: "",
+    endTime: "",
+    notes: "",
+  };
+
+  function renderWith(duration: number | null, initial = blank) {
+    render(
+      <AppointmentForm
+        action={jest.fn()}
+        initial={initial}
+        professionals={[]}
+        patientPicker={{ initial: null }}
+        suggestedDurationMinutes={duration}
+        cancelHref="/agenda"
+        submitLabel="Agendar"
+      />,
+    );
+    return { start: screen.getByLabelText("Início *"), end: screen.getByLabelText("Fim *") };
+  }
+
+  it("sugere o fim a partir do início e acompanha a mudança do início", () => {
+    const { start, end } = renderWith(50);
+    fireEvent.change(start, { target: { value: "09:00" } });
+    expect(end).toHaveValue("09:50");
+    fireEvent.change(start, { target: { value: "10:15" } });
+    expect(end).toHaveValue("11:05");
+    expect(screen.getByText(/sugerido com 50 minutos/)).toBeInTheDocument();
+  });
+
+  it("não sobrescreve um fim editado à mão", () => {
+    const { start, end } = renderWith(50);
+    fireEvent.change(start, { target: { value: "09:00" } });
+    fireEvent.change(end, { target: { value: "09:30" } });
+    fireEvent.change(start, { target: { value: "08:00" } });
+    expect(end).toHaveValue("09:30");
+  });
+
+  it("desligada, não preenche nada (comportamento anterior)", () => {
+    const { start, end } = renderWith(null);
+    fireEvent.change(start, { target: { value: "09:00" } });
+    expect(end).toHaveValue("");
+    expect(screen.queryByText(/sugerido com/)).not.toBeInTheDocument();
+  });
+});

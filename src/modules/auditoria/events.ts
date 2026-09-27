@@ -16,6 +16,8 @@ export type AuditEntry = {
   targetUserId?: string | null;
   emailHash?: string | null;
   ip?: string | null;
+  // Só resumo sem valores (ex.: versão e nomes dos campos de uma configuração, issue #63).
+  details?: string | null;
 };
 
 // E-mail digitado numa falha de login: só o SHA-256 do valor normalizado, como nas chaves dos
@@ -37,6 +39,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   SENHA_REDEFINIDA: "Senha redefinida",
   CLI_ADMIN_CRIADO: "Administrador criado (db:admin)",
   CLI_SENHA_REDEFINIDA: "Senha redefinida (db:admin)",
+  CONFIGURACAO_ALTERADA: "Configurações alteradas",
 };
 
 export const AUDIT_RESULT_LABELS: Record<AuditResult, string> = {

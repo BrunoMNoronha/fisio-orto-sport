@@ -17,6 +17,7 @@ const LABELS: Record<string, string> = {
   agenda: "Agenda",
   usuarios: "Usuários",
   auditoria: "Auditoria",
+  configuracoes: "Configurações",
   novo: "Novo",
   editar: "Editar",
   reagendar: "Reagendar",

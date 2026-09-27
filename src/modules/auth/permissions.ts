@@ -13,6 +13,10 @@ export const PERMISSIONS = [
   "clinico:gerir",
   // Trilha de auditoria de login e gestão de usuários (issue #56, decisão A4): só Administrador.
   "auditoria:ler",
+  // Painel de configurações da clínica (issue #63): só Administrador. Os demais perfis só recebem,
+  // no servidor, os valores de que seus fluxos precisam, sem acesso ao painel.
+  "configuracoes:ler",
+  "configuracoes:gerir",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

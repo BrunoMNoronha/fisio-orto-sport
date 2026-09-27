@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { AppointmentActionState } from "@/modules/agenda/actions";
 import { startsInPast } from "@/modules/agenda/validation";
+import { suggestEndTime } from "@/modules/configuracoes/settings";
 import { PatientCombobox } from "./patient-combobox";
 
 type Action = (prev: AppointmentActionState, formData: FormData) => Promise<AppointmentActionState>;
@@ -61,6 +62,7 @@ export function AppointmentForm({
   patientPicker,
   patientName,
   appointmentId,
+  suggestedDurationMinutes = null,
   cancelHref,
   submitLabel,
 }: {
@@ -71,10 +73,15 @@ export function AppointmentForm({
   patientPicker?: { initial: Option | null };
   patientName?: string;
   appointmentId?: string;
+  // Duração sugerida da configuração (issue #63), só na criação: preenche o fim a partir do início
+  // enquanto o fim não for editado à mão. Não altera agendamentos existentes nem a regra de conflito.
+  suggestedDurationMinutes?: number | null;
   cancelHref: string;
   submitLabel: string;
 }) {
   const [values, setValues] = useState(initial);
+  // Fim digitado pela pessoa: a sugestão nunca o sobrescreve.
+  const [endTouched, setEndTouched] = useState(false);
   const [patient, setPatient] = useState<Option | null>(patientPicker?.initial ?? null);
   const [state, formAction, pending] = useActionState(action, undefined);
   const errors = state?.fieldErrors;
@@ -85,8 +92,17 @@ export function AppointmentForm({
     return {
       name,
       value: values[name],
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-        setValues((current) => ({ ...current, [name]: event.target.value })),
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const value = event.target.value;
+        if (name === "endTime") setEndTouched(true);
+        setValues((current) => {
+          const next = { ...current, [name]: value };
+          if (name === "startTime" && suggestedDurationMinutes && !endTouched) {
+            next.endTime = suggestEndTime(value, suggestedDurationMinutes);
+          }
+          return next;
+        });
+      },
     };
   }
 
@@ -150,6 +166,12 @@ export function AppointmentForm({
         {input("startTime", "Início *", "time")}
         {input("endTime", "Fim *", "time")}
       </div>
+
+      {suggestedDurationMinutes ? (
+        <p className="-mt-3 text-xs text-muted-foreground">
+          O fim é sugerido com {suggestedDurationMinutes} minutos a partir do início; ajuste se precisar.
+        </p>
+      ) : null}
 
       {past && (
         <Alert aria-live="polite">

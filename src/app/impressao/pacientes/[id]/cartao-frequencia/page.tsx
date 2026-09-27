@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { requirePermission } from "@/modules/auth/dal";
+import { getPrintIdentity } from "@/modules/configuracoes/queries";
 import { getPatient } from "@/modules/pacientes/queries";
+import { formatPhone } from "@/modules/pacientes/validation";
 import { FillField, Sheet } from "../../../document-parts";
 
 export async function generateMetadata({
@@ -38,10 +40,12 @@ function SessionsTable({ from }: { from: number }) {
 }
 
 // Um cartão (1/4 da folha), réplica do modelo impresso da clínica.
-function Card({ name }: { name: string }) {
+// `contact`: nome e telefone da clínica configurados (issue #63), numa linha só; o cartão é pequeno.
+function Card({ name, contact }: { name: string; contact: string | null }) {
   return (
     <section className="flex h-full flex-col gap-2 rounded-[3mm] border border-black/70 px-[4mm] py-[3.5mm] text-[8pt]">
       <BrandLogo className="justify-center [&_img]:size-10 [&_span.text-3xl]:text-2xl" />
+      {contact && <p className="-mt-1 truncate text-center text-[7pt]">{contact}</p>}
       <FillField label="NOME" value={name} className="mt-1" />
       <FillField label="CONVÊNIO" />
       <div className="mt-1 grid grid-cols-2 gap-[2mm]">
@@ -65,6 +69,10 @@ export default async function CartaoFrequenciaPage({ params }: PageProps<"/impre
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
+  const clinic = await getPrintIdentity();
+  const contact = clinic
+    ? [clinic.displayName, clinic.phone && formatPhone(clinic.phone)].filter(Boolean).join(" · ") || null
+    : null;
 
   // Folha com 4 cartões iguais (2×2), separados pelo tracejado de corte.
   return (
@@ -79,7 +87,7 @@ export default async function CartaoFrequenciaPage({ params }: PageProps<"/impre
               i < 2 ? "border-b border-dashed border-black/40" : "",
             ].join(" ")}
           >
-            <Card name={patient.fullName} />
+            <Card name={patient.fullName} contact={contact} />
           </div>
         ))}
       </div>

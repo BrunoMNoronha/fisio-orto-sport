@@ -1,6 +1,7 @@
 import { toLocalTime } from "@/modules/agenda/validation";
 
-// Grade do dia: faixa padrão 07:00–20:00, ampliada quando há agendamento fora dela.
+// Grade do dia: faixa configurável (padrão 07:00–20:00, issue #63), sempre ampliada quando há
+// agendamento fora dela. A faixa é só visual: não é horário de funcionamento nem bloqueio.
 export const DEFAULT_START_HOUR = 7;
 export const DEFAULT_END_HOUR = 20;
 export const HOUR_HEIGHT_PX = 64;
@@ -13,9 +14,12 @@ function minutesOf(instant: Date) {
   return hh * 60 + mm;
 }
 
-export function dayHourRange(items: Timed[]) {
-  let start = DEFAULT_START_HOUR;
-  let end = DEFAULT_END_HOUR;
+export function dayHourRange(
+  items: Timed[],
+  range: { startHour: number; endHour: number } = { startHour: DEFAULT_START_HOUR, endHour: DEFAULT_END_HOUR },
+) {
+  let start = range.startHour;
+  let end = range.endHour;
   for (const item of items) {
     start = Math.min(start, Math.floor(minutesOf(item.startsAt) / 60));
     // Fim à meia-noite do mesmo dia não existe (mesmo dia, fim > início), então 0 min não ocorre aqui.

@@ -7,6 +7,7 @@ import {
   ChevronsUpDownIcon,
   LayoutDashboardIcon,
   LogOutIcon,
+  SettingsIcon,
   UserRoundCogIcon,
   UsersIcon,
 } from "lucide-react"
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon, key: "pacientes" },
   { href: "/agenda", label: "Agenda", icon: CalendarDaysIcon, key: "agenda" },
   { href: "/usuarios", label: "Usuários", icon: UserRoundCogIcon, key: "usuarios" },
+  { href: "/configuracoes", label: "Configurações", icon: SettingsIcon, key: "configuracoes" },
 ] as const
 
 export type NavKey = (typeof NAV_ITEMS)[number]["key"]
@@ -49,10 +51,13 @@ export type NavKey = (typeof NAV_ITEMS)[number]["key"]
 export function AppSidebar({
   allowed,
   user,
+  clinicName,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   allowed: NavKey[]
   user: { name: string; email: string; roleLabel: string }
+  // Nome de exibição configurado (issue #63); sem ele, a identificação padrão.
+  clinicName: string | null
 }) {
   const pathname = usePathname()
   const items = NAV_ITEMS.filter((item) => allowed.includes(item.key))
@@ -66,9 +71,15 @@ export function AppSidebar({
               <BrandMark className="size-8 shrink-0" />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <BrandWordmark className="truncate text-base" />
-                <span className="truncate text-[0.65rem] tracking-wide text-muted-foreground uppercase">
-                  Fisioterapia especializada
-                </span>
+                {clinicName ? (
+                  <span className="truncate text-xs text-muted-foreground" title={clinicName}>
+                    {clinicName}
+                  </span>
+                ) : (
+                  <span className="truncate text-[0.65rem] tracking-wide text-muted-foreground uppercase">
+                    Fisioterapia especializada
+                  </span>
+                )}
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

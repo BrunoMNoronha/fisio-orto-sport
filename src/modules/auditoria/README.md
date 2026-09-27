@@ -15,6 +15,7 @@ Bruno em 26/09/2026, registradas em
 | `PRIMEIRO_ADMIN_CRIADO` | `auth/bootstrap.ts` | `SUCESSO` |
 | `USUARIO_CRIADO`, `USUARIO_EDITADO`, `PERFIL_ALTERADO`, `USUARIO_ATIVADO`, `USUARIO_DESATIVADO`, `SENHA_REDEFINIDA` | `auth/users/actions.ts` | `SUCESSO` |
 | `CLI_ADMIN_CRIADO`, `CLI_SENHA_REDEFINIDA` | `auth/admin-cli.ts` (`pnpm db:admin`) | `SUCESSO`, sem ator nem IP |
+| `CONFIGURACAO_ALTERADA` | `configuracoes/write.ts` (issue #63) | `SUCESSO`, na mesma transação da gravação. `details` traz a versão e os nomes dos campos alterados, nunca os valores |
 
 Leituras do prontuário e impressão de documentos **não** são auditadas (A1). Recusas da gestão de
 usuários por salvaguarda ou dado duplicado não geram registro: a transação não se completa. O
@@ -22,7 +23,8 @@ acesso rápido de desenvolvimento (`dev-login.ts`, só em `next dev`) também n�
 
 ## Campos (A6)
 
-`action`, `result`, `createdAt`, `actorId`, `actorRole`, `targetUserId`, `emailHash` e `ip`.
+`action`, `result`, `createdAt`, `actorId`, `actorRole`, `targetUserId`, `emailHash`, `ip` e `details`
+(este último só nas configurações, issue #63: resumo sem valores).
 
 - Nunca guarda senha, token, user-agent ou conteúdo clínico.
 - Na falha de login, o e-mail digitado vai só como SHA-256 do valor normalizado (`hashEmail`).

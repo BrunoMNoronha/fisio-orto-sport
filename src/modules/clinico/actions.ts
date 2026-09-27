@@ -8,7 +8,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
-import { ClinicoRuleError, assertPatientCanReceiveAnamnesis, PATIENT_NOT_FOUND } from "./rules";
+import { insertAnamnesisVersion } from "./anamnesis-service";
+import { ClinicoRuleError, PATIENT_NOT_FOUND } from "./rules";
 import { anamnesisFormEntries, anamnesisSchema, isPlausibleId } from "./validation";
 
 export type AnamnesisActionState = { error?: string; fieldErrors?: FieldErrors } | undefined;
@@ -41,19 +42,7 @@ export async function createAnamnesisVersion(
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   try {
-    await prisma.$transaction(async (tx) => {
-      await assertPatientCanReceiveAnamnesis(tx, patientId);
-      await tx.anamnesis.create({
-        data: {
-          ...parsed.data,
-          patientId,
-          authorId: actor.id,
-          // Assinatura histórica: copiada do usuário autenticado, nunca do formulário.
-          authorNameSnapshot: actor.name,
-        },
-        select: { id: true },
-      });
-    });
+    await insertAnamnesisVersion(prisma, patientId, parsed.data, actor.id);
   } catch (error) {
     if (error instanceof ClinicoRuleError) return { error: error.message };
     throw error;

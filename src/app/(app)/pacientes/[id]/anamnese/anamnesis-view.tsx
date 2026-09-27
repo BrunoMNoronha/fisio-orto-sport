@@ -1,6 +1,7 @@
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import type { AnamnesisDetail } from "@/modules/clinico/queries";
+import { anamnesisSignatureLabel } from "@/modules/clinico/signature";
 import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
 import { formatDate } from "../../format";
 import { ANAMNESIS_STEPS } from "./anamnesis-steps";
@@ -100,7 +101,7 @@ export function AnamnesisView({ anamnesis }: { anamnesis: AnamnesisDetail }) {
 
       <p className="pt-2 text-sm text-muted-foreground">
         Avaliação em {formatDate(anamnesis.assessmentDate)} · registrado por{" "}
-        <span className="font-medium text-foreground">{anamnesis.authorNameSnapshot}</span> em{" "}
+        <span className="font-medium text-foreground">{anamnesisSignatureLabel(anamnesis)}</span> em{" "}
         {anamnesis.createdAt.toLocaleString("pt-BR")}
       </p>
     </div>

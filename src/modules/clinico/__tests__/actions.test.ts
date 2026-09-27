@@ -15,8 +15,14 @@ jest.mock("@/modules/auth/dal", () => {
   };
 });
 
+// Cadastro atual no banco, lido na transação (MEL-03): o Administrador não tem CREFITO.
+const users: Record<string, { name: string; crefito: string | null }> = {
+  "u-ADMIN": { name: "Nome ADMIN", crefito: null },
+  "u-FISIOTERAPEUTA": { name: "Nome FISIOTERAPEUTA", crefito: "123456-F" },
+};
 const tx = {
   $queryRaw: jest.fn(),
+  user: { findUnique: jest.fn(async ({ where }: { where: { id: string } }) => users[where.id] ?? null) },
   anamnesis: { create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn(), deleteMany: jest.fn(), upsert: jest.fn() },
 };
 const prismaMock = {
@@ -102,6 +108,8 @@ describe("createAnamnesisVersion", () => {
       patientId: "p1",
       authorId: `u-${role}`,
       authorNameSnapshot: `Nome ${role}`,
+      authorCrefitoSnapshot: role === "ADMIN" ? null : "123456-F",
+      authorCrefitoRecorded: true,
       painIntensity: 6,
       painTypes: ["PONTADA", "IRRADIADA"],
     });
@@ -124,12 +132,37 @@ describe("createAnamnesisVersion", () => {
 
   it("snapshot e autoria vêm do usuário autenticado, não do formulário", async () => {
     as("FISIOTERAPEUTA");
-    const forged = form({ ...valid, authorId: "forjado", authorNameSnapshot: "Forjado", patientId: "outro" });
+    const forged = form({
+      ...valid,
+      authorId: "forjado",
+      authorNameSnapshot: "Forjado",
+      authorCrefitoSnapshot: "999-F",
+      authorCrefitoRecorded: "false",
+      patientId: "outro",
+    });
     await createAnamnesisVersion("p1", undefined, forged).catch(() => {});
     const { data } = tx.anamnesis.create.mock.calls[0][0];
     expect(data.authorId).toBe("u-FISIOTERAPEUTA");
     expect(data.authorNameSnapshot).toBe("Nome FISIOTERAPEUTA");
+    expect(data.authorCrefitoSnapshot).toBe("123456-F");
+    expect(data.authorCrefitoRecorded).toBe(true);
     expect(data.patientId).toBe("p1");
+  });
+
+  it("MEL-03: a assinatura usa o cadastro lido na transação, não o nome da sessão", async () => {
+    as("FISIOTERAPEUTA");
+    users["u-FISIOTERAPEUTA"] = { name: "Nome Atualizado", crefito: "654321-F" };
+    try {
+      await createAnamnesisVersion("p1", undefined, form(valid)).catch(() => {});
+      const { data } = tx.anamnesis.create.mock.calls[0][0];
+      expect(data).toMatchObject({ authorNameSnapshot: "Nome Atualizado", authorCrefitoSnapshot: "654321-F" });
+      expect(tx.user.findUnique).toHaveBeenCalledWith({
+        where: { id: "u-FISIOTERAPEUTA" },
+        select: { name: true, crefito: true },
+      });
+    } finally {
+      users["u-FISIOTERAPEUTA"] = { name: "Nome FISIOTERAPEUTA", crefito: "123456-F" };
+    }
   });
 
   it("RECEPCAO recebe acesso negado em chamada direta, sem gravar", async () => {

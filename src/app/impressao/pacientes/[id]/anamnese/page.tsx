@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/modules/auth/dal";
 import { getPrintIdentity } from "@/modules/configuracoes/queries";
 import { getCurrentAnamnesis } from "@/modules/clinico/queries";
+import { anamnesisCrefitoText } from "@/modules/clinico/signature";
 import { PAIN_TYPE_LABELS } from "@/modules/clinico/validation";
-import { getAnamnesisAuthor } from "@/modules/pacientes/documents";
 import { getPatient } from "@/modules/pacientes/queries";
 import { SEX_LABELS } from "@/modules/pacientes/validation";
 import { ANAMNESIS_STEPS } from "../../../../(app)/pacientes/[id]/anamnese/anamnesis-steps";
@@ -42,11 +42,7 @@ export default async function AnamneseImpressaoPage({ params }: PageProps<"/impr
   const { id } = await params;
   const patient = await getPatient(id);
   if (!patient) notFound();
-  const [anamnesis, author, clinic] = await Promise.all([
-    getCurrentAnamnesis(patient.id),
-    getAnamnesisAuthor(patient.id),
-    getPrintIdentity(),
-  ]);
+  const [anamnesis, clinic] = await Promise.all([getCurrentAnamnesis(patient.id), getPrintIdentity()]);
   if (!anamnesis) notFound();
 
   return (
@@ -97,9 +93,8 @@ export default async function AnamneseImpressaoPage({ params }: PageProps<"/impr
         <div className="w-1/2">
           <SignatureLine
             label="Fisioterapeuta"
-            name={[anamnesis.authorNameSnapshot, author?.crefito && `CREFITO ${author.crefito}`]
-              .filter(Boolean)
-              .join(" · ")}
+            // Só a assinatura gravada na versão (MEL-03), nunca o cadastro atual do autor.
+            name={[anamnesis.authorNameSnapshot, anamnesisCrefitoText(anamnesis)].filter(Boolean).join(" · ")}
           />
         </div>
       </div>

@@ -15,6 +15,8 @@ export const ANAMNESIS_DETAIL_SELECT = {
   assessmentDate: true,
   createdAt: true,
   authorNameSnapshot: true,
+  authorCrefitoSnapshot: true,
+  authorCrefitoRecorded: true,
   chiefComplaint: true,
   currentIllnessHistory: true,
   personalPathologicalHistory: true,
@@ -35,6 +37,8 @@ export const ANAMNESIS_HISTORY_SELECT = {
   assessmentDate: true,
   createdAt: true,
   authorNameSnapshot: true,
+  authorCrefitoSnapshot: true,
+  authorCrefitoRecorded: true,
 } as const;
 
 export async function getCurrentAnamnesis(patientId: string) {

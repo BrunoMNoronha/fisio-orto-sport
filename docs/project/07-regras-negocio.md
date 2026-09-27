@@ -18,7 +18,7 @@ Fontes: `README.md`, `src/modules/agenda/README.md`, `src/modules/clinico/README
 
 ## DECISÃO TÉCNICA
 
-Sexo é enum Prisma; profissão tem até 120 caracteres; CREFITO fica em `User.crefito`, normalizado, com até 20 caracteres e unicidade quando informado. A anamnese mantém assinatura nominal histórica, ainda sem snapshot de CREFITO (backfill previsto na decisão D1, fora da entrega da avaliação).
+Sexo é enum Prisma; profissão tem até 120 caracteres; CREFITO fica em `User.crefito`, normalizado, com até 20 caracteres e unicidade quando informado. Desde a MEL-03 (#46, decisões de 27/09/2026), a anamnese grava snapshot de CREFITO nas versões novas, como os demais registros clínicos. As versões anteriores ficam sem CREFITO, marcadas como "não registrado nesta versão", sem backfill. Isso substitui o backfill previsto na D1.
 
 Fonte: `src/modules/pacientes/README.md` e `src/modules/auth/README.md`.
 

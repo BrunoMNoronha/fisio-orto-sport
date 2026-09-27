@@ -75,8 +75,33 @@ export async function getSession(patientId: string, sessionId: string) {
       // A revisão exata aplicada (não a vigente de hoje).
       planRevision: REVISION_REF,
       plan: { select: { status: true, currentRevision: true } },
+      // Agendamento de origem (MEL-01), se houver: só o horário, para o link à agenda.
+      appointment: { select: { id: true, startsAt: true, endsAt: true } },
     },
   });
+}
+
+// Agendamento de origem para o formulário de nova sessão (`?agendamento=`). A elegibilidade é
+// recalculada na action, com a linha travada; aqui só evita exibir um formulário que não pode ser salvo.
+export async function getAppointmentForSession(patientId: string, appointmentId: string) {
+  await requirePermission("clinico:gerir");
+  if (!isPlausibleId(patientId) || !isPlausibleId(appointmentId)) return null;
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, patientId },
+    select: {
+      id: true,
+      patientId: true,
+      startsAt: true,
+      endsAt: true,
+      status: true,
+      attendance: true,
+      professional: { select: { id: true, name: true, crefito: true, active: true } },
+      sessions: { where: { status: "VALIDO" }, select: { id: true }, take: 1 },
+    },
+  });
+  if (!appointment) return null;
+  const { sessions, ...rest } = appointment;
+  return { ...rest, hasValidSession: sessions.length > 0 };
 }
 
 export async function listSessionChanges(patientId: string, sessionId: string) {
@@ -146,6 +171,7 @@ export async function listProfessionalOptions() {
 }
 
 export type SessionListItem = Awaited<ReturnType<typeof listSessions>>["items"][number];
+export type AppointmentForSessionForm = NonNullable<Awaited<ReturnType<typeof getAppointmentForSession>>>;
 export type SessionDetail = NonNullable<Awaited<ReturnType<typeof getSession>>>;
 export type SessionChangeItem = Awaited<ReturnType<typeof listSessionChanges>>[number];
 export type SessionPlanOption = Awaited<ReturnType<typeof listSessionPlanOptions>>[number];

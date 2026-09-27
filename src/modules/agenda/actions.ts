@@ -7,8 +7,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
-import { cancelAppointmentRecord, insertAppointment, moveAppointment, ruleFailure } from "./service";
-import { appointmentSchema, cancelSchema, rescheduleSchema } from "./validation";
+import { cancelAppointmentRecord, insertAppointment, moveAppointment, ruleFailure, setAttendanceRecord } from "./service";
+import { appointmentSchema, attendanceSchema, cancelSchema, rescheduleSchema } from "./validation";
 import { normalizeSearch } from "@/modules/pacientes/validation";
 
 export type AppointmentActionState =
@@ -99,12 +99,44 @@ export async function cancelAppointment(
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { id, reason } = parsed.data;
-  const failure = await cancelAppointmentRecord(prisma, id, reason, actor.actorId);
-  if (failure) return failure;
+  try {
+    const outcome = await cancelAppointmentRecord(prisma, id, reason, actor.actorId);
+    if (outcome) return outcome;
+  } catch (error) {
+    const failure = ruleFailure(error);
+    if (failure) return failure;
+    throw error;
+  }
 
   revalidatePath(AGENDA_PATH);
   revalidatePath(`${AGENDA_PATH}/${id}`);
   return { ok: true, message: "Agendamento cancelado." };
+}
+
+// Presença (MEL-01): Recepção, Fisioterapeuta e Administrador marcam, corrigem ou removem.
+export async function setAttendance(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = attendanceSchema.safeParse(entries(formData, ["id", "attendance"]));
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  const { id, attendance } = parsed.data;
+  try {
+    const outcome = await setAttendanceRecord(prisma, id, attendance, actor.actorId);
+    if (outcome) return outcome;
+  } catch (error) {
+    const failure = ruleFailure(error);
+    if (failure) return failure;
+    throw error;
+  }
+
+  revalidatePath(AGENDA_PATH);
+  revalidatePath(`${AGENDA_PATH}/${id}`);
+  return { ok: true, message: attendance ? "Presença registrada." : "Marcação de presença removida." };
 }
 
 // --- Busca de pacientes para agendar (issue #38) --------------------------------------

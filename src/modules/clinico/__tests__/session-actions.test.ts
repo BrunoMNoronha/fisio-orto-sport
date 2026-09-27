@@ -258,6 +258,129 @@ describe("createSession", () => {
   });
 });
 
+describe("createSession a partir de agendamento (MEL-01)", () => {
+  const STARTED = new Date("2026-09-20T17:00:00.000Z");
+  const linked = { ...valid, appointmentId: "a1" };
+  type Row = { patientId: string; professionalId: string; status: string; startsAt: Date; attendance: string | null };
+  const row = (over: Partial<Row> = {}): Row => ({
+    patientId: "p1",
+    professionalId: "uFISIOTERAPEUTA",
+    status: "AGENDADO",
+    startsAt: STARTED,
+    attendance: null,
+    ...over,
+  });
+
+  // Paciente e plano ativos; o agendamento travado devolve `appointment` (ou nada).
+  function withAppointment(appointment: Row | null) {
+    tx.$queryRaw.mockImplementation(async (sql: TemplateStringsArray) =>
+      sql.join("?").includes('"Appointment"') ? (appointment ? [appointment] : []) : [{ status: "ATIVO" }],
+    );
+  }
+
+  // findFirst por chave de idempotência (reenvio) e por atendimento válido do agendamento.
+  function sessions({ byKey = null, valid: validSession = null }: { byKey?: unknown; valid?: unknown } = {}) {
+    tx.treatmentSession.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      "idempotencyKey" in where ? byKey : "appointmentId" in where ? validSession : null,
+    );
+  }
+
+  beforeEach(() => {
+    withAppointment(row());
+    sessions();
+  });
+
+  it("gera o atendimento vinculado, trava o agendamento e registra o comparecimento", async () => {
+    as("FISIOTERAPEUTA");
+    await expect(createSession("p1", undefined, form(linked))).rejects.toMatchObject({ url: "/pacientes/p1/sessoes/s1" });
+    expect(tx.treatmentSession.create.mock.calls[0][0].data).toMatchObject({ appointmentId: "a1", patientId: "p1" });
+    const sqls = tx.$queryRaw.mock.calls.map(([sql]) => sql.join("?"));
+    expect(sqls[0]).toMatch(/"Patient".*FOR UPDATE/);
+    expect(sqls[1]).toMatch(/"Appointment".*FOR UPDATE/);
+    expect(tx.appointment.updateMany).toHaveBeenCalledWith({
+      where: { id: "a1", status: "AGENDADO", attendance: null },
+      data: { attendance: "COMPARECEU", attendanceMarkedAt: expect.any(Date), attendanceMarkedById: "uFISIOTERAPEUTA" },
+    });
+  });
+
+  it("presença já marcada como compareceu continua elegível", async () => {
+    as("FISIOTERAPEUTA");
+    withAppointment(row({ attendance: "COMPARECEU" }));
+    await expect(createSession("p1", undefined, form(linked))).rejects.toMatchObject({ url: "/pacientes/p1/sessoes/s1" });
+    expect(tx.treatmentSession.create).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["inexistente", null, /não encontrado para este paciente/],
+    ["de outro paciente", row({ patientId: "p2" }), /não encontrado para este paciente/],
+    ["cancelado", row({ status: "CANCELADO" }), /cancelado não gera/],
+    ["futuro", row({ startsAt: new Date("2999-01-01T12:00:00.000Z") }), /a partir do início do horário/],
+    ["com falta avisada", row({ attendance: "FALTA_AVISADA" }), /falta marcada/],
+    ["com falta sem aviso", row({ attendance: "FALTA_NAO_AVISADA" }), /falta marcada/],
+  ])("agendamento %s não gera atendimento", async (_label, appointment, message) => {
+    as("FISIOTERAPEUTA");
+    withAppointment(appointment);
+    const result = await createSession("p1", undefined, form(linked));
+    expect(result?.error).toMatch(message);
+    expectNoWrites();
+    expect(tx.appointment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("agendamento com atendimento válido não gera outro", async () => {
+    as("FISIOTERAPEUTA");
+    sessions({ valid: { id: "s-anterior" } });
+    expect(await createSession("p1", undefined, form(linked))).toEqual({
+      error: "Este agendamento já tem atendimento registrado.",
+    });
+    expectNoWrites();
+  });
+
+  it("profissional diferente do agendamento é recusado (ADMIN não troca)", async () => {
+    as("ADMIN");
+    const result = await createSession("p1", undefined, form({ ...linked, professionalId: "f2" }));
+    expect(result).toEqual({ fieldErrors: { professionalId: ["O profissional do atendimento é o do agendamento."] } });
+    expectNoWrites();
+  });
+
+  it("reenvio com a mesma chave devolve o atendimento já gerado, sem acusar duplicidade", async () => {
+    as("FISIOTERAPEUTA");
+    sessions({ byKey: { id: "s-existente" }, valid: { id: "s-existente" } });
+    await expect(createSession("p1", undefined, form(linked))).rejects.toMatchObject({
+      url: "/pacientes/p1/sessoes/s-existente",
+    });
+    expectNoWrites();
+  });
+
+  it("corrida perdida no índice único parcial vira mensagem de duplicidade", async () => {
+    as("FISIOTERAPEUTA");
+    tx.treatmentSession.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("dup", {
+        code: "P2002",
+        clientVersion: "7",
+        meta: { target: ["appointmentId"] },
+      }),
+    );
+    expect(await createSession("p1", undefined, form(linked))).toEqual({
+      error: "Este agendamento já tem atendimento registrado.",
+    });
+  });
+
+  it("agendamento com id malformado é recusado antes do banco", async () => {
+    as("FISIOTERAPEUTA");
+    const result = await createSession("p1", undefined, form({ ...valid, appointmentId: "a1; DROP" }));
+    expect(result?.fieldErrors?.appointmentId).toBeDefined();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("sem agendamento, o lançamento continua (retroativo) e a agenda não muda", async () => {
+    as("FISIOTERAPEUTA");
+    await expect(createSession("p1", undefined, form(valid))).rejects.toMatchObject({ url: "/pacientes/p1/sessoes/s1" });
+    expect(tx.treatmentSession.create.mock.calls[0][0].data).toMatchObject({ appointmentId: null });
+    expect(tx.$queryRaw.mock.calls.some(([sql]) => sql.join("?").includes('"Appointment"'))).toBe(false);
+    expect(tx.appointment.updateMany).not.toHaveBeenCalled();
+  });
+});
+
 describe("updateSession", () => {
   it("grava só os campos alterados, com motivo, valores legíveis e assinatura", async () => {
     as("ADMIN");
@@ -299,6 +422,16 @@ describe("updateSession", () => {
     tx.treatmentSession.findFirst.mockResolvedValueOnce(null);
     expect(await updateSession("p1", "alheio", undefined, editForm({ evolution: "Outra" }))).toEqual({ error: "Atendimento não encontrado." });
     expect((await updateSession("p1", "s1", undefined, editForm({ reason: "" })))?.fieldErrors?.reason).toBeDefined();
+    expectNoWrites();
+  });
+
+  it("atendimento vinculado a agendamento mantém o profissional (MEL-01)", async () => {
+    as("ADMIN");
+    tx.treatmentSession.findFirst.mockResolvedValue({ ...storedSession, appointmentId: "a1" });
+    const result = await updateSession("p1", "s1", undefined, editForm({ professionalId: "f2" }));
+    expect(result).toEqual({
+      fieldErrors: { professionalId: ["Atendimento vinculado a agendamento mantém o profissional do agendamento."] },
+    });
     expectNoWrites();
   });
 

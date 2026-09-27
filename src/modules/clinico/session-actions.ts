@@ -3,7 +3,8 @@
 // Atendimento clínico (sessão de fisioterapia) com evolução. Cada action checa `clinico:gerir` no
 // servidor. O responsável é um FISIOTERAPEUTA (o próprio, quando quem registra é fisioterapeuta);
 // o autor do lançamento vem da sessão de login. Correções gravam histórico por campo com motivo;
-// invalidação mantém o registro e o tira da contagem. Não há exclusão nem vínculo com a agenda.
+// invalidação mantém o registro e o tira da contagem. Não há exclusão. O atendimento pode vir de um
+// agendamento elegível (MEL-01, `session-appointment.ts`) ou ser lançado sem agendamento (retroativo).
 // Mensagens nunca ecoam o conteúdo enviado.
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -14,6 +15,13 @@ import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
 import { ClinicoRuleError, PATIENT_NOT_FOUND, assertPatientCanReceiveSession, signature } from "./rules";
 import {
+  AppointmentLinkError,
+  isAppointmentLinkConflict,
+  lockAppointmentForSession,
+  markAttendedBySession,
+} from "./session-appointment";
+import {
+  APPOINTMENT_SESSION_MESSAGES,
   SESSION_TEXT_FIELDS,
   createSessionSchema,
   formatOccurredAt,
@@ -58,6 +66,7 @@ function isActor(value: unknown): value is Actor {
 
 function failure(error: unknown): SessionActionState {
   if (error instanceof SessionFieldError) return { fieldErrors: { [error.field]: [error.message] } };
+  if (error instanceof AppointmentLinkError && error.field) return { fieldErrors: { [error.field]: [error.message] } };
   if (error instanceof ClinicoRuleError) return { error: error.message };
   throw error;
 }
@@ -100,6 +109,8 @@ function revalidate(patientId: string) {
   revalidatePath(`/pacientes/${patientId}/sessoes`, "layout");
   revalidatePath(`/pacientes/${patientId}/planos`, "layout");
   revalidatePath(`/pacientes/${patientId}`);
+  // Detalhe do agendamento mostra presença e se há atendimento vinculado.
+  revalidatePath("/agenda", "layout");
 }
 
 function isIdempotencyConflict(error: unknown) {
@@ -117,15 +128,19 @@ export async function createSession(
   if (!isActor(actor)) return actor;
   if (!isPlausibleId(patientId)) return { error: PATIENT_NOT_FOUND };
 
-  const parsed = createSessionSchema.safeParse(sessionFormEntries(formData, ["planId", "planRevisionId", "requestId"]));
+  const parsed = createSessionSchema.safeParse(sessionFormEntries(formData, ["appointmentId", "planId", "planRevisionId", "requestId"]));
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
-  const { planId, planRevisionId, requestId, professionalId, ...content } = parsed.data;
+  const { appointmentId, planId, planRevisionId, requestId, professionalId, ...content } = parsed.data;
   if (actor.role === "FISIOTERAPEUTA" && professionalId !== actor.id) return { fieldErrors: { professionalId: [OWN_PROFESSIONAL] } };
 
   let id: string;
   try {
     id = await prisma.$transaction(async (tx) => {
       await assertPatientCanReceiveSession(tx, patientId);
+      if (appointmentId) {
+        const { existingId } = await lockAppointmentForSession(tx, { appointmentId, patientId, professionalId, requestId });
+        if (existingId) return existingId;
+      }
       // FOR SHARE: um encerramento concorrente do plano espera este registro (ou é esperado e relido).
       const [plan] = await tx.$queryRaw<{ status: TherapyPlanStatus }[]>`
         SELECT "status" FROM "TherapyPlan" WHERE "id" = ${planId} AND "patientId" = ${patientId} FOR SHARE`;
@@ -148,6 +163,7 @@ export async function createSession(
           patientId,
           planId,
           planRevisionId,
+          appointmentId,
           professionalId: pro.id,
           professionalNameSnapshot: pro.name,
           professionalCrefitoSnapshot: pro.crefito,
@@ -158,6 +174,7 @@ export async function createSession(
         },
         select: { id: true },
       });
+      if (appointmentId) await markAttendedBySession(tx, appointmentId, actor.id);
       return created.id;
     });
   } catch (error) {
@@ -169,6 +186,8 @@ export async function createSession(
       });
       if (!existing) return { error: "Dados inválidos. Recarregue a página." };
       id = existing.id;
+    } else if (isAppointmentLinkConflict(error)) {
+      return { error: APPOINTMENT_SESSION_MESSAGES.linked };
     } else {
       return failure(error);
     }
@@ -202,6 +221,7 @@ export async function updateSession(
           status: true,
           version: true,
           planId: true,
+          appointmentId: true,
           occurredAt: true,
           professionalId: true,
           professionalNameSnapshot: true,
@@ -219,6 +239,9 @@ export async function updateSession(
       if (current.version !== version) throw new ClinicoRuleError(SESSION_CONFLICT);
 
       const professionalChanged = professionalId !== current.professionalId;
+      if (professionalChanged && current.appointmentId) {
+        throw new SessionFieldError("professionalId", APPOINTMENT_SESSION_MESSAGES.professionalLocked);
+      }
       if (professionalChanged && actor.role === "FISIOTERAPEUTA" && professionalId !== actor.id) {
         throw new SessionFieldError("professionalId", OWN_PROFESSIONAL);
       }

@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
 import { getAppointment } from "@/modules/agenda/queries";
-import { APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
+import { APPOINTMENT_ATTENDANCE_LABELS, APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
+import { AttendanceForm } from "../attendance-form";
 import { CancelAppointmentForm } from "../cancel-appointment-form";
 import { agendaHref, formatDateTime, formatDay, formatTime } from "../format";
 
@@ -31,6 +32,27 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
 
   const active = appointment.status === "AGENDADO";
   const cancelledBy = appointment.cancelledBy ? ` por ${appointment.cancelledBy.name}` : "";
+  // MEL-01: presença e atendimento vinculado. A agenda sabe só se há atendimento válido (id), nunca o
+  // conteúdo clínico; o link para ele aparece apenas para quem tem `clinico:ler`.
+  const started = appointment.startsAt.getTime() <= new Date().getTime();
+  const sessionId = appointment.sessions[0]?.id ?? null;
+  const locked = sessionId !== null || appointment.attendance !== null;
+  const canRegisterSession =
+    can(actor.role, "clinico:gerir") &&
+    active &&
+    started &&
+    !sessionId &&
+    (appointment.attendance === null || appointment.attendance === "COMPARECEU") &&
+    (actor.role !== "FISIOTERAPEUTA" || appointment.professional.id === actor.id);
+  const attendanceText = appointment.attendance
+    ? `${APPOINTMENT_ATTENDANCE_LABELS[appointment.attendance]}${
+        appointment.attendanceMarkedAt
+          ? ` — marcada${appointment.attendanceMarkedBy ? ` por ${appointment.attendanceMarkedBy.name}` : ""} em ${formatDateTime(appointment.attendanceMarkedAt)}`
+          : ""
+      }`
+    : started
+      ? "Não marcada"
+      : "Disponível a partir do início do horário";
 
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
@@ -54,7 +76,15 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
             >
               Ver na agenda do dia
             </Link>
-            {canManage && active && (
+            {canRegisterSession && (
+              <Link
+                href={`/pacientes/${appointment.patient.id}/sessoes/nova?agendamento=${id}`}
+                className={buttonVariants()}
+              >
+                Registrar atendimento
+              </Link>
+            )}
+            {canManage && active && !locked && (
               <Link href={`/agenda/${id}/reagendar`} className={buttonVariants({ variant: "outline" })}>
                 Reagendar
               </Link>
@@ -84,6 +114,26 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
             <div className="sm:col-span-2">
               <Item label="Observação administrativa" value={appointment.notes} />
             </div>
+            {active && <Item label="Presença" value={attendanceText} />}
+            <Item
+              label="Atendimento"
+              value={
+                sessionId ? (
+                  can(actor.role, "clinico:ler") ? (
+                    <Link
+                      href={`/pacientes/${appointment.patient.id}/sessoes/${sessionId}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Registrado — ver atendimento
+                    </Link>
+                  ) : (
+                    "Registrado"
+                  )
+                ) : (
+                  "Não registrado"
+                )
+              }
+            />
             {!active && (
               <>
                 <Item
@@ -98,7 +148,22 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
         </CardContent>
       </Card>
 
-      {canManage && active && <CancelAppointmentForm id={id} />}
+      {canManage && active && started && !sessionId && (
+        <AttendanceForm key={appointment.attendance ?? ""} id={id} current={appointment.attendance} />
+      )}
+      {canManage && active && sessionId && (
+        <p className="text-sm text-muted-foreground">
+          Há atendimento registrado: a presença fica como compareceu e o agendamento não pode ser cancelado nem
+          reagendado. Se o atendimento foi lançado por engano, ele precisa ser invalidado antes.
+        </p>
+      )}
+      {canManage && active && !sessionId && appointment.attendance && (
+        <p className="text-sm text-muted-foreground">
+          Com presença marcada, o agendamento não pode ser cancelado nem reagendado. Remova a marcação antes, se
+          necessário.
+        </p>
+      )}
+      {canManage && active && !locked && <CancelAppointmentForm id={id} />}
     </div>
   );
 }

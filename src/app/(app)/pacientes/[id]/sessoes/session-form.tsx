@@ -32,7 +32,7 @@ export type SessionPlanChoice = {
 export type ProfessionalChoice = { id: string; label: string };
 
 type Mode =
-  | { kind: "create"; requestId: string; plans: SessionPlanChoice[]; initialPlanId: string }
+  | { kind: "create"; requestId: string; plans: SessionPlanChoice[]; initialPlanId: string; appointmentId?: string }
   | { kind: "edit"; version: number };
 
 const FOCUS_ORDER = [
@@ -179,6 +179,7 @@ export function SessionForm({
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-5" noValidate>
       {mode.kind === "create" && <input type="hidden" name="requestId" value={mode.requestId} />}
+      {mode.kind === "create" && mode.appointmentId && <input type="hidden" name="appointmentId" value={mode.appointmentId} />}
       {mode.kind === "edit" && <input type="hidden" name="version" value={mode.version} />}
       {state?.error && (
         <Alert ref={alertRef} tabIndex={-1} variant="destructive">

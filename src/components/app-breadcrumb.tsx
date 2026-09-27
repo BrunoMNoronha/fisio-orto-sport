@@ -21,6 +21,7 @@ const LABELS: Record<string, string> = {
   novo: "Novo",
   editar: "Editar",
   reagendar: "Reagendar",
+  bloqueios: "Bloqueios",
   anamnese: "Anamnese",
   nova: "Nova versão",
   historico: "Histórico",

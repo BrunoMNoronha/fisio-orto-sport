@@ -84,6 +84,10 @@ export function AppointmentForm({
   const [endTouched, setEndTouched] = useState(false);
   const [patient, setPatient] = useState<Option | null>(patientPicker?.initial ?? null);
   const [state, formAction, pending] = useActionState(action, undefined);
+  // Aviso de conflito do paciente (MEL-02): só vale para os valores enviados. Editar um campo
+  // esconde o aviso, e o próximo envio checa de novo.
+  const [editedSinceSubmit, setEditedSinceSubmit] = useState(false);
+  const patientConflicts = editedSinceSubmit ? undefined : state?.patientConflicts;
   const errors = state?.fieldErrors;
   const minute = useClientMinute();
   const past = minute !== null && startsInPast(values.date, values.startTime, new Date(minute));
@@ -94,6 +98,7 @@ export function AppointmentForm({
       value: values[name],
       onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const value = event.target.value;
+        setEditedSinceSubmit(true);
         if (name === "endTime") setEndTouched(true);
         setValues((current) => {
           const next = { ...current, [name]: value };
@@ -136,9 +141,27 @@ export function AppointmentForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6" noValidate>
+    <form action={formAction} onSubmit={() => setEditedSinceSubmit(false)} className="flex flex-col gap-6" noValidate>
       {appointmentId && <input type="hidden" name="id" value={appointmentId} />}
-      {state?.error && (
+      {patientConflicts?.length ? (
+        <Alert aria-live="polite">
+          <AlertDescription className="flex flex-col gap-2">
+            <p className="font-medium text-foreground">
+              O paciente já tem outro agendamento que se sobrepõe a este horário:
+            </p>
+            <ul className="list-disc pl-5">
+              {patientConflicts.map((conflict) => (
+                <li key={conflict.id}>
+                  <Link href={`/agenda/${conflict.id}`} className="underline underline-offset-4" target="_blank">
+                    {conflict.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <p>Se for um encaixe intencional, confirme abaixo; caso contrário, ajuste o horário.</p>
+          </AlertDescription>
+        </Alert>
+      ) : state?.error && !state.patientConflicts && (
         <Alert variant="destructive" aria-live="polite">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
@@ -151,6 +174,7 @@ export function AppointmentForm({
             value={patient}
             errors={errors?.patientId}
             onChange={(option) => {
+              setEditedSinceSubmit(true);
               setPatient(option);
               setValues((current) => ({ ...current, patientId: option.id }));
             }}
@@ -197,9 +221,15 @@ export function AppointmentForm({
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Salvando…" : submitLabel}
-        </Button>
+        {patientConflicts?.length ? (
+          <Button type="submit" name="confirmPatientConflict" value="1" disabled={pending}>
+            {pending ? "Salvando…" : "Confirmar mesmo assim"}
+          </Button>
+        ) : (
+          <Button type="submit" disabled={pending}>
+            {pending ? "Salvando…" : submitLabel}
+          </Button>
+        )}
         <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
           Voltar
         </Link>

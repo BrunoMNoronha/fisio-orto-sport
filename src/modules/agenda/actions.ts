@@ -7,16 +7,47 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { AuthorizationError, assertPermission } from "@/modules/auth/dal";
 import { fieldErrors, type FieldErrors } from "@/modules/auth/validation";
-import { cancelAppointmentRecord, insertAppointment, moveAppointment, ruleFailure, setAttendanceRecord } from "./service";
-import { appointmentSchema, attendanceSchema, cancelSchema, rescheduleSchema } from "./validation";
+import type { ConflictItem } from "./rules";
+import {
+  cancelAppointmentRecord,
+  insertAppointment,
+  insertScheduleBlock,
+  moveAppointment,
+  removeScheduleBlock,
+  ruleFailure,
+  setAttendanceRecord,
+} from "./service";
+import {
+  appointmentSchema,
+  attendanceSchema,
+  blockSchema,
+  cancelSchema,
+  removeBlockSchema,
+  rescheduleSchema,
+} from "./validation";
 import { normalizeSearch } from "@/modules/pacientes/validation";
 
 export type AppointmentActionState =
-  | { ok?: boolean; message?: string; error?: string; fieldErrors?: FieldErrors }
+  | {
+      ok?: boolean;
+      message?: string;
+      error?: string;
+      fieldErrors?: FieldErrors;
+      // MEL-02: aviso de conflito do paciente (confirmar com `confirmPatientConflict=1`) e
+      // agendamentos que impedem um bloqueio.
+      patientConflicts?: ConflictItem[];
+      conflicts?: ConflictItem[];
+    }
   | undefined;
 
 const AGENDA_PATH = "/agenda";
+const BLOCKS_PATH = "/agenda/bloqueios";
 const SLOT_FIELDS = ["professionalId", "date", "startTime", "endTime"];
+
+// Conflito do paciente é só aviso (MEL-02): a pessoa confirma no formulário e reenvia.
+function patientConflictOption(formData: FormData) {
+  return { allowPatientConflict: formData.get("confirmPatientConflict") === "1" };
+}
 
 async function guard(): Promise<{ actorId: string } | AppointmentActionState> {
   try {
@@ -54,7 +85,7 @@ export async function createAppointment(
   const data = parsed.data;
   let id: string;
   try {
-    id = await insertAppointment(prisma, data, actor.actorId);
+    id = await insertAppointment(prisma, data, actor.actorId, patientConflictOption(formData));
   } catch (error) {
     const failure = ruleFailure(error);
     if (failure) return failure;
@@ -76,7 +107,7 @@ export async function rescheduleAppointment(
 
   const { id, ...slot } = parsed.data;
   try {
-    const outcome = await moveAppointment(prisma, id, slot, actor.actorId);
+    const outcome = await moveAppointment(prisma, id, slot, actor.actorId, patientConflictOption(formData));
     if (outcome) return outcome;
   } catch (error) {
     const failure = ruleFailure(error);
@@ -137,6 +168,48 @@ export async function setAttendance(
   revalidatePath(AGENDA_PATH);
   revalidatePath(`${AGENDA_PATH}/${id}`);
   return { ok: true, message: attendance ? "Presença registrada." : "Marcação de presença removida." };
+}
+
+// --- Bloqueios de horário (MEL-02, #45) --------------------------------------------------------
+// `agenda:gerir` (Recepção, Fisioterapeuta e Administrador), para qualquer fisioterapeuta ativo.
+// Bloqueio sobre agendamento AGENDADO é recusado com a lista dos agendamentos; sem edição (remove e
+// cria outro) e sem exclusão física.
+export async function createScheduleBlock(
+  _prev: AppointmentActionState,
+  formData: FormData,
+): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = blockSchema.safeParse(
+    entries(formData, ["professionalId", "startDate", "startTime", "endDate", "endTime", "reason"]),
+  );
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  try {
+    await insertScheduleBlock(prisma, parsed.data, actor.actorId);
+  } catch (error) {
+    const failure = ruleFailure(error);
+    if (failure) return failure;
+    throw error;
+  }
+  revalidatePath(AGENDA_PATH);
+  revalidatePath(BLOCKS_PATH);
+  redirect(`${BLOCKS_PATH}?${new URLSearchParams({ professionalId: parsed.data.professionalId })}`);
+}
+
+export async function removeBlock(_prev: AppointmentActionState, formData: FormData): Promise<AppointmentActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = removeBlockSchema.safeParse(entries(formData, ["id"]));
+  if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
+
+  const outcome = await removeScheduleBlock(prisma, parsed.data.id, actor.actorId);
+  if (outcome) return outcome;
+  revalidatePath(AGENDA_PATH);
+  revalidatePath(BLOCKS_PATH);
+  return { ok: true, message: "Bloqueio removido." };
 }
 
 // --- Busca de pacientes para agendar (issue #38) --------------------------------------

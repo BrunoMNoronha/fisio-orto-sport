@@ -4,20 +4,37 @@ import type { AppointmentAttendance, AppointmentStatus, Prisma, PrismaClient } f
 import type { FieldErrors } from "@/modules/auth/validation";
 import {
   AgendaRuleError,
+  BlockOverlapError,
   CONFLICT_MESSAGE,
+  PatientConflictWarning,
+  assertNoAppointmentsInBlock,
   assertNoConflict,
+  assertNotBlocked,
   assertPatientActive,
   assertProfessionalAvailable,
+  checkPatientConflict,
   isOverlapViolation,
+  type ConflictItem,
 } from "./rules";
-import type { appointmentSchema, rescheduleSchema } from "./validation";
+import type { appointmentSchema, blockSchema, rescheduleSchema } from "./validation";
 
 // Operações da agenda no banco, sem autorização nem navegação (feitas pelas actions). Recebem o
 // cliente Prisma para que os testes de integração exercitem exatamente estas transações.
-type Db = Pick<PrismaClient, "$transaction" | "appointment">;
-export type AgendaFailure = { error?: string; fieldErrors?: FieldErrors };
+type Db = Pick<PrismaClient, "$transaction" | "appointment" | "scheduleBlock">;
+// `patientConflicts`: aviso de conflito do paciente, a confirmar; `conflicts`: agendamentos que
+// impedem o bloqueio. Ambos só com horário, profissional ou paciente (dados administrativos).
+export type AgendaFailure = {
+  error?: string;
+  fieldErrors?: FieldErrors;
+  patientConflicts?: ConflictItem[];
+  conflicts?: ConflictItem[];
+};
 export type NewAppointment = z.output<typeof appointmentSchema>;
 export type AppointmentSlot = Omit<z.output<typeof rescheduleSchema>, "id">;
+export type NewScheduleBlock = z.output<typeof blockSchema>;
+// Conflito do paciente (MEL-02) é aviso: sem `allowPatientConflict`, a operação para e devolve a
+// lista para a pessoa confirmar; com ele, segue.
+export type PatientConflictOption = { allowPatientConflict?: boolean };
 
 export const NOT_FOUND: AgendaFailure = { error: "Agendamento não encontrado." };
 export const ALREADY_CANCELLED: AgendaFailure = { error: "Agendamento cancelado não pode ser alterado." };
@@ -50,7 +67,7 @@ function isWriteConflict(error: unknown) {
 // e o PostgreSQL pode abortar uma por deadlock (erro 500 em vez da mensagem de conflito). Com o lock,
 // a segunda espera a primeira terminar e a checagem já enxerga o que foi confirmado. Os locks são
 // tomados em ordem fixa (reagendar pode envolver dois profissionais) e liberados no fim da transação.
-async function lockProfessionals(tx: Prisma.TransactionClient, ids: string[]) {
+export async function lockProfessionals(tx: Prisma.TransactionClient, ids: string[]) {
   for (const id of [...new Set(ids)].sort()) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agenda:${id}`}, 0))`;
   }
@@ -91,6 +108,8 @@ export function ruleFailure(error: unknown): AgendaFailure | null {
   if (error instanceof AgendaRuleError) {
     return error.field ? { fieldErrors: { [error.field]: [error.message] } } : { error: error.message };
   }
+  if (error instanceof PatientConflictWarning) return { error: error.message, patientConflicts: error.conflicts };
+  if (error instanceof BlockOverlapError) return { error: error.message, conflicts: error.conflicts };
   if (isOverlapViolation(error)) return { fieldErrors: { startTime: [CONFLICT_MESSAGE] } };
   if (isWriteConflict(error)) return RETRY_LATER;
   return null;
@@ -98,12 +117,19 @@ export function ruleFailure(error: unknown): AgendaFailure | null {
 
 // A checagem de conflito na transação dá a mensagem amigável; a constraint Appointment_no_overlap
 // (23P01) continua barrando qualquer escrita que não passe por aqui.
-export async function insertAppointment(db: Db, data: NewAppointment, actorId: string): Promise<string> {
+export async function insertAppointment(
+  db: Db,
+  data: NewAppointment,
+  actorId: string,
+  { allowPatientConflict = false }: PatientConflictOption = {},
+): Promise<string> {
   return db.$transaction(async (tx) => {
     await lockProfessionals(tx, [data.professionalId]);
     await assertPatientActive(tx, data.patientId);
     await assertProfessionalAvailable(tx, data.professionalId);
+    await assertNotBlocked(tx, data);
     await assertNoConflict(tx, data);
+    if (!allowPatientConflict) await checkPatientConflict(tx, data);
     const created = await tx.appointment.create({
       data: { ...data, createdById: actorId, updatedById: actorId },
       select: { id: true },
@@ -118,9 +144,13 @@ export async function moveAppointment(
   id: string,
   slot: AppointmentSlot,
   actorId: string,
+  { allowPatientConflict = false }: PatientConflictOption = {},
 ): Promise<AgendaFailure | null> {
   return db.$transaction(async (tx) => {
-    const current = await tx.appointment.findUnique({ where: { id }, select: { professionalId: true } });
+    const current = await tx.appointment.findUnique({
+      where: { id },
+      select: { professionalId: true, patientId: true },
+    });
     if (!current) return NOT_FOUND;
     await lockProfessionals(tx, [current.professionalId, slot.professionalId]);
     // Relido depois do lock: um cancelamento ou reagendamento simultâneo já terminou.
@@ -130,7 +160,9 @@ export async function moveAppointment(
     const blocked = await blockedByRecord(tx, id, locked);
     if (blocked) return blocked;
     await assertProfessionalAvailable(tx, slot.professionalId);
+    await assertNotBlocked(tx, slot);
     await assertNoConflict(tx, slot, id);
+    if (!allowPatientConflict) await checkPatientConflict(tx, { ...slot, patientId: current.patientId }, id);
     await tx.appointment.update({ where: { id }, data: { ...slot, updatedById: actorId }, select: { id: true } });
     return null;
   });
@@ -191,4 +223,35 @@ export async function setAttendanceRecord(
     });
     return null;
   });
+}
+
+// --- Bloqueios (MEL-02, #45) ---------------------------------------------------------------------
+
+export const BLOCK_NOT_FOUND: AgendaFailure = { error: "Bloqueio não encontrado." };
+export const BLOCK_ALREADY_REMOVED: AgendaFailure = { error: "Este bloqueio já foi removido." };
+
+// Mesmo lock por profissional de criar/reagendar agendamento: um agendamento simultâneo ou já
+// enxerga o bloqueio, ou já está gravado e faz o bloqueio ser recusado.
+export async function insertScheduleBlock(db: Db, data: NewScheduleBlock, actorId: string): Promise<string> {
+  return db.$transaction(async (tx) => {
+    await lockProfessionals(tx, [data.professionalId]);
+    await assertProfessionalAvailable(tx, data.professionalId);
+    await assertNoAppointmentsInBlock(tx, data);
+    const created = await tx.scheduleBlock.create({
+      data: { ...data, createdById: actorId },
+      select: { id: true },
+    });
+    return created.id;
+  });
+}
+
+// Remoção lógica: libera o horário e preserva quem criou e quem removeu. Não mexe em agendamentos.
+export async function removeScheduleBlock(db: Db, id: string, actorId: string): Promise<AgendaFailure | null> {
+  const { count } = await db.scheduleBlock.updateMany({
+    where: { id, removedAt: null },
+    data: { removedAt: new Date(), removedById: actorId },
+  });
+  if (count === 1) return null;
+  const exists = await db.scheduleBlock.findUnique({ where: { id }, select: { id: true } });
+  return exists ? BLOCK_ALREADY_REMOVED : BLOCK_NOT_FOUND;
 }

@@ -62,3 +62,12 @@ export function groupByProfessional<T extends Timed & { professional: Person }>(
   }
   return [...columns.values()];
 }
+
+// Trecho de um bloqueio (MEL-02) visível no dia [dayStart, dayEnd), em minutos desde 00:00 do dia (fim até 1440).
+// Bloqueios podem atravessar vários dias; fora do dia, null.
+export function blockMinutesOnDay(block: Timed, dayStart: Date, dayEnd: Date) {
+  if (block.endsAt <= dayStart || block.startsAt >= dayEnd) return null;
+  const start = block.startsAt <= dayStart ? 0 : minutesOf(block.startsAt);
+  const end = block.endsAt >= dayEnd ? 24 * 60 : minutesOf(block.endsAt);
+  return end > start ? { start, end } : null;
+}

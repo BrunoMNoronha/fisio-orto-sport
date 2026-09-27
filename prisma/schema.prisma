@@ -39,6 +39,9 @@ model User {
   appointmentsUpdated             Appointment[]             @relation("AppointmentUpdatedBy")
   appointmentsCancelled           Appointment[]             @relation("AppointmentCancelledBy")
   appointmentsAttendanceMarked    Appointment[]             @relation("AppointmentAttendanceMarkedBy")
+  scheduleBlocksAsProfessional    ScheduleBlock[]           @relation("ScheduleBlockProfessional")
+  scheduleBlocksCreated           ScheduleBlock[]           @relation("ScheduleBlockCreatedBy")
+  scheduleBlocksRemoved           ScheduleBlock[]           @relation("ScheduleBlockRemovedBy")
   anamnesesAuthored               Anamnesis[]
   assessmentsAuthored             Assessment[]
   assessmentChangesAuthored       AssessmentChange[]
@@ -172,6 +175,31 @@ model Appointment {
   @@index([professionalId, startsAt])
   @@index([patientId, startsAt])
   @@index([attendanceMarkedById])
+}
+
+// Bloqueio de horário de um profissional (MEL-02, #45): férias, ausências. Intervalo [início, fim),
+// pode durar vários dias. Não se agenda sobre bloqueio ativo e não se cria bloqueio sobre agendamento
+// AGENDADO; as duas checagens rodam sob o mesmo lock transacional por profissional (service.ts).
+// Sem edição nem exclusão física: remover grava removedAt/removedById e libera o horário.
+// CHECKs manuais: "ScheduleBlock_ends_after_starts" e "ScheduleBlock_removal_consistent".
+model ScheduleBlock {
+  id             String    @id @default(cuid())
+  professionalId String
+  startsAt       DateTime  @db.Timestamptz(3)
+  endsAt         DateTime  @db.Timestamptz(3)
+  // Motivo administrativo opcional; nunca conteúdo clínico.
+  reason         String?
+  createdAt      DateTime  @default(now())
+  createdById    String
+  removedAt      DateTime? @db.Timestamptz(3)
+  removedById    String?
+  professional   User      @relation("ScheduleBlockProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
+  createdBy      User      @relation("ScheduleBlockCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  removedBy      User?     @relation("ScheduleBlockRemovedBy", fields: [removedById], references: [id], onDelete: Restrict)
+
+  @@index([professionalId, startsAt])
+  @@index([createdById])
+  @@index([removedById])
 }
 
 enum PainType {

@@ -230,3 +230,47 @@ export function parseAgendaView(
   }
   return { view, date, today, filter: base };
 }
+
+// --- Bloqueios de horário (MEL-02, #45) ---------------------------------------------------------
+// Intervalo [início, fim) com data e hora de início e de fim (pode durar vários dias, ex.: férias).
+// Limite técnico contra erro de digitação, não regra de negócio.
+export const MAX_BLOCK_DAYS = 366;
+
+type BlockRange = { startDate: string; startTime: string; endDate: string; endTime: string };
+
+function checkBlock(value: BlockRange, ctx: z.RefinementCtx) {
+  if (
+    !isValidDate(value.startDate) ||
+    !isValidDate(value.endDate) ||
+    !TIME_RE.test(value.startTime) ||
+    !TIME_RE.test(value.endTime)
+  ) {
+    return;
+  }
+  const startsAt = toInstant(value.startDate, value.startTime);
+  const endsAt = toInstant(value.endDate, value.endTime);
+  if (endsAt <= startsAt) {
+    ctx.addIssue({ code: "custom", path: ["endTime"], message: "O fim do bloqueio deve ser posterior ao início." });
+  } else if (endsAt.getTime() - startsAt.getTime() > MAX_BLOCK_DAYS * DAY_MS) {
+    ctx.addIssue({ code: "custom", path: ["endDate"], message: `O bloqueio pode ter no máximo ${MAX_BLOCK_DAYS} dias.` });
+  }
+}
+
+export const blockSchema = z
+  .object({
+    professionalId: requiredId("Selecione o profissional."),
+    startDate: date,
+    startTime: time,
+    endDate: date,
+    endTime: time,
+    reason: optionalText(200),
+  })
+  .superRefine(checkBlock)
+  .transform(({ professionalId, startDate, startTime, endDate, endTime, reason }) => ({
+    professionalId,
+    startsAt: toInstant(startDate, startTime),
+    endsAt: toInstant(endDate, endTime),
+    reason,
+  }));
+
+export const removeBlockSchema = z.object({ id });

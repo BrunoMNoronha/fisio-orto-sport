@@ -77,6 +77,12 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
               </Link>
             ))}
           </nav>
+          <Link
+            href={`/agenda/bloqueios${professionalId ? `?${new URLSearchParams({ professionalId })}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Bloqueios
+          </Link>
           {canManage && (
             <Link href={`/agenda/novo?${newQuery}`} className={buttonVariants()}>
               <PlusIcon />
@@ -128,6 +134,10 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="size-2.5 rounded-sm bg-muted-foreground/40" />
             Cancelado
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2.5 rounded-sm border border-dashed border-muted-foreground/60" />
+            Bloqueado
           </li>
         </ul>
       </form>

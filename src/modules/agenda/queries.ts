@@ -91,5 +91,51 @@ export async function getActivePatientOption(id: string | undefined) {
   return patient ? { id: patient.id, label: patient.fullName } : null;
 }
 
+// Bloqueios ativos (MEL-02) que tocam o período, para as visões dia e semana. Remoção lógica: os
+// removidos não aparecem nem ocupam horário.
+export const BLOCK_SELECT = {
+  id: true,
+  startsAt: true,
+  endsAt: true,
+  reason: true,
+  professional: PERSON,
+} as const;
+
+export async function listScheduleBlocks(filter: AgendaFilter) {
+  await requirePermission("agenda:ler");
+  const { gte, lt } = filterBounds(filter);
+  return prisma.scheduleBlock.findMany({
+    where: {
+      removedAt: null,
+      startsAt: { lt },
+      endsAt: { gt: gte },
+      ...(filter.professionalId ? { professionalId: filter.professionalId } : {}),
+    },
+    orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+    select: BLOCK_SELECT,
+  });
+}
+
+// Tela de bloqueios: ativos que ainda não terminaram, com autoria.
+export const UPCOMING_BLOCKS_LIMIT = 200;
+
+export async function listUpcomingBlocks(
+  { professionalId, now = new Date() }: { professionalId?: string; now?: Date } = {},
+) {
+  await requirePermission("agenda:ler");
+  return prisma.scheduleBlock.findMany({
+    where: {
+      removedAt: null,
+      endsAt: { gt: now },
+      ...(professionalId && professionalId.length <= 64 ? { professionalId } : {}),
+    },
+    orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+    take: UPCOMING_BLOCKS_LIMIT,
+    select: { ...BLOCK_SELECT, createdAt: true, createdBy: PERSON },
+  });
+}
+
 export type AgendaItem = Awaited<ReturnType<typeof listAgenda>>[number];
 export type AppointmentDetail = NonNullable<Awaited<ReturnType<typeof getAppointment>>>;
+export type ScheduleBlockItem = Awaited<ReturnType<typeof listScheduleBlocks>>[number];
+export type UpcomingBlock = Awaited<ReturnType<typeof listUpcomingBlocks>>[number];

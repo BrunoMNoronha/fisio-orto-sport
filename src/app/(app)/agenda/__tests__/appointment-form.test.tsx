@@ -137,3 +137,63 @@ describe("AppointmentForm — duração sugerida (issue #63)", () => {
     expect(screen.queryByText(/sugerido com/)).not.toBeInTheDocument();
   });
 });
+
+describe("AppointmentForm — conflito do paciente (MEL-02)", () => {
+  const values: AppointmentFormValues = {
+    patientId: "p1",
+    professionalId: "f1",
+    date: "2099-01-10",
+    startTime: "09:00",
+    endTime: "10:00",
+    notes: "",
+  };
+
+  function renderWith(action: jest.Mock) {
+    render(
+      <AppointmentForm
+        action={action}
+        initial={values}
+        professionals={[{ id: "f1", label: "Dra. Ana" }]}
+        patientName="Paciente Fictício"
+        appointmentId="a1"
+        cancelHref="/agenda"
+        submitLabel="Reagendar"
+      />,
+    );
+  }
+
+  it("mostra o aviso e confirma reenviando com confirmPatientConflict=1", async () => {
+    const sent: (string | null)[] = [];
+    const action = jest.fn(async (_prev: unknown, formData: FormData) => {
+      sent.push(formData.get("confirmPatientConflict") as string | null);
+      return { error: "aviso", patientConflicts: [{ id: "a7", label: "10/01/2099 09:00–10:00 com Dr. Beto" }] };
+    });
+    renderWith(action);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Reagendar" }));
+    });
+    expect(await screen.findByText("10/01/2099 09:00–10:00 com Dr. Beto")).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Confirmar mesmo assim" }));
+    });
+    expect(sent).toEqual([null, "1"]);
+  });
+
+  it("editar um campo esconde o aviso e volta ao envio normal", async () => {
+    const action = jest.fn(async () => ({
+      error: "aviso",
+      patientConflicts: [{ id: "a7", label: "10/01/2099 09:00–10:00 com Dr. Beto" }],
+    }));
+    renderWith(action);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Reagendar" }));
+    });
+    expect(await screen.findByRole("button", { name: "Confirmar mesmo assim" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Início *"), { target: { value: "11:00" } });
+    expect(screen.queryByRole("button", { name: "Confirmar mesmo assim" })).not.toBeInTheDocument();
+    expect(screen.queryByText("10/01/2099 09:00–10:00 com Dr. Beto")).not.toBeInTheDocument();
+    expect(screen.queryByText("aviso")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reagendar" })).toBeInTheDocument();
+  });
+});

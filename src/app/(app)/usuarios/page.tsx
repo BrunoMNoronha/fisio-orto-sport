@@ -15,6 +15,7 @@ import { ROLE_LABELS, can } from "@/modules/auth/permissions";
 import { listUsers } from "@/modules/auth/users/queries";
 import {
   CreateUserDialog,
+  DeleteUserDialog,
   EditUserDialog,
   ResetPasswordDialog,
   ToggleActiveButton,
@@ -93,6 +94,7 @@ export default async function UsuariosPage() {
                           <EditUserDialog user={user} />
                           <ResetPasswordDialog user={user} />
                           <ToggleActiveButton user={user} disabled={isSelf} />
+                          {!user.active && !isSelf && <DeleteUserDialog user={user} />}
                         </div>
                       </TableCell>
                     )}

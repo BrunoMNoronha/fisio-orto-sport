@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -19,6 +20,7 @@ import type { Role } from "@/generated/prisma/enums";
 import { ROLES, ROLE_LABELS } from "@/modules/auth/permissions";
 import {
   createUser,
+  deleteUser,
   resetPassword,
   setUserActive,
   updateUser,
@@ -302,5 +304,40 @@ export function ToggleActiveButton({ user, disabled }: { user: UserRow; disabled
         </p>
       )}
     </form>
+  );
+}
+
+// Exclusão definitiva (issue #76): só aparece para conta desativada que não é a do próprio
+// Administrador. Estado e vínculos são conferidos de novo no servidor; se houver vínculo, a
+// mensagem explica e a conta continua desativada. Cancelar não altera nada.
+export function DeleteUserDialog({ user }: { user: UserRow }) {
+  const { open, setOpen, state, formAction, pending } = useDialogAction(deleteUser);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="destructive" size="sm" />}>
+        Excluir<span className="sr-only"> {user.name}</span>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir usuário?</DialogTitle>
+          <DialogDescription>
+            A conta de {user.name} ({user.email}) será excluída definitivamente e não poderá ser recuperada. Só é
+            possível excluir contas desativadas sem vínculos com pacientes, agenda, prontuário ou configurações; o
+            histórico de auditoria é mantido.
+          </DialogDescription>
+        </DialogHeader>
+        <form action={formAction} className="flex flex-col gap-4">
+          <input type="hidden" name="id" value={user.id} />
+          <FormError state={state} />
+          <DialogFooter>
+            <DialogClose render={<Button type="button" variant="outline" />}>Cancelar</DialogClose>
+            <Button type="submit" variant="destructive" disabled={pending}>
+              {pending ? "Excluindo…" : "Excluir definitivamente"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -34,7 +34,8 @@ export async function listAuditLogs(filters: AuditFilters) {
   return { items, total, page: filters.page, pageCount: Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE)) };
 }
 
-// Nomes para exibir quem agiu e o alvo. Usuários nunca são excluídos; id desconhecido vira "—".
+// Nomes para exibir quem agiu e o alvo. Conta excluída (issue #76) não está aqui: a página mostra
+// "Usuário excluído" com o início do id, e os eventos continuam consultáveis.
 export async function listAuditUserOptions() {
   await requirePermission("auditoria:ler");
   return prisma.user.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true } });

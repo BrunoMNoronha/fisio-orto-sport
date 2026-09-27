@@ -13,8 +13,10 @@ import { AuthorizationError, assertPermission, type CurrentUser } from "../dal";
 import { hashPassword } from "../password";
 import { ROLES, can } from "../permissions";
 import { checkUserChange } from "../safeguards";
+import { UserDeleteError, deleteDeactivatedUser } from "./delete";
 import {
   createUserSchema,
+  deleteUserSchema,
   fieldErrors,
   resetPasswordSchema,
   setUserActiveSchema,
@@ -185,4 +187,26 @@ export async function resetPassword(_prev: UserActionState, formData: FormData):
 
   revalidatePath(USERS_PATH);
   return { ok: true, message: "Senha redefinida. As sessões do usuário foram encerradas." };
+}
+
+// Exclusão definitiva de conta desativada e sem vínculos (issue #76). Estado, vínculos e
+// autoexclusão são conferidos no servidor, na transação; a interface só esconde o botão.
+export async function deleteUser(_prev: UserActionState, formData: FormData): Promise<UserActionState> {
+  const actor = await guard();
+  if (!isActor(actor)) return actor;
+
+  const parsed = deleteUserSchema.safeParse(entries(formData, ["id"]));
+  if (!parsed.success) return { error: "Dados inválidos." };
+
+  try {
+    await deleteDeactivatedUser(prisma, actor, parsed.data.id);
+  } catch (error) {
+    if (error instanceof UserDeleteError) {
+      revalidatePath(USERS_PATH);
+      return { error: error.message };
+    }
+    throw error;
+  }
+  revalidatePath(USERS_PATH);
+  return { ok: true, message: "Usuário excluído." };
 }

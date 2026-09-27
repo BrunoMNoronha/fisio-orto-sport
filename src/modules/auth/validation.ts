@@ -63,6 +63,7 @@ export const setUserActiveSchema = z.object({
   active: z.enum(["true", "false"]).transform((value) => value === "true"),
 });
 export const resetPasswordSchema = z.object({ id, password });
+export const deleteUserSchema = z.object({ id });
 
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();

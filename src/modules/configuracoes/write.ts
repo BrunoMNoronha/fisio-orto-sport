@@ -4,6 +4,7 @@ import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import type { Role } from "@/generated/prisma/enums";
 import { writeAudit } from "@/modules/auditoria/write";
 import {
+  AGENDA_VIEWS,
   DEFAULT_SETTINGS,
   SETTINGS_FIELDS,
   auditDetails,
@@ -24,8 +25,14 @@ export class SettingsConflictError extends Error {
 
 export type SettingsActor = { id: string; role: Role; ip: string | null };
 
-export function pickValues(source: ClinicSettingsValues): ClinicSettingsValues {
-  return Object.fromEntries(SETTINGS_FIELDS.map((field) => [field, source[field]])) as ClinicSettingsValues;
+// Linha do banco: a visão vem como texto (o CHECK garante um valor de AGENDA_VIEWS). Um valor fora
+// da lista, que o banco não aceitaria, cairia no padrão em vez de quebrar a agenda.
+type SettingsRow = Omit<ClinicSettingsValues, "agendaDefaultView"> & { agendaDefaultView: string };
+
+export function pickValues(source: SettingsRow): ClinicSettingsValues {
+  const values = Object.fromEntries(SETTINGS_FIELDS.map((field) => [field, source[field]])) as SettingsRow;
+  const view = AGENDA_VIEWS.find((item) => item === values.agendaDefaultView) ?? DEFAULT_SETTINGS.agendaDefaultView;
+  return { ...values, agendaDefaultView: view };
 }
 
 // Salva o conjunto inteiro numa transação: configuração e registro de auditoria entram juntos ou

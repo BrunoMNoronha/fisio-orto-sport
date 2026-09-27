@@ -107,4 +107,12 @@ describe("saveSettings — falhas", () => {
     expect(result).toEqual({ ok: true, message: "Nenhuma alteração para salvar.", version: 4 });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
+
+  it("visão inicial inválida (#69) não grava nada; válida chega à gravação", async () => {
+    const invalid = await saveSettings(undefined, form({ ...valid, agendaDefaultView: "mes" }));
+    expect(invalid?.fieldErrors?.agendaDefaultView).toBeDefined();
+    expect(save).not.toHaveBeenCalled();
+    await saveSettings(undefined, form({ ...valid, agendaDefaultView: "semana" }));
+    expect(save.mock.calls[0][1].values.agendaDefaultView).toBe("semana");
+  });
 });

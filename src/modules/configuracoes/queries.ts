@@ -33,7 +33,12 @@ export async function getClinicDisplayName(): Promise<string | null> {
   return (await loadSettings()).displayName;
 }
 
-export type AgendaPreferences = { dayStartHour: number; dayEndHour: number; suggestedDurationMinutes: number | null };
+export type AgendaPreferences = {
+  dayStartHour: number;
+  dayEndHour: number;
+  suggestedDurationMinutes: number | null;
+  defaultView: ClinicSettings["agendaDefaultView"];
+};
 
 export async function getAgendaPreferences(): Promise<AgendaPreferences> {
   const settings = await loadSettings();
@@ -41,6 +46,7 @@ export async function getAgendaPreferences(): Promise<AgendaPreferences> {
     dayStartHour: settings.agendaDayStartHour,
     dayEndHour: settings.agendaDayEndHour,
     suggestedDurationMinutes: settings.suggestedDurationMinutes,
+    defaultView: settings.agendaDefaultView,
   };
 }
 

@@ -2,7 +2,7 @@
 // só repete as regras para o feedback imediato.
 import { z } from "zod";
 import { onlyDigits } from "@/modules/pacientes/validation";
-import { SETTINGS_LIMITS, isValidCnpj } from "./settings";
+import { AGENDA_VIEWS, DEFAULT_SETTINGS, SETTINGS_LIMITS, isValidCnpj } from "./settings";
 
 const optionalText = (label: string, max: number) =>
   z
@@ -75,6 +75,22 @@ const duration = z
     return minutes;
   });
 
+// Visão inicial da agenda (#69): só as visões existentes; ausente = padrão (dia), como os demais
+// campos com padrão. Valor desconhecido é recusado, com mensagem própria em pt-BR.
+const agendaView = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    const text = (value ?? "").trim();
+    if (text === "") return DEFAULT_SETTINGS.agendaDefaultView;
+    const view = AGENDA_VIEWS.find((item) => item === text);
+    if (!view) {
+      ctx.addIssue({ code: "custom", message: "Escolha a visão inicial da agenda: Dia, Semana ou Lista." });
+      return z.NEVER;
+    }
+    return view;
+  });
+
 // Checkbox: presente = "on"; ausente = desligado.
 const checkbox = z
   .string()
@@ -92,6 +108,7 @@ export const settingsSchema = z
     agendaDayStartHour: hour("o início da faixa", 0, 23),
     agendaDayEndHour: hour("o fim da faixa", 1, 24),
     suggestedDurationMinutes: duration,
+    agendaDefaultView: agendaView,
     printShowClinicInfo: checkbox,
     // Versão lida quando o formulário abriu (0 = nunca salvo).
     expectedVersion: z.coerce.number().int().min(0).max(1_000_000_000),

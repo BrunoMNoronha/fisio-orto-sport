@@ -664,6 +664,8 @@ model ClinicSettings {
   agendaDayEndHour         Int      @default(20)
   // Duração sugerida para novos agendamentos; null = desligada.
   suggestedDurationMinutes Int?
+  // Visão que /agenda abre sem `view` na URL (#69): "dia", "semana" ou "lista" (CHECK manual).
+  agendaDefaultView        String   @default("dia") @db.VarChar(10)
   printShowClinicInfo      Boolean  @default(false)
   version                  Int      @default(1)
   updatedAt                DateTime @updatedAt @db.Timestamptz(3)

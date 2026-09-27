@@ -141,7 +141,7 @@ decisão registrada acima.
 | T4 — Consulta da auditoria — **#56** | Auditoria de acesso | A4 ✓; T2 | Somente ADMIN consulta, em tela; filtros por usuário, evento e período — **IMPLEMENTADO na #56** (PR #58; migração aplicada no Neon de produção em 26/09/2026) |
 | T5 — Expurgo dos registros de auditoria vencidos — **incluído na #56** | Retenção | A5 ✓ (7 dias) | Rotina documentada e testada em banco descartável — **IMPLEMENTADO na #56** (PR #58; migração aplicada no Neon de produção em 26/09/2026) |
 | T6 — Configurar retenção/snapshots no Neon e cópia externa | Backup | B4/B5 (decidido: manter) | **Adiada** por risco aceito. Configuração lida de volta e registrada; custo aprovado |
-| T7 — Roteiro e primeiro teste de restauração — **#42 (VAL-02)** | Backup | B1–B3, B6, B7 ✓ | Antes do uso com dados reais: restauração em branch isolado do Neon, conferência das variáveis de produção pelo inventário (nomes, sem valores) e evidência registrada conforme B7; branch removido após conferência autorizada. Aberta na #42; roteiro e evidência em [evidencias/val-02-producao](evidencias/val-02-producao.md#7-restauração-em-destino-isolado--pendente--bruno-b6-b7) |
+| T7 — Roteiro e primeiro teste de restauração — **#42 (VAL-02)** | Backup | B1–B3, B6, B7 ✓ | Antes do uso com dados reais: restauração em branch isolado do Neon, conferência das variáveis de produção pelo inventário (nomes, sem valores) e evidência registrada conforme B7; branch removido após conferência autorizada. Concluída em 27/09/2026 na #42: as 17 tabelas batem entre a restauração e o `main`, as variáveis foram conferidas e o branch e o snapshot foram removidos. Evidência em [evidencias/val-02-producao](evidencias/val-02-producao.md#7-restauração-em-destino-isolado--comprovado-b6-b7) |
 | T8 — Fluxo de retenção/anonimização do prontuário | Retenção | R1–R5 (decidido: nada é excluído por ora) | **Adiada.** Somente após decisão e autorização expressa; teste só com dados fictícios |
 | T9 — Monitoramento de erros e alertas | Observabilidade | O1, O2 (decidido: sem alertas por ora) | **Adiada.** Alertas definidos chegam ao responsável; logs sem dados pessoais |
 
@@ -170,7 +170,6 @@ produção; `TRUST_PROXY` é dispensável na Vercel (`VERCEL` já cumpre o papel
   e fonte consultada. Ao chegar, revisar R1–R5, A1, A3 e A5.
 - Decisões "por ora" (R1–R6, A1, A3, B4, B5, O1, O2): revisar antes de volume
   relevante de dados reais.
-- T7 na #42 antes do uso com dados reais — roteiro em [evidencias/val-02-producao](evidencias/val-02-producao.md).
 
 ## Fontes
 

@@ -99,9 +99,18 @@ export type SessionContent = z.infer<typeof sessionFields>;
 
 const reason = requiredText(SESSION_LIMITS.reason, "Informe o motivo.", "O motivo");
 
-// Criação: plano, revisão aplicada e a chave de idempotência gerada pelo formulário.
+const APPOINTMENT_INVALID = "Agendamento inválido. Volte à agenda e tente de novo.";
+
+// Criação: plano, revisão aplicada, a chave de idempotência gerada pelo formulário e, se o atendimento
+// vem da agenda (MEL-01), o agendamento de origem. Vazio = lançamento sem agendamento.
 export const createSessionSchema = z
   .object({
+    appointmentId: z
+      .string()
+      .trim()
+      .optional()
+      .transform((value) => (value ? value : null))
+      .refine((value) => value === null || isPlausibleId(value), { error: APPOINTMENT_INVALID }),
     planId: id("Selecione o plano terapêutico."),
     planRevisionId: id("Selecione a revisão do plano aplicada."),
     requestId: z
@@ -135,6 +144,41 @@ export function sessionFormEntries(formData: FormData, extra: readonly string[] 
       return [key, typeof value === "string" ? value : undefined];
     }),
   );
+}
+
+// --- Vínculo com a agenda (MEL-01, #44) ---------------------------------------------------------
+// Agendamento elegível para gerar atendimento: deste paciente, AGENDADO, horário já iniciado, sem falta
+// marcada e sem atendimento válido vinculado. Paciente e plano ativos são checados à parte (regras
+// clínicas existentes). O profissional do atendimento é o do agendamento.
+export type AppointmentForSession = {
+  patientId: string;
+  status: "AGENDADO" | "CANCELADO";
+  startsAt: Date;
+  attendance: "COMPARECEU" | "FALTA_AVISADA" | "FALTA_NAO_AVISADA" | null;
+  hasValidSession: boolean;
+};
+
+export const APPOINTMENT_SESSION_MESSAGES = {
+  notFound: "Agendamento não encontrado para este paciente.",
+  cancelled: "Agendamento cancelado não gera atendimento.",
+  notStarted: "O atendimento só pode ser registrado a partir do início do horário agendado.",
+  absent: "Este agendamento tem falta marcada. Corrija a presença na agenda antes de registrar o atendimento.",
+  linked: "Este agendamento já tem atendimento registrado.",
+  professional: "O profissional do atendimento é o do agendamento.",
+  professionalLocked: "Atendimento vinculado a agendamento mantém o profissional do agendamento.",
+} as const;
+
+export function appointmentSessionBlocker(
+  appointment: AppointmentForSession | null,
+  patientId: string,
+  now: Date = new Date(),
+): string | null {
+  if (!appointment || appointment.patientId !== patientId) return APPOINTMENT_SESSION_MESSAGES.notFound;
+  if (appointment.status !== "AGENDADO") return APPOINTMENT_SESSION_MESSAGES.cancelled;
+  if (appointment.startsAt.getTime() > now.getTime()) return APPOINTMENT_SESSION_MESSAGES.notStarted;
+  if (appointment.attendance && appointment.attendance !== "COMPARECEU") return APPOINTMENT_SESSION_MESSAGES.absent;
+  if (appointment.hasValidSession) return APPOINTMENT_SESSION_MESSAGES.linked;
+  return null;
 }
 
 // Momento clínico legível no fuso da clínica (ex.: "26/09/2026 14:30").

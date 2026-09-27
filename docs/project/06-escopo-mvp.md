@@ -29,8 +29,9 @@ Os complementos decididos na DEC-01 estão abaixo.
   - plano terapêutico com revisões imutáveis;
   - sessões com evolução, correção e invalidação;
   - reavaliação comparativa, com revisão motivada do plano.
-- Histórico clínico de sessões na ficha do paciente. Agenda e sessões ainda não
-  têm vínculo.
+- Histórico clínico de sessões na ficha do paciente.
+- MEL-01 (#44): vínculo agenda–sessão e registro de presença e faltas
+  (decisões abaixo).
 - Publicação e fluxo autenticado verificados na VAL-02 (#42, 27/09/2026), com as
   limitações registradas em [evidencias/val-02-producao](evidencias/val-02-producao.md).
 
@@ -102,14 +103,34 @@ registrada (issue ou PR com aceite verificado):
 MEL-03 (CREFITO na anamnese) e MEL-04 (verificação de experiência) não foram
 decididos na DEC-01. Se a clínica os incluir, passam a somar-se a esta lista.
 
+## Regras da MEL-01 (#44)
+
+Decisor: Bruno M Noronha, em 27/09/2026, respondendo no chat às opções
+preparadas a partir do código, antes do schema. Detalhes técnicos em
+`src/modules/agenda/README.md` e `src/modules/clinico/README.md`; migração e
+recuperação em [evidencias/mel-01-agenda-sessao](evidencias/mel-01-agenda-sessao.md).
+
+- **Estados de presença:** campo próprio no agendamento, separado do status
+  (`AGENDADO`/`CANCELADO` continuam): compareceu, faltou (avisou) e faltou (sem
+  aviso), ou não marcada. Marca-se a partir do início do horário. A falta não
+  libera o horário; só cancelar libera.
+- **Quem corrige:** Recepção, Fisioterapeuta e Administrador (`agenda:gerir`)
+  marcam, corrigem ou removem. Guarda-se a última marcação (quem e quando).
+- **Relação:** o atendimento aponta, opcionalmente, para o agendamento do mesmo
+  paciente. Um atendimento válido por agendamento; invalidar libera para novo
+  registro. Elegível: agendado, horário já iniciado, sem falta marcada, paciente
+  e plano ativos. O profissional do atendimento é o do agendamento. Gerar o
+  atendimento marca "compareceu".
+- **Cancelar ou reagendar agendamento vinculado:** bloqueado enquanto houver
+  atendimento válido; para desfazer, invalida-se o atendimento. Com presença
+  marcada, também é preciso remover a marcação antes (decisão técnica derivada:
+  presença só existe em agendamento ativo).
+- **Inativar o paciente:** sem efeito automático na agenda; não se gera
+  atendimento enquanto inativo (regra clínica existente).
+- **Atendimento sem vínculo:** continua permitido (retroativo). Registros
+  anteriores à MEL-01 ficam sem vínculo, sem backfill.
+
 ## PENDENTE / TBD
-
-Antes do schema da MEL-01:
-
-- estados exatos de presença;
-- quem corrige uma marcação;
-- efeitos de cancelar ou reagendar um agendamento já vinculado a um atendimento;
-- efeitos de inativar o paciente.
 
 Na MEL-02, falta a regra de encaixe: agendamento fora da grade ou menor que o
 padrão.

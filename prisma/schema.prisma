@@ -38,6 +38,7 @@ model User {
   appointmentsCreated             Appointment[]             @relation("AppointmentCreatedBy")
   appointmentsUpdated             Appointment[]             @relation("AppointmentUpdatedBy")
   appointmentsCancelled           Appointment[]             @relation("AppointmentCancelledBy")
+  appointmentsAttendanceMarked    Appointment[]             @relation("AppointmentAttendanceMarkedBy")
   anamnesesAuthored               Anamnesis[]
   assessmentsAuthored             Assessment[]
   assessmentChangesAuthored       AssessmentChange[]
@@ -126,33 +127,51 @@ enum AppointmentStatus {
   CANCELADO
 }
 
+// Presença (MEL-01): registro administrativo, sem cobrança, multa ou bloqueio. Não muda a ocupação
+// do horário (só cancelar libera).
+enum AppointmentAttendance {
+  COMPARECEU
+  FALTA_AVISADA
+  FALTA_NAO_AVISADA
+}
+
 // Agendamento. Não há exclusão física: cancelar muda o status e preserva o registro.
 // Sobreposição para o mesmo profissional é barrada na action e, no banco, pela constraint
 // de exclusão "Appointment_no_overlap" (btree_gist, intervalo [início, fim), só AGENDADO).
+// Presença (MEL-01): `attendance` com quem/quando marcou (só o último); CHECK manual
+// "Appointment_attendance_consistent": os três campos vêm juntos e só em agendamento AGENDADO.
 model Appointment {
-  id             String            @id @default(cuid())
-  patientId      String
-  professionalId String
-  startsAt       DateTime          @db.Timestamptz(3)
-  endsAt         DateTime          @db.Timestamptz(3)
-  status         AppointmentStatus @default(AGENDADO)
+  id                   String                 @id @default(cuid())
+  patientId            String
+  professionalId       String
+  startsAt             DateTime               @db.Timestamptz(3)
+  endsAt               DateTime               @db.Timestamptz(3)
+  status               AppointmentStatus      @default(AGENDADO)
   // Observação administrativa; nunca conteúdo clínico.
-  notes          String?
-  cancelledAt    DateTime?
-  cancelReason   String?
-  cancelledById  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  createdById    String
-  updatedById    String
-  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  professional   User              @relation("AppointmentProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
-  createdBy      User              @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy      User              @relation("AppointmentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  cancelledBy    User?             @relation("AppointmentCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  notes                String?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  cancelledById        String?
+  attendance           AppointmentAttendance?
+  attendanceMarkedAt   DateTime?              @db.Timestamptz(3)
+  attendanceMarkedById String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  createdById          String
+  updatedById          String
+  patient              Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  professional         User                   @relation("AppointmentProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
+  createdBy            User                   @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy            User                   @relation("AppointmentUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  cancelledBy          User?                  @relation("AppointmentCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  attendanceMarkedBy   User?                  @relation("AppointmentAttendanceMarkedBy", fields: [attendanceMarkedById], references: [id], onDelete: Restrict)
+  sessions             TreatmentSession[]
 
+  // Alvo da FK composta do atendimento vinculado (mesmo paciente garantido no banco).
+  @@unique([id, patientId])
   @@index([professionalId, startsAt])
   @@index([patientId, startsAt])
+  @@index([attendanceMarkedById])
 }
 
 enum PainType {
@@ -372,9 +391,11 @@ enum TreatmentSessionStatus {
 }
 
 // Atendimento clínico (sessão de fisioterapia) com a evolução do paciente (Fase 4, dado clínico
-// sensível, `clinico:*`). NÃO é a sessão de autenticação (Session) nem um agendamento: não há vínculo
-// com Appointment nesta fatia. Aponta para o plano (mesmo paciente) e para a revisão exata aplicada
-// (mesmo plano), por FKs compostas; novas revisões não mudam a referência.
+// sensível, `clinico:*`). NÃO é a sessão de autenticação (Session) nem um agendamento. Aponta para o
+// plano (mesmo paciente) e para a revisão exata aplicada (mesmo plano), por FKs compostas; novas
+// revisões não mudam a referência. MEL-01: `appointmentId` opcional (agendamento do mesmo paciente,
+// FK composta); índice único parcial manual "TreatmentSession_appointmentId_valid_key" permite um
+// atendimento VALIDO por agendamento.
 // occurredAt é o momento clínico (não futuro; não antes do início do plano); createdAt é técnico.
 // Responsável (professional*) é um FISIOTERAPEUTA, distinto do autor do lançamento (author*).
 // Editável com histórico por campo (TreatmentSessionChange) e checagem otimista por `version`.
@@ -386,6 +407,8 @@ model TreatmentSession {
   patientId                   String
   planId                      String
   planRevisionId              String
+  // Vínculo opcional com a agenda (MEL-01). Nulo = lançamento sem agendamento (inclui os legados).
+  appointmentId               String?
   occurredAt                  DateTime                 @db.Timestamptz(3)
   professionalId              String
   professionalNameSnapshot    String                   @db.VarChar(120)
@@ -410,6 +433,7 @@ model TreatmentSession {
   patient                     Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   plan                        TherapyPlan              @relation(fields: [planId, patientId], references: [id, patientId], onDelete: Restrict)
   planRevision                TherapyPlanRevision      @relation(fields: [planRevisionId, planId], references: [id, planId], onDelete: Restrict)
+  appointment                 Appointment?             @relation(fields: [appointmentId, patientId], references: [id, patientId], onDelete: Restrict)
   professional                User                     @relation("TreatmentSessionProfessional", fields: [professionalId], references: [id], onDelete: Restrict)
   author                      User                     @relation("TreatmentSessionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
   invalidatedBy               User?                    @relation("TreatmentSessionInvalidatedBy", fields: [invalidatedById], references: [id], onDelete: Restrict)
@@ -418,6 +442,7 @@ model TreatmentSession {
   @@index([patientId, occurredAt(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([planId, status])
   @@index([planRevisionId, planId])
+  @@index([appointmentId, patientId])
   @@index([professionalId])
   @@index([authorId])
   @@index([invalidatedById])

@@ -25,6 +25,7 @@ const session: SessionDetail = {
   updatedAt: new Date("2026-09-21T12:00:00.000Z"),
   planRevision: { number: 1, planDate: new Date("2026-09-01T00:00:00.000Z"), plannedSessions: 10 },
   plan: { status: "ATIVO", currentRevision: 2 },
+  appointment: null,
 };
 
 describe("SessionView", () => {
@@ -37,6 +38,17 @@ describe("SessionView", () => {
     expect(screen.getByText("Administrador em 21/09/2026, 09:00")).toBeInTheDocument();
     // A revisão aplicada foi a 1, mesmo o plano estando hoje na 2.
     expect(screen.getByText("Revisão 1, de 01/09/2026 (substituída depois)")).toBeInTheDocument();
+    expect(screen.getByText("Sem agendamento")).toBeInTheDocument();
+  });
+
+  it("atendimento gerado da agenda leva ao agendamento de origem (MEL-01)", () => {
+    const appointment = {
+      id: "a1",
+      startsAt: new Date("2026-09-20T17:00:00.000Z"),
+      endsAt: new Date("2026-09-20T18:00:00.000Z"),
+    };
+    render(<SessionView session={{ ...session, appointment }} />);
+    expect(screen.getByRole("link", { name: "20/09/2026 14:00" })).toHaveAttribute("href", "/agenda/a1");
   });
 });
 

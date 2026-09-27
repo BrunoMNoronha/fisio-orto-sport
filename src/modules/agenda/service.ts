@@ -1,6 +1,6 @@
 import "server-only";
 import type { z } from "zod";
-import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import type { AppointmentAttendance, AppointmentStatus, Prisma, PrismaClient } from "@/generated/prisma/client";
 import type { FieldErrors } from "@/modules/auth/validation";
 import {
   AgendaRuleError,
@@ -22,6 +22,22 @@ export type AppointmentSlot = Omit<z.output<typeof rescheduleSchema>, "id">;
 export const NOT_FOUND: AgendaFailure = { error: "Agendamento não encontrado." };
 export const ALREADY_CANCELLED: AgendaFailure = { error: "Agendamento cancelado não pode ser alterado." };
 export const RETRY_LATER: AgendaFailure = { error: "A agenda foi alterada ao mesmo tempo por outra pessoa. Tente novamente." };
+// MEL-01 (#44): agendamento com atendimento válido ou presença marcada não é cancelado nem reagendado.
+export const HAS_SESSION: AgendaFailure = {
+  error:
+    "Este agendamento tem atendimento registrado e não pode ser cancelado nem reagendado. Se o atendimento foi lançado por engano, invalide-o antes.",
+};
+export const HAS_ATTENDANCE: AgendaFailure = {
+  error: "Este agendamento tem presença marcada. Remova a marcação antes de cancelar ou reagendar.",
+};
+export const ATTENDANCE_LOCKED: AgendaFailure = {
+  error:
+    "Há atendimento registrado para este agendamento: a presença fica como compareceu. Para mudar, invalide o atendimento antes.",
+};
+export const ATTENDANCE_TOO_EARLY: AgendaFailure = {
+  error: "A presença só pode ser marcada a partir do início do horário agendado.",
+};
+export const ATTENDANCE_CANCELLED: AgendaFailure = { error: "Agendamento cancelado não recebe marcação de presença." };
 
 // P2034: o PostgreSQL abortou a transação por deadlock ou conflito de escrita. Com o lock por
 // profissional abaixo isso não deveria ocorrer; se ocorrer, nada foi gravado e o usuário tenta de novo.
@@ -38,6 +54,36 @@ async function lockProfessionals(tx: Prisma.TransactionClient, ids: string[]) {
   for (const id of [...new Set(ids)].sort()) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agenda:${id}`}, 0))`;
   }
+}
+
+type LockedAppointment = {
+  status: AppointmentStatus;
+  startsAt: Date;
+  attendance: AppointmentAttendance | null;
+};
+
+// Trava a linha do agendamento até o fim da transação. Cancelar, reagendar, marcar presença e gerar
+// atendimento (clinico/session-appointment.ts) passam por aqui, então não se intercalam.
+export async function lockAppointment(tx: Prisma.TransactionClient, id: string): Promise<LockedAppointment | null> {
+  const [row] = await tx.$queryRaw<LockedAppointment[]>`
+    SELECT "status", "startsAt", "attendance" FROM "Appointment" WHERE "id" = ${id} FOR UPDATE`;
+  return row ?? null;
+}
+
+// Só o id: a agenda sabe que há atendimento, nunca o conteúdo clínico.
+export async function hasValidSession(tx: Prisma.TransactionClient, appointmentId: string) {
+  const session = await tx.treatmentSession.findFirst({
+    where: { appointmentId, status: "VALIDO" },
+    select: { id: true },
+  });
+  return session !== null;
+}
+
+// Agendamento já travado e AGENDADO: pode deixar de ocupar o horário ou mudar de horário?
+async function blockedByRecord(tx: Prisma.TransactionClient, id: string, locked: LockedAppointment) {
+  if (await hasValidSession(tx, id)) return HAS_SESSION;
+  if (locked.attendance) return HAS_ATTENDANCE;
+  return null;
 }
 
 // Erros de regra viram resposta do formulário; o resto propaga.
@@ -78,8 +124,11 @@ export async function moveAppointment(
     if (!current) return NOT_FOUND;
     await lockProfessionals(tx, [current.professionalId, slot.professionalId]);
     // Relido depois do lock: um cancelamento ou reagendamento simultâneo já terminou.
-    const locked = await tx.appointment.findUniqueOrThrow({ where: { id }, select: { status: true } });
+    const locked = await lockAppointment(tx, id);
+    if (!locked) return NOT_FOUND;
     if (locked.status !== "AGENDADO") return ALREADY_CANCELLED;
+    const blocked = await blockedByRecord(tx, id, locked);
+    if (blocked) return blocked;
     await assertProfessionalAvailable(tx, slot.professionalId);
     await assertNoConflict(tx, slot, id);
     await tx.appointment.update({ where: { id }, data: { ...slot, updatedById: actorId }, select: { id: true } });
@@ -87,24 +136,59 @@ export async function moveAppointment(
   });
 }
 
-// Só cancela o que ainda está AGENDADO; o registro é preservado e deixa de ocupar o horário.
+// Só cancela o que ainda está AGENDADO, sem atendimento válido nem presença marcada; o registro é
+// preservado e deixa de ocupar o horário.
 export async function cancelAppointmentRecord(
   db: Db,
   id: string,
   reason: string | null | undefined,
   actorId: string,
 ): Promise<AgendaFailure | null> {
-  const result = await db.appointment.updateMany({
-    where: { id, status: "AGENDADO" },
-    data: {
-      status: "CANCELADO",
-      cancelledAt: new Date(),
-      cancelReason: reason,
-      cancelledById: actorId,
-      updatedById: actorId,
-    },
+  return db.$transaction(async (tx) => {
+    const locked = await lockAppointment(tx, id);
+    if (!locked) return NOT_FOUND;
+    if (locked.status !== "AGENDADO") return { error: "Agendamento já está cancelado." };
+    const blocked = await blockedByRecord(tx, id, locked);
+    if (blocked) return blocked;
+    await tx.appointment.update({
+      where: { id },
+      data: {
+        status: "CANCELADO",
+        cancelledAt: new Date(),
+        cancelReason: reason,
+        cancelledById: actorId,
+        updatedById: actorId,
+      },
+      select: { id: true },
+    });
+    return null;
   });
-  if (result.count > 0) return null;
-  const exists = await db.appointment.findUnique({ where: { id }, select: { id: true } });
-  return exists ? { error: "Agendamento já está cancelado." } : NOT_FOUND;
+}
+
+// Presença (MEL-01): registro administrativo a partir do início do horário, só em agendamento
+// AGENDADO. `null` remove a marcação. Guarda só a última marcação (quem e quando). Com atendimento
+// válido vinculado, fica travada em COMPARECEU. Não altera a ocupação do horário.
+export async function setAttendanceRecord(
+  db: Db,
+  id: string,
+  attendance: AppointmentAttendance | null,
+  actorId: string,
+  now: Date = new Date(),
+): Promise<AgendaFailure | null> {
+  return db.$transaction(async (tx) => {
+    const locked = await lockAppointment(tx, id);
+    if (!locked) return NOT_FOUND;
+    if (locked.status !== "AGENDADO") return ATTENDANCE_CANCELLED;
+    if (locked.startsAt.getTime() > now.getTime()) return ATTENDANCE_TOO_EARLY;
+    if (locked.attendance === attendance) return null;
+    if (await hasValidSession(tx, id)) return ATTENDANCE_LOCKED;
+    await tx.appointment.update({
+      where: { id },
+      data: attendance
+        ? { attendance, attendanceMarkedAt: now, attendanceMarkedById: actorId }
+        : { attendance: null, attendanceMarkedAt: null, attendanceMarkedById: null },
+      select: { id: true },
+    });
+    return null;
+  });
 }

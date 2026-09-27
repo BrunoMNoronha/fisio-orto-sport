@@ -21,6 +21,9 @@ const findUniqueMock = jest.fn();
 const prismaMock = {
   $transaction: jest.fn(),
   $executeRaw: jest.fn(),
+  // Trava da linha do agendamento (SELECT ... FOR UPDATE): status, início e presença.
+  $queryRaw: jest.fn(),
+  treatmentSession: { findFirst: jest.fn() },
   patient: { findUnique: jest.fn(), findMany: jest.fn() },
   user: { findUnique: jest.fn() },
   appointment: {
@@ -29,8 +32,6 @@ const prismaMock = {
     updateMany: jest.fn(),
     findFirst: jest.fn(),
     findUnique: findUniqueMock,
-    // Releitura depois do lock por profissional: segue o mesmo mock de findUnique.
-    findUniqueOrThrow: jest.fn((...args: unknown[]): unknown => findUniqueMock(...args)),
     delete: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -54,7 +55,13 @@ jest.mock("next/navigation", () => ({
   }),
 }));
 
-import { cancelAppointment, createAppointment, rescheduleAppointment, searchActivePatients } from "../actions";
+import {
+  cancelAppointment,
+  createAppointment,
+  rescheduleAppointment,
+  searchActivePatients,
+  setAttendance,
+} from "../actions";
 import { CONFLICT_MESSAGE } from "../rules";
 
 function form(values: Record<string, string>) {
@@ -71,6 +78,11 @@ const slot = { professionalId: "f1", date: "2026-09-21", startTime: "09:00", end
 const newAppointment = { patientId: "p1", ...slot };
 const STARTS = new Date("2026-09-21T12:00:00.000Z");
 const ENDS = new Date("2026-09-21T13:00:00.000Z");
+const PAST = new Date("2026-09-01T12:00:00.000Z");
+const FUTURE = new Date("2999-01-01T12:00:00.000Z");
+const lockedRow = (row: Partial<{ status: string; startsAt: Date; attendance: string | null }> = {}) => [
+  { status: "AGENDADO", startsAt: PAST, attendance: null, ...row },
+];
 
 // Erro que o Prisma lança quando a constraint de exclusão do banco barra uma corrida.
 const overlapError = Object.assign(new Error("Database error. Code: `23P01`."), {
@@ -93,6 +105,8 @@ beforeEach(() => {
   prismaMock.appointment.findUnique.mockResolvedValue({ status: "AGENDADO" });
   prismaMock.appointment.update.mockResolvedValue({ id: "a1" });
   prismaMock.appointment.updateMany.mockResolvedValue({ count: 1 });
+  prismaMock.$queryRaw.mockResolvedValue(lockedRow());
+  prismaMock.treatmentSession.findFirst.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -139,7 +153,7 @@ describe("Fisioterapeuta gerindo a agenda de outro profissional", () => {
     await expectRedirect(rescheduleAppointment(undefined, form({ id: "a1", ...slot })), "/agenda/a1");
     expect(prismaMock.appointment.update.mock.calls[0][0].data).toMatchObject({ professionalId: "f1", updatedById: "u-FISIOTERAPEUTA" });
     await expect(cancelAppointment(undefined, form({ id: "a1" }))).resolves.toMatchObject({ ok: true });
-    expect(prismaMock.appointment.updateMany.mock.calls[0][0].data).toMatchObject({
+    expect(prismaMock.appointment.update.mock.calls[1][0].data).toMatchObject({
       cancelledById: "u-FISIOTERAPEUTA",
       updatedById: "u-FISIOTERAPEUTA",
     });
@@ -263,7 +277,7 @@ describe("rescheduleAppointment", () => {
   });
 
   it("não reagenda agendamento cancelado", async () => {
-    prismaMock.appointment.findUnique.mockResolvedValue({ status: "CANCELADO" });
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ status: "CANCELADO" }));
     const result = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
     expect(result).toEqual({ error: "Agendamento cancelado não pode ser alterado." });
     expect(prismaMock.appointment.update).not.toHaveBeenCalled();
@@ -286,8 +300,8 @@ describe("cancelAppointment", () => {
   it("cancela preservando o registro e liberando o horário", async () => {
     const result = await cancelAppointment(undefined, form({ id: "a1", reason: "Paciente viajou" }));
     expect(result).toEqual({ ok: true, message: "Agendamento cancelado." });
-    expect(prismaMock.appointment.updateMany).toHaveBeenCalledWith({
-      where: { id: "a1", status: "AGENDADO" },
+    expect(prismaMock.appointment.update).toHaveBeenCalledWith({
+      where: { id: "a1" },
       data: {
         status: "CANCELADO",
         cancelledAt: expect.any(Date),
@@ -295,30 +309,128 @@ describe("cancelAppointment", () => {
         cancelledById: "u-RECEPCAO",
         updatedById: "u-RECEPCAO",
       },
+      select: { id: true },
     });
   });
 
   it("motivo é opcional", async () => {
     await cancelAppointment(undefined, form({ id: "a1" }));
-    expect(prismaMock.appointment.updateMany).toHaveBeenCalledWith(
+    expect(prismaMock.appointment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ cancelReason: null }) }),
     );
   });
 
   it("agendamento já cancelado", async () => {
-    prismaMock.appointment.updateMany.mockResolvedValue({ count: 0 });
-    prismaMock.appointment.findUnique.mockResolvedValue({ id: "a1" });
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ status: "CANCELADO" }));
     await expect(cancelAppointment(undefined, form({ id: "a1" }))).resolves.toEqual({
       error: "Agendamento já está cancelado.",
     });
   });
 
   it("agendamento inexistente", async () => {
-    prismaMock.appointment.updateMany.mockResolvedValue({ count: 0 });
-    prismaMock.appointment.findUnique.mockResolvedValue(null);
+    prismaMock.$queryRaw.mockResolvedValue([]);
     await expect(cancelAppointment(undefined, form({ id: "x" }))).resolves.toEqual({
       error: "Agendamento não encontrado.",
     });
+  });
+});
+
+describe("MEL-01: atendimento vinculado e presença bloqueiam cancelar e reagendar", () => {
+  it("com atendimento válido vinculado, não cancela nem reagenda", async () => {
+    prismaMock.treatmentSession.findFirst.mockResolvedValue({ id: "s1" });
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ attendance: "COMPARECEU" }));
+    const cancel = await cancelAppointment(undefined, form({ id: "a1" }));
+    expect(cancel?.error).toMatch(/tem atendimento registrado/);
+    const move = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
+    expect(move?.error).toMatch(/tem atendimento registrado/);
+    expect(prismaMock.treatmentSession.findFirst).toHaveBeenCalledWith({
+      where: { appointmentId: "a1", status: "VALIDO" },
+      select: { id: true },
+    });
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it.each(["COMPARECEU", "FALTA_AVISADA", "FALTA_NAO_AVISADA"])(
+    "com presença %s, não cancela nem reagenda",
+    async (attendance) => {
+      prismaMock.$queryRaw.mockResolvedValue(lockedRow({ attendance }));
+      const cancel = await cancelAppointment(undefined, form({ id: "a1" }));
+      expect(cancel?.error).toMatch(/presença marcada/);
+      const move = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
+      expect(move?.error).toMatch(/presença marcada/);
+      expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("setAttendance (presença, MEL-01)", () => {
+  it.each(["RECEPCAO", "FISIOTERAPEUTA", "ADMIN"])("%s marca presença com autor e data", async (role) => {
+    as(role);
+    const result = await setAttendance(undefined, form({ id: "a1", attendance: "FALTA_AVISADA" }));
+    expect(result).toEqual({ ok: true, message: "Presença registrada." });
+    expect(prismaMock.appointment.update).toHaveBeenCalledWith({
+      where: { id: "a1" },
+      data: { attendance: "FALTA_AVISADA", attendanceMarkedAt: expect.any(Date), attendanceMarkedById: `u-${role}` },
+      select: { id: true },
+    });
+  });
+
+  it("sem sessão é negado antes do banco", async () => {
+    as(null);
+    await expect(setAttendance(undefined, form({ id: "a1", attendance: "COMPARECEU" }))).resolves.toEqual({
+      error: "Acesso negado.",
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("valor vazio remove a marcação", async () => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ attendance: "FALTA_NAO_AVISADA" }));
+    const result = await setAttendance(undefined, form({ id: "a1", attendance: "" }));
+    expect(result).toEqual({ ok: true, message: "Marcação de presença removida." });
+    expect(prismaMock.appointment.update).toHaveBeenCalledWith({
+      where: { id: "a1" },
+      data: { attendance: null, attendanceMarkedAt: null, attendanceMarkedById: null },
+      select: { id: true },
+    });
+  });
+
+  it("valor desconhecido é recusado", async () => {
+    const result = await setAttendance(undefined, form({ id: "a1", attendance: "ATRASOU" }));
+    expect(result?.fieldErrors?.attendance).toEqual(["Escolha a presença."]);
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("antes do início do horário, recusa", async () => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ startsAt: FUTURE }));
+    const result = await setAttendance(undefined, form({ id: "a1", attendance: "COMPARECEU" }));
+    expect(result?.error).toMatch(/a partir do início do horário/);
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it("agendamento cancelado ou inexistente não recebe presença", async () => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ status: "CANCELADO" }));
+    expect((await setAttendance(undefined, form({ id: "a1", attendance: "COMPARECEU" })))?.error).toMatch(/cancelado/);
+    prismaMock.$queryRaw.mockResolvedValue([]);
+    expect(await setAttendance(undefined, form({ id: "x", attendance: "COMPARECEU" }))).toEqual({
+      error: "Agendamento não encontrado.",
+    });
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it("com atendimento válido vinculado, a presença fica travada em compareceu", async () => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ attendance: "COMPARECEU" }));
+    prismaMock.treatmentSession.findFirst.mockResolvedValue({ id: "s1" });
+    const result = await setAttendance(undefined, form({ id: "a1", attendance: "FALTA_AVISADA" }));
+    expect(result?.error).toMatch(/invalide o atendimento/);
+    const cleared = await setAttendance(undefined, form({ id: "a1", attendance: "" }));
+    expect(cleared?.error).toMatch(/invalide o atendimento/);
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+  });
+
+  it("mesma marcação não regrava (preserva autor e data)", async () => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ attendance: "COMPARECEU" }));
+    await setAttendance(undefined, form({ id: "a1", attendance: "COMPARECEU" }));
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
   });
 });
 
@@ -398,12 +510,15 @@ describe("lock por profissional", () => {
   });
 
   it("reagendar trava origem e destino em ordem fixa e relê o status depois do lock", async () => {
-    prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f2", status: "AGENDADO" });
+    prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f2" });
     prismaMock.appointment.findFirst.mockResolvedValue(null);
     prismaMock.appointment.update.mockResolvedValue({ id: "a1" });
     await expect(rescheduleAppointment(undefined, form({ id: "a1", ...slot }))).rejects.toThrow("NEXT_REDIRECT");
     const keys = prismaMock.$executeRaw.mock.calls.map((call: unknown[]) => call[1]);
     expect(keys).toEqual(["agenda:f1", "agenda:f2"]);
-    expect(prismaMock.appointment.findUniqueOrThrow).toHaveBeenCalled();
+    // A linha do agendamento é travada (FOR UPDATE) depois dos locks por profissional.
+    expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(
+      prismaMock.$executeRaw.mock.invocationCallOrder[1],
+    );
   });
 });

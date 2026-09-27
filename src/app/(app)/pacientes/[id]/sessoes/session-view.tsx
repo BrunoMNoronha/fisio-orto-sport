@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import type { SessionChangeItem, SessionDetail } from "@/modules/clinico/session-queries";
@@ -46,6 +47,18 @@ export function SessionView({ session }: { session: SessionDetail }) {
       </section>
       <dl className="grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <Item label="Momento do atendimento" value={formatOccurredAt(session.occurredAt)} />
+        <Item
+          label="Agendamento"
+          value={
+            session.appointment ? (
+              <Link href={`/agenda/${session.appointment.id}`} className="underline-offset-4 hover:underline">
+                {formatOccurredAt(session.appointment.startsAt)}
+              </Link>
+            ) : (
+              "Sem agendamento"
+            )
+          }
+        />
         <Item
           label="Profissional responsável"
           value={signatureLabel(session.professionalNameSnapshot, session.professionalCrefitoSnapshot)}

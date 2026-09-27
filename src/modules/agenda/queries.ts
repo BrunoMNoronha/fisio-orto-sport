@@ -24,6 +24,12 @@ export const APPOINTMENT_DETAIL_SELECT = {
   createdAt: true,
   updatedAt: true,
   createdBy: PERSON,
+  // Presença (MEL-01) e se há atendimento válido vinculado: só o id do atendimento, nunca o conteúdo
+  // clínico (a Recepção vê apenas que o atendimento foi registrado).
+  attendance: true,
+  attendanceMarkedAt: true,
+  attendanceMarkedBy: PERSON,
+  sessions: { where: { status: "VALIDO" }, select: { id: true }, take: 1 },
 } as const;
 
 // Inclui cancelados (continuam consultáveis); a UI os marca. Período em horário da clínica.

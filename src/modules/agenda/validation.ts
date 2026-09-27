@@ -148,6 +148,23 @@ export const rescheduleSchema = z
 
 export const cancelSchema = z.object({ id, reason: optionalText(500) });
 
+// Presença (MEL-01). Só registro: sem cobrança, multa, limite de faltas ou bloqueio.
+export const APPOINTMENT_ATTENDANCES = ["COMPARECEU", "FALTA_AVISADA", "FALTA_NAO_AVISADA"] as const;
+export type AppointmentAttendanceValue = (typeof APPOINTMENT_ATTENDANCES)[number];
+export const APPOINTMENT_ATTENDANCE_LABELS: Record<AppointmentAttendanceValue, string> = {
+  COMPARECEU: "Compareceu",
+  FALTA_AVISADA: "Faltou (avisou)",
+  FALTA_NAO_AVISADA: "Faltou (sem aviso)",
+};
+
+// "" remove a marcação.
+export const attendanceSchema = z.object({
+  id,
+  attendance: z
+    .union([z.enum(APPOINTMENT_ATTENDANCES), z.literal("")], { error: "Escolha a presença." })
+    .transform((value) => (value === "" ? null : value)),
+});
+
 export type AgendaFilter = { professionalId?: string; from: string; to: string };
 
 // Filtros da URL. Valores inválidos caem no padrão (semana a partir de hoje) em vez de quebrar a página.

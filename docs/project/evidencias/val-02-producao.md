@@ -123,16 +123,42 @@ Requisitos: DEC-02 B1–B3, B6, B7. RPO = ponto dentro da janela PITR de 6 h
    primário ou reconectar pelo Storage da Vercel e fazer redeploy.
 5. Preencher a evidência abaixo e, após conferência, **excluir o branch**.
 
+Pelo conector MCP do Neon, o `create_branch` só copia o estado atual. Para um
+ponto passado: `create_snapshot` do `main` com `timestamp` e depois
+`restore_snapshot` **sem** `target_branch_id` e com `finalize: false`. No padrão
+(`true`), o compute de produção passaria para o branch restaurado.
+
+### Execução de 27/09/2026 (autorizada por Bruno no chat)
+
 | Campo | Valor |
 |---|---|
-| Data do teste | |
-| Ponto restaurado (UTC / LSN) | |
-| Branch criado | |
-| Contagens `main` × restauração | (colar a tabela, sem dados pessoais) |
-| Tempo até o branch ficar consultável | |
-| Variáveis conferidas | |
-| Branch removido em | |
-| Responsável | Bruno M Noronha |
+| Data do teste | 27/09/2026, 13:43–13:45 UTC |
+| Ponto pedido | 2026-09-27T12:43:00Z (1 h antes, dentro da janela de 6 h) |
+| Ponto efetivo | LSN `0/20EDCE0`, última escrita em 2026-09-26T21:10:32Z (nenhuma escrita depois disso até o ponto pedido) |
+| Snapshot | `snap-snowy-leaf-acggldg8` (`restore-test-20260927`), expira em 2026-09-29T13:43Z |
+| Branch criado | `br-restless-recipe-acfsn25f` (`restore-test-20260927`), não primário, não finalizado |
+| Tempo até o branch ficar consultável | ~15 s depois do snapshot; RTO de 1 dia útil atendido com folga |
+| `main` depois da restauração | Continua primário/default; `/login` em produção responde 200 |
+| Responsável | Bruno M Noronha (autorização); execução técnica pelo Claude |
+
+Contagens no branch restaurado (nenhum dado pessoal lido):
+
+| Tabela | Restauração | `main` (leitura anterior, 13:40 UTC) |
+|---|---|---|
+| `User` | 3 | 3 (todos ADMIN) |
+| `Patient` | 1 | 1 |
+| `_prisma_migrations` | 14 | 14 |
+| `Session` | 1 | — |
+| `AuthRateLimit`, `AuditLog` | 0 | — |
+| Demais 11 tabelas clínicas e de agenda | 0 | — |
+
+**PENDENTE — Bruno:**
+
+- [ ] Rodar a consulta do passo 3 no `main` e completar a coluna `—`. Ela ficou
+      bloqueada pela permissão de leitura em produção da sessão.
+- [ ] Conferir as variáveis (item 4).
+- [ ] Excluir o branch `restore-test-20260927`. O snapshot expira sozinho em
+      29/09, ou pode ser apagado junto. Anotar a data aqui: ____.
 
 ## 8. Aviso SSL nos logs — CLASSIFICADO, sem correção agora
 
@@ -158,5 +184,6 @@ anotar se há algo além do aviso SSL.
 
 - READY e CI verdes não equivalem a teste funcional: itens 5 e 6 seguem sem
   comprovação.
-- Restauração ainda não demonstrada (item 7); é pré-requisito para dados reais.
+- Restauração demonstrada em branch isolado (item 7). Faltam a comparação
+  completa das contagens com o `main` e a remoção do branch.
 - Variáveis e logs de runtime não conferidos por falta de acesso ao painel.

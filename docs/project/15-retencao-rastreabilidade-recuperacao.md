@@ -42,7 +42,7 @@ na própria linha.
 | Dado | Rastreamento atual |
 |---|---|
 | `Patient`, `Appointment` | `createdById`, `updatedById` e datas; **só a última alteração** (sem histórico de valores anteriores); cancelamento guarda autor |
-| `Anamnesis` | Versionada; autor e nome snapshot (sem CREFITO, ver MEL-03) |
+| `Anamnesis` | Versionada; autor, nome e CREFITO snapshot (CREFITO desde a MEL-03; versões anteriores marcadas sem CREFITO) |
 | `Assessment`, `TreatmentSession`, `Reassessment` | Autor com nome/CREFITO snapshot e tabelas `*Change` com editor, motivo e data de cada correção |
 | `TherapyPlan` | Revisões imutáveis (`TherapyPlanRevision`) e mudanças de status (`TherapyPlanStatusChange`) com autor e motivo |
 | `User` | Datas de criação/alteração; **sem autor** da alteração nem histórico de perfil, ativação ou senha |

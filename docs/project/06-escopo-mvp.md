@@ -102,6 +102,9 @@ registrada (issue ou PR com aceite verificado):
 
 MEL-03 (CREFITO na anamnese) e MEL-04 (verificação de experiência) não foram
 decididos na DEC-01. Se a clínica os incluir, passam a somar-se a esta lista.
+A MEL-03 foi implementada na #46 (27/09/2026): snapshot de CREFITO nas versões
+novas da anamnese, sem backfill das antigas, e impressão só com a assinatura
+gravada.
 
 ## Regras da MEL-01 (#44)
 

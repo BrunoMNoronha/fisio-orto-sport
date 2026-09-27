@@ -93,7 +93,7 @@ describe("filtros e ordenação", () => {
     expect(args.where).toEqual({ patientId: "p1" });
     expect(args.orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]);
     expect(Object.keys(ANAMNESIS_HISTORY_SELECT).sort()).toEqual(
-      ["assessmentDate", "authorNameSnapshot", "createdAt", "id"].sort(),
+      ["assessmentDate", "authorCrefitoRecorded", "authorCrefitoSnapshot", "authorNameSnapshot", "createdAt", "id"].sort(),
     );
   });
 

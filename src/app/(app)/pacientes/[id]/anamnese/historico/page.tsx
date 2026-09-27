@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { requirePermission } from "@/modules/auth/dal";
 import { listAnamnesisVersions } from "@/modules/clinico/queries";
+import { anamnesisSignatureLabel } from "@/modules/clinico/signature";
 import { getPatient } from "@/modules/pacientes/queries";
 import { formatDate } from "../../../format";
 
@@ -43,7 +44,7 @@ export default async function HistoricoAnamnesePage({ params }: PageProps<"/paci
                   {index === 0 && <Badge variant="secondary">Vigente</Badge>}
                 </span>
                 <span className="text-muted-foreground">
-                  {version.authorNameSnapshot} · salvo em {version.createdAt.toLocaleString("pt-BR")}
+                  {anamnesisSignatureLabel(version)} · salvo em {version.createdAt.toLocaleString("pt-BR")}
                 </span>
               </Link>
             </li>

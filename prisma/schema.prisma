@@ -212,14 +212,19 @@ enum PainType {
 // Anamnese (dado clínico sensível, protegido por `clinico:*`). Versionamento append-only:
 // cada salvamento cria uma nova linha imutável; não há update nem exclusão.
 // Versão vigente: maior createdAt, desempate pelo maior id. assessmentDate é a data clínica
-// informada e não define a versão vigente. authorNameSnapshot preserva a assinatura histórica.
-// CHECKs manuais na migração (não representados aqui): painIntensity entre 0 e 10 e
-// chiefComplaint não vazia.
+// informada e não define a versão vigente. authorNameSnapshot e authorCrefitoSnapshot preservam a
+// assinatura histórica (MEL-03, #46): CREFITO nulo para quem não o tem (ex.: Administrador).
+// authorCrefitoRecorded = false marca versões anteriores à MEL-03, sem CREFITO registrado e sem
+// backfill (decisão de 27/09/2026); versões novas nascem com true.
+// CHECKs manuais na migração (não representados aqui): painIntensity entre 0 e 10,
+// chiefComplaint não vazia e "Anamnesis_legacy_without_crefito" (legado nunca tem CREFITO).
 model Anamnesis {
   id                          String       @id @default(cuid())
   patientId                   String
   authorId                    String
   authorNameSnapshot          String       @db.VarChar(120)
+  authorCrefitoSnapshot       String?      @db.VarChar(20)
+  authorCrefitoRecorded       Boolean      @default(true)
   assessmentDate              DateTime     @db.Date
   chiefComplaint              String       @db.VarChar(500)
   currentIllnessHistory       String?      @db.VarChar(4000)

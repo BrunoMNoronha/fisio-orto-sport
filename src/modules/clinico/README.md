@@ -9,9 +9,11 @@ Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisiote
 | Arquivo | Papel |
 |---|---|
 | `validation.ts` | Schema zod da anamnese (mensagens em pt-BR), limites por campo (`LIMITS`, iguais aos `@db.VarChar`), leitura do `FormData` (`painTypes` via `getAll`) e `isPlausibleId()`. |
-| `rules.ts` (`server-only`) | `assertPatientCanReceiveAnamnesis()`: paciente existe e está `ATIVO`. Roda dentro da transação da action. |
+| `rules.ts` (`server-only`) | `assertPatientCanReceiveAnamnesis()`: paciente existe e está `ATIVO`. `signature()`: nome e CREFITO do usuário autenticado, lidos na transação. |
+| `anamnesis-service.ts` (`server-only`) | `insertAnamnesisVersion()`: a transação que grava nova versão (paciente ativo com lock, assinatura, criação). Recebe o cliente Prisma, e a integração a exercita. |
+| `signature.ts` | `anamnesisSignatureLabel()` e `anamnesisCrefitoText()`: assinatura exibida da anamnese, a partir só do que foi gravado (MEL-03). |
 | `queries.ts` (`server-only`) | `getCurrentAnamnesis()`, `getAnamnesisVersion()` e `listAnamnesisVersions()`, todas com `requirePermission("clinico:ler")` e `select` explícito. O histórico traz só metadados (data, autor), sem conteúdo clínico. |
-| `actions.ts` | `createAnamnesisVersion(patientId, …)` (usada com `.bind`). Exige `clinico:gerir` e **só cria** registros. |
+| `actions.ts` | `createAnamnesisVersion(patientId, …)` (usada com `.bind`). Exige `clinico:gerir`, valida e chama `insertAnamnesisVersion`. **Só cria** registros. |
 | `assessment-validation.ts` | Schemas zod da avaliação (criação com `anamnesisId`; edição com `version`), limites (`ASSESSMENT_LIMITS`, iguais aos `@db.VarChar`), rótulos por campo e `diffAssessment()` (campos alterados, datas em AAAA-MM-DD). |
 | `assessment-queries.ts` (`server-only`) | `listAssessments()` (10 por página), `getAssessment()` e `listAssessmentChanges()`, com `clinico:ler` e filtro pelo paciente. A listagem traz só metadados. |
 | `assessment-actions.ts` | `createAssessment(patientId, …)` e `updateAssessment(patientId, assessmentId, …)`, ambas com `clinico:gerir`. |
@@ -36,6 +38,7 @@ Implementado até agora: **anamnese subjetiva** (Fase 2b), **avaliação fisiote
 - **Campos:** queixa principal (obrigatória), HDA, antecedentes pessoais e patológicos, cirurgias, medicamentos, hábitos e atividade física, dor relatada (EVA 0–10, localização e tipos `PONTADA`/`QUEIMACAO`/`PESO`/`IRRADIADA` com múltipla seleção), limitações funcionais relatadas, objetivos do paciente e observações.
 - **`assessmentDate`** (`date`): data clínica da avaliação, informada pelo profissional. Não pode ser futura. **`createdAt`**: momento técnico em que a versão foi salva. Registrar depois uma avaliação feita antes é permitido.
 - **`authorNameSnapshot`**: nome do autor copiado do usuário autenticado no momento da criação, nunca do formulário. A assinatura exibida continua histórica mesmo se o usuário mudar de nome. `authorId` mantém a autoria técnica (FK `Restrict`).
+- **`authorCrefitoSnapshot` e `authorCrefitoRecorded`** (MEL-03, #46; decisões de Bruno em 27/09/2026): versões novas gravam o CREFITO do autor lido na transação (`signature()`), nulo para quem não o tem (ex.: Administrador), com `authorCrefitoRecorded = true`. Versões anteriores à MEL-03 ficam com `false` e CREFITO nulo, **sem backfill** (a parte de backfill da D1 foi substituída): a tela, o histórico e a impressão mostram "CREFITO não registrado nesta versão". Tudo vem só do que foi gravado na versão; a impressão deixou de consultar o CREFITO atual do cadastro. O CHECK `Anamnesis_legacy_without_crefito` impede CREFITO em versão legada. Mudanças posteriores no cadastro não alteram versões gravadas; uma nova versão leva o cadastro vigente.
 - **FKs** `patientId` e `authorId` com `onDelete: Restrict`. Não há exclusão física.
 - **`painTypes`** é `NOT NULL` com default `{}` (migração `clinico_anamnese_paintypes_not_null`): "nenhum tipo marcado" é sempre lista vazia, nunca `NULL`. A migração converteu `NULL` existentes em `{}`, o único backfill feito em versões gravadas, sem mudança de significado.
 - **CHECKs manuais** na migração `clinico_anamnese`, que **não aparecem no schema Prisma**: `Anamnesis_painIntensity_range` (EVA nula ou entre 0 e 10), `Anamnesis_chiefComplaint_not_blank` e `Anamnesis_authorNameSnapshot_not_blank`. Se o modelo mudar, recrie-os na nova migração.
@@ -62,7 +65,7 @@ Decisões de Bruno (D1–D3 de 18/09 e respostas às pendências da #24, em 26/0
 - **Paciente inativo:** as avaliações continuam consultáveis, mas o paciente não recebe nova avaliação nem edição. Usa o mesmo `SELECT ... FOR UPDATE` do paciente da anamnese (`assertPatientCanReceiveAssessment`), então a concorrência com a inativação segue a mesma regra.
 - **CHECKs manuais** (migração `avaliacao_inicial`, fora do schema Prisma): `Assessment_diagnosis_not_blank`, `Assessment_authorNameSnapshot_not_blank`, `Assessment_version_positive`, `AssessmentChange_version_after_first` e `AssessmentChange_editorNameSnapshot_not_blank`. A migração também cria o índice único `Anamnesis(id, patientId)`, alvo da FK composta. É uma mudança só aditiva.
 - **Integração** (`test/integration/avaliacao.integration.ts`): cobre a FK composta, os CHECKs, a preservação de contexto e autoria, o `Restrict`, a inativação concorrente, a edição concorrente com a mesma versão e a unicidade do histórico.
-- **Fora do escopo:** plano terapêutico, sessões, evolução, reavaliação, impressão e PDF da avaliação, anexos, assinatura digital e backfill de CREFITO nas anamneses antigas (D1 prevê isso, mas esta entrega não mexe na anamnese).
+- **Fora do escopo:** plano terapêutico, sessões, evolução, reavaliação, impressão e PDF da avaliação, anexos e assinatura digital. O backfill de CREFITO nas anamneses antigas previsto na D1 foi descartado na MEL-03 (ver `Anamnesis`).
 
 ## Plano terapêutico (`TherapyPlan`)
 

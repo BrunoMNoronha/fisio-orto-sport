@@ -21,6 +21,7 @@ describe("padrões", () => {
       agendaDayStartHour: 7,
       agendaDayEndHour: 20,
       suggestedDurationMinutes: null,
+      agendaDefaultView: "dia",
       printShowClinicInfo: false,
     });
   });
@@ -95,5 +96,13 @@ describe("identityLines", () => {
         "Rua Fictícia, 1",
       ],
     });
+  });
+});
+
+describe("limites compartilhados (#69)", () => {
+  it("o teto da duração sugerida é o mesmo teto técnico da agenda", async () => {
+    const { MAX_DURATION_MINUTES } = await import("@/modules/agenda/validation");
+    const { SETTINGS_LIMITS } = await import("../settings");
+    expect(SETTINGS_LIMITS.maxDuration).toBe(MAX_DURATION_MINUTES);
   });
 });

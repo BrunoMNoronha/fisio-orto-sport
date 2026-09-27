@@ -1,5 +1,8 @@
-// Catálogo das configurações da clínica (issue #63): tipos, padrões, rótulos e regras puras.
-// Sem `server-only`: também é usado pelos formulários no cliente.
+// Catálogo das configurações da clínica (issues #63 e #69): tipos, padrões, rótulos e regras puras.
+// Sem `server-only`: também é usado pelos formulários no cliente. Limites compartilhados com a
+// agenda vêm de lá (uma definição só); o catálogo completo, com o que é só referência ou constante
+// técnica, está no README do módulo.
+import { AGENDA_VIEWS, MAX_DURATION_MINUTES, type AgendaView } from "@/modules/agenda/validation";
 
 export type ClinicSettingsValues = {
   displayName: string | null;
@@ -11,6 +14,7 @@ export type ClinicSettingsValues = {
   agendaDayStartHour: number;
   agendaDayEndHour: number;
   suggestedDurationMinutes: number | null;
+  agendaDefaultView: AgendaView;
   printShowClinicInfo: boolean;
 };
 
@@ -23,8 +27,8 @@ export type ClinicSettings = ClinicSettingsValues & {
   updatedByName: string | null;
 };
 
-// Padrões = comportamento anterior à issue: sem dados institucionais, grade 07:00–20:00, sem
-// duração sugerida e impressões só com a marca do produto.
+// Padrões = comportamento anterior às issues: sem dados institucionais, grade 07:00–20:00, sem
+// duração sugerida, agenda abrindo no dia e impressões só com a marca do produto.
 export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   displayName: null,
   legalName: null,
@@ -35,6 +39,7 @@ export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   agendaDayStartHour: 7,
   agendaDayEndHour: 20,
   suggestedDurationMinutes: null,
+  agendaDefaultView: "dia",
   printShowClinicInfo: false,
 };
 
@@ -46,9 +51,12 @@ export const SETTINGS_LIMITS = {
   address: 300,
   email: 254,
   minDuration: 5,
-  // Mesmo teto de duração da agenda (MAX_DURATION_MINUTES).
-  maxDuration: 12 * 60,
+  // Teto técnico do agendamento (agenda/validation.ts): a sugestão nunca passa do que a agenda aceita.
+  maxDuration: MAX_DURATION_MINUTES,
 } as const;
+
+export { AGENDA_VIEWS };
+export const AGENDA_VIEW_LABELS: Record<AgendaView, string> = { dia: "Dia", semana: "Semana", lista: "Lista" };
 
 // Rótulos usados no painel e no resumo da auditoria (só o nome do campo, nunca o valor).
 export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
@@ -61,6 +69,7 @@ export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
   agendaDayStartHour: "Início da faixa do dia",
   agendaDayEndHour: "Fim da faixa do dia",
   suggestedDurationMinutes: "Duração sugerida",
+  agendaDefaultView: "Visão inicial da agenda",
   printShowClinicInfo: "Identificação nas impressões",
 };
 

@@ -1,6 +1,7 @@
 import {
   addDays,
   appointmentSchema,
+  MAX_DURATION_MINUTES,
   blockSchema,
   cancelSchema,
   filterBounds,
@@ -254,5 +255,39 @@ describe("blockSchema (MEL-02)", () => {
   it("campos inválidos não quebram a validação", () => {
     const result = blockSchema.safeParse({ professionalId: "", startDate: "x", startTime: "25:00", endDate: "", endTime: "" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("parseAgendaView com visão inicial configurada (#69)", () => {
+  const now = new Date("2026-09-21T15:00:00.000Z");
+
+  it("sem view na URL usa a visão configurada; com view explícita, a da URL", () => {
+    expect(parseAgendaView({}, now, "semana").view).toBe("semana");
+    expect(parseAgendaView({}, now, "lista").view).toBe("lista");
+    expect(parseAgendaView({ view: "dia" }, now, "lista").view).toBe("dia");
+    expect(parseAgendaView({ view: "invalida" }, now, "semana").view).toBe("semana");
+    // Sem configuração: comportamento anterior (dia).
+    expect(parseAgendaView({}, now).view).toBe("dia");
+  });
+
+  it("a visão configurada deriva o período como a explícita", () => {
+    const week = parseAgendaView({ date: "2026-09-23" }, now, "semana");
+    expect(week.filter).toEqual({ from: "2026-09-21", to: "2026-09-27" });
+    const list = parseAgendaView({}, now, "lista");
+    expect(list.filter).toEqual({ from: "2026-09-21", to: "2026-09-27" });
+  });
+});
+
+describe("teto de duração (#69)", () => {
+  it("a mensagem deriva do teto técnico", () => {
+    const result = appointmentSchema.safeParse({
+      patientId: "p1",
+      professionalId: "f1",
+      date: "2026-09-21",
+      startTime: "06:00",
+      endTime: "19:00",
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error?.issues)).toContain(`no máximo ${MAX_DURATION_MINUTES / 60} horas`);
   });
 });

@@ -10,7 +10,8 @@ export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatusValue, string> =
 
 // Datas e horas digitadas no formulário são horário local da clínica; no banco ficam em timestamptz.
 export const CLINIC_TIMEZONE = "America/Sao_Paulo";
-// Limite técnico de sanidade (evita erro de digitação), não regra de negócio de duração.
+// Limite técnico de sanidade (evita erro de digitação), não regra de negócio de duração. Fonte única
+// do teto: a duração sugerida das configurações (#63/#69) e a mensagem abaixo derivam daqui.
 export const MAX_DURATION_MINUTES = 12 * 60;
 export const MAX_RANGE_DAYS = 31;
 export const DEFAULT_RANGE_DAYS = 7;
@@ -128,7 +129,11 @@ function checkSlot(value: Slot, ctx: z.RefinementCtx) {
   if (endsAt <= startsAt) {
     ctx.addIssue({ code: "custom", path: ["endTime"], message: "O horário final deve ser posterior ao inicial." });
   } else if (endsAt.getTime() - startsAt.getTime() > MAX_DURATION_MINUTES * 60 * 1000) {
-    ctx.addIssue({ code: "custom", path: ["endTime"], message: "O agendamento pode ter no máximo 12 horas." });
+    ctx.addIssue({
+      code: "custom",
+      path: ["endTime"],
+      message: `O agendamento pode ter no máximo ${MAX_DURATION_MINUTES / 60} horas.`,
+    });
   }
 }
 
@@ -212,13 +217,15 @@ export function startOfWeek(date: string) {
 }
 
 // Visão da agenda a partir da URL. Dia e semana derivam o período de `date`; a lista usa de/até.
-// Valores inválidos caem no padrão (visão do dia de hoje).
+// Sem `view` (ou com valor inválido) vale `defaultView`, a visão inicial configurada (#69; padrão:
+// dia). Datas inválidas caem em hoje.
 export function parseAgendaView(
   raw: { view?: string; date?: string; professionalId?: string; from?: string; to?: string },
   now = new Date(),
+  defaultView: AgendaView = "dia",
 ): { view: AgendaView; date: string; today: string; filter: AgendaFilter } {
   const today = toLocalDate(now);
-  const view = AGENDA_VIEWS.find((v) => v === raw.view) ?? "dia";
+  const view = AGENDA_VIEWS.find((v) => v === raw.view) ?? defaultView;
   const date = raw.date && isValidDate(raw.date) ? raw.date : today;
   const base = parseAgendaFilter({ professionalId: raw.professionalId, from: raw.from, to: raw.to }, now);
   const professional = base.professionalId ? { professionalId: base.professionalId } : {};

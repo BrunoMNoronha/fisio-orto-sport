@@ -8,8 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+  DEFAULT_RANGE_DAYS,
+  MAX_BLOCK_DAYS,
+  MAX_DURATION_MINUTES,
+  MAX_RANGE_DAYS,
+} from "@/modules/agenda/validation";
 import { saveSettings, type SettingsActionState } from "@/modules/configuracoes/actions";
 import {
+  AGENDA_VIEWS,
+  AGENDA_VIEW_LABELS,
+  DEFAULT_SETTINGS,
   SETTINGS_LIMITS,
   formatCnpj,
   identityLines,
@@ -29,6 +38,7 @@ type FormValues = {
   agendaDayStartHour: string;
   agendaDayEndHour: string;
   suggestedDurationMinutes: string;
+  agendaDefaultView: string;
   printShowClinicInfo: boolean;
 };
 
@@ -43,6 +53,7 @@ function toForm(values: ClinicSettingsValues): FormValues {
     agendaDayStartHour: String(values.agendaDayStartHour),
     agendaDayEndHour: String(values.agendaDayEndHour),
     suggestedDurationMinutes: values.suggestedDurationMinutes ? String(values.suggestedDurationMinutes) : "",
+    agendaDefaultView: values.agendaDefaultView,
     printShowClinicInfo: values.printShowClinicInfo,
   };
 }
@@ -60,6 +71,7 @@ function fromFormData(formData: FormData): FormValues {
     agendaDayStartHour: get("agendaDayStartHour"),
     agendaDayEndHour: get("agendaDayEndHour"),
     suggestedDurationMinutes: get("suggestedDurationMinutes"),
+    agendaDefaultView: get("agendaDefaultView"),
     printShowClinicInfo: formData.get("printShowClinicInfo") === "on",
   };
 }
@@ -305,8 +317,9 @@ export function SettingsForm({
             <FieldError id="config-agendaDayEndHour-erro" messages={errors?.agendaDayEndHour} />
           </div>
           <p className="text-xs text-muted-foreground sm:col-span-2">
-            Faixa mostrada na grade do dia (padrão 07:00–20:00). Agendamentos fora dela continuam aparecendo: a grade se
-            amplia para mostrá-los.
+            Faixa mostrada na grade do dia (padrão {pad(DEFAULT_SETTINGS.agendaDayStartHour)}–
+            {pad(DEFAULT_SETTINGS.agendaDayEndHour)}). Agendamentos fora dela continuam aparecendo: a grade se amplia
+            para mostrá-los.
           </p>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="config-suggestedDurationMinutes">Duração sugerida (minutos)</Label>
@@ -321,14 +334,37 @@ export function SettingsForm({
               className="sm:max-w-40"
             />
             <p id="config-suggestedDurationMinutes-ajuda" className="text-xs text-muted-foreground">
-              Em branco, desligada. Com um valor ({SETTINGS_LIMITS.minDuration} a {SETTINGS_LIMITS.maxDuration}), o
-              novo agendamento sugere o fim a partir do início, e dá para ajustar. Não altera agendamentos existentes
-              nem a duração das sessões clínicas.
+              Padrão: desligada (em branco). Com um valor ({SETTINGS_LIMITS.minDuration} a{" "}
+              {SETTINGS_LIMITS.maxDuration}, o teto técnico do agendamento), o novo agendamento sugere o fim a partir do
+              início, e dá para ajustar. Não altera agendamentos existentes nem a duração das sessões clínicas.
             </p>
             <FieldError
               id="config-suggestedDurationMinutes-erro"
               messages={errors?.suggestedDurationMinutes}
             />
+          </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="config-agendaDefaultView">Visão inicial da agenda</Label>
+            <NativeSelect
+              {...a11y("config-agendaDefaultView", errors?.agendaDefaultView, true)}
+              name="agendaDefaultView"
+              value={values.agendaDefaultView}
+              disabled={!canManage}
+              onChange={(event) => set("agendaDefaultView", event.target.value)}
+              className="w-full sm:max-w-40"
+            >
+              {AGENDA_VIEWS.map((view) => (
+                <NativeSelectOption key={view} value={view}>
+                  {AGENDA_VIEW_LABELS[view]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <p id="config-agendaDefaultView-ajuda" className="text-xs text-muted-foreground">
+              Padrão: {AGENDA_VIEW_LABELS[DEFAULT_SETTINGS.agendaDefaultView]}. Visão que abre ao entrar na agenda pelo
+              menu, para todos os perfis. Links que já indicam a visão continuam valendo, e cada pessoa pode trocar de
+              visão a qualquer momento.
+            </p>
+            <FieldError id="config-agendaDefaultView-erro" messages={errors?.agendaDefaultView} />
           </div>
         </CardContent>
       </Card>
@@ -383,13 +419,23 @@ export function SettingsForm({
       <Card>
         <CardHeader>
           <CardTitle>Referências</CardTitle>
-          <CardDescription>Informações do sistema, só para consulta.</CardDescription>
+          <CardDescription>
+            Regras fixas do sistema, só para consulta. São limites técnicos ou de segurança e não mudam por aqui.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">Fuso horário da clínica: </span>
-            {timezone} (fixo)
-          </p>
+        <CardContent className="flex flex-col gap-3 text-sm">
+          <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[auto_1fr]">
+            <dt className="text-muted-foreground">Fuso horário da clínica</dt>
+            <dd>{timezone}</dd>
+            <dt className="text-muted-foreground">Duração máxima de um agendamento</dt>
+            <dd>{MAX_DURATION_MINUTES / 60} horas, no mesmo dia</dd>
+            <dt className="text-muted-foreground">Período da visão Lista</dt>
+            <dd>
+              {DEFAULT_RANGE_DAYS} dias sem datas escolhidas; até {MAX_RANGE_DAYS} dias por consulta
+            </dd>
+            <dt className="text-muted-foreground">Duração máxima de um bloqueio</dt>
+            <dd>{MAX_BLOCK_DAYS} dias</dd>
+          </dl>
           <div className="flex flex-wrap gap-4">
             {links.users && (
               <Link href="/usuarios" className="underline underline-offset-4">

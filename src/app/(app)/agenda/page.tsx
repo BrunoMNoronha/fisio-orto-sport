@@ -17,18 +17,23 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
   const canManage = can(actor.role, "agenda:gerir");
 
   const raw = await searchParams;
-  const { view, date, today, filter } = parseAgendaView({
-    view: firstParam(raw.view),
-    date: firstParam(raw.date),
-    professionalId: firstParam(raw.professionalId),
-    from: firstParam(raw.from),
-    to: firstParam(raw.to),
-  });
-  const [items, blocks, professionals, preferences] = await Promise.all([
+  // Configuração lida por requisição: a visão inicial (#69) vale sem deploy.
+  const preferences = await getAgendaPreferences();
+  const { view, date, today, filter } = parseAgendaView(
+    {
+      view: firstParam(raw.view),
+      date: firstParam(raw.date),
+      professionalId: firstParam(raw.professionalId),
+      from: firstParam(raw.from),
+      to: firstParam(raw.to),
+    },
+    new Date(),
+    preferences.defaultView,
+  );
+  const [items, blocks, professionals] = await Promise.all([
     listAgenda(filter),
     view === "lista" ? Promise.resolve([]) : listScheduleBlocks(filter),
     listProfessionals(),
-    getAgendaPreferences(),
   ]);
   const columns = filter.professionalId
     ? professionals.filter((professional) => professional.id === filter.professionalId)

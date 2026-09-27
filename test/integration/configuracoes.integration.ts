@@ -136,4 +136,34 @@ describe("configurações no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
     );
     assert.equal(await prisma.clinicSettings.count(), 0);
   });
+
+  it("visão inicial da agenda (#69): persiste, entra na auditoria só pelo nome e o CHECK recusa valor desconhecido", async () => {
+    const first = await saveClinicSettings(prisma, { values: values({ agendaDefaultView: "semana" }), expectedVersion: 0, actor: actor() });
+    assert.deepEqual(first, { version: 1, fields: ["agendaDefaultView"] });
+    const row = await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+    assert.equal(row.agendaDefaultView, "semana");
+    const audits = await auditsOf(adminId);
+    assert.equal(audits.at(-1)?.details, "Versão 1: Visão inicial da agenda");
+
+    // Versão desatualizada continua recusada também para o campo novo.
+    await assert.rejects(
+      saveClinicSettings(prisma, { values: values({ agendaDefaultView: "lista" }), expectedVersion: 0, actor: actor() }),
+      SettingsConflictError,
+    );
+    assert.equal((await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } })).agendaDefaultView, "semana");
+
+    await assert.rejects(
+      prisma.$executeRawUnsafe(`UPDATE "ClinicSettings" SET "agendaDefaultView" = 'mes' WHERE "id" = 1`),
+      /ClinicSettings_agenda_default_view/,
+    );
+  });
+
+  it("linha anterior ao campo novo fica com a visão do dia (padrão)", async () => {
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "ClinicSettings" ("id", "version", "updatedAt", "updatedById") VALUES (1, 1, now(), $1)`,
+      adminId,
+    );
+    const row = await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+    assert.equal(row.agendaDefaultView, "dia");
+  });
 });

@@ -31,6 +31,7 @@ describe("settingsSchema", () => {
       agendaDayStartHour: 7,
       agendaDayEndHour: 20,
       suggestedDurationMinutes: null,
+      agendaDefaultView: "dia",
       printShowClinicInfo: false,
       expectedVersion: 0,
     });
@@ -78,5 +79,24 @@ describe("settingsSchema", () => {
     expect(errorsOf({ suggestedDurationMinutes: "721" }).suggestedDurationMinutes?.[0]).toMatch(/entre 5 e 720/);
     expect(errorsOf({ suggestedDurationMinutes: "-5" }).suggestedDurationMinutes?.[0]).toMatch(/minutos inteiros/);
     expect(errorsOf({ suggestedDurationMinutes: "720" })).toEqual({});
+  });
+
+  it("visão inicial da agenda (#69): aceita dia, semana e lista; ausente vira dia; outra é recusada", () => {
+    for (const view of ["dia", "semana", "lista"]) {
+      expect(settingsSchema.parse({ ...base, agendaDefaultView: view }).agendaDefaultView).toBe(view);
+    }
+    expect(settingsSchema.parse(base).agendaDefaultView).toBe("dia");
+    expect(errorsOf({ agendaDefaultView: "mes" }).agendaDefaultView?.[0]).toBe(
+      "Escolha a visão inicial da agenda: Dia, Semana ou Lista.",
+    );
+    expect(errorsOf({ agendaDefaultView: "DIA" }).agendaDefaultView).toBeDefined();
+  });
+
+  it("vários campos inválidos recusam tudo, com erro em cada campo; a faixa invertida é checada com os campos válidos", () => {
+    const errors = errorsOf({ agendaDefaultView: "mes", agendaDayStartHour: "30", suggestedDurationMinutes: "900" });
+    expect(Object.keys(errors).sort()).toEqual(["agendaDayStartHour", "agendaDefaultView", "suggestedDurationMinutes"]);
+    expect(Object.keys(errorsOf({ agendaDefaultView: "lista", agendaDayStartHour: "20", agendaDayEndHour: "8" }))).toEqual([
+      "agendaDayEndHour",
+    ]);
   });
 });

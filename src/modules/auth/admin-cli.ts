@@ -43,7 +43,7 @@ export function describeTarget(databaseUrl: string) {
   const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
   if (!url.hostname || !database) return null;
   const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(url.hostname);
-  return { label: `${url.hostname}/${database}`, database, local };
+  return { label: `${url.hostname}/${database}`, database, hostname: url.hostname, local };
 }
 
 function errorCode(error: unknown) {

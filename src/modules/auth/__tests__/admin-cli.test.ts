@@ -44,9 +44,19 @@ const writes = (db: ReturnType<typeof makeDb>) => db.db.$transaction.mock.calls.
 
 describe("describeTarget", () => {
   it("mostra só host e banco, nunca usuário ou senha", () => {
-    expect(describeTarget(LOCAL)).toEqual({ label: "localhost/fisio_orto_sport", database: "fisio_orto_sport", local: true });
+    expect(describeTarget(LOCAL)).toEqual({
+      label: "localhost/fisio_orto_sport",
+      database: "fisio_orto_sport",
+      hostname: "localhost",
+      local: true,
+    });
     const remote = describeTarget(REMOTE);
-    expect(remote).toEqual({ label: "ep-exemplo.sa-east-1.aws.neon.tech/neondb", database: "neondb", local: false });
+    expect(remote).toEqual({
+      label: "ep-exemplo.sa-east-1.aws.neon.tech/neondb",
+      database: "neondb",
+      hostname: "ep-exemplo.sa-east-1.aws.neon.tech",
+      local: false,
+    });
     expect(JSON.stringify(remote)).not.toMatch(/segredo|neondb_owner/);
   });
 

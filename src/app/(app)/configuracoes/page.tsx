@@ -3,6 +3,9 @@ import { CLINIC_TIMEZONE } from "@/modules/agenda/validation";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
 import { getSettingsForPanel } from "@/modules/configuracoes/queries";
+import { currentDevDataAvailability } from "@/modules/dados-ficticios/guard";
+import { getDevDataPreview } from "@/modules/dados-ficticios/queries";
+import { DevDataSection } from "./dev-data-section";
 import { SettingsForm } from "./settings-form";
 
 export const metadata: Metadata = { title: "Configurações — TechLab+ Fisio OrtoSport" };
@@ -12,6 +15,9 @@ export default async function ConfiguracoesPage() {
   const actor = await requirePermission("configuracoes:ler");
   const settings = await getSettingsForPanel();
   const { version, updatedAt, updatedByName, ...values } = settings;
+  // Seção de desenvolvimento (issue #73): só com o ambiente habilitado e para Administrador.
+  const devData = currentDevDataAvailability();
+  const devPreview = devData.enabled && actor.role === "ADMIN" ? await getDevDataPreview() : null;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -30,6 +36,7 @@ export default async function ConfiguracoesPage() {
         timezone={CLINIC_TIMEZONE}
         links={{ users: can(actor.role, "usuarios:ler"), audit: can(actor.role, "auditoria:ler") }}
       />
+      {devData.enabled && devPreview && <DevDataSection preview={devPreview} target={devData.target.label} />}
     </div>
   );
 }

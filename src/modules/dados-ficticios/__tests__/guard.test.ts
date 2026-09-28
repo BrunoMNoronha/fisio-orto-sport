@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { devDataAvailability, type DevDataEnv } from "../guard";
+import { devDataAvailability, devResetAvailability, type DevDataEnv } from "../guard";
 
 const LOCAL = "postgresql://fisio:segredo@localhost:5432/fisio_orto_sport?schema=public";
 const ok: DevDataEnv = { NODE_ENV: "development", DEMO_DATA_TARGET: "localhost/fisio_orto_sport", DATABASE_URL: LOCAL };
@@ -45,5 +45,26 @@ describe("devDataAvailability", () => {
     expect(result.enabled).toBe(false);
     // A resposta nunca carrega a URL nem credenciais.
     expect(JSON.stringify(result)).not.toMatch(/segredo|postgresql:|u:p@/);
+  });
+});
+
+describe("devResetAvailability (#78)", () => {
+  it("usa DEV_RESET_TARGET, independente da geração", () => {
+    expect(devResetAvailability(ok).enabled).toBe(false);
+    expect(devResetAvailability({ ...ok, DEV_RESET_TARGET: "localhost/fisio_orto_sport" })).toEqual({
+      enabled: true,
+      target: { label: "localhost/fisio_orto_sport", database: "fisio_orto_sport" },
+    });
+    // Ligar a limpeza não liga a geração.
+    expect(devDataAvailability({ ...ok, DEMO_DATA_TARGET: undefined, DEV_RESET_TARGET: "localhost/fisio_orto_sport" }).enabled).toBe(false);
+  });
+
+  it.each<[string, DevDataEnv]>([
+    ["produção", { ...ok, NODE_ENV: "production", DEV_RESET_TARGET: "localhost/fisio_orto_sport" }],
+    ["Vercel", { ...ok, VERCEL: "1", DEV_RESET_TARGET: "localhost/fisio_orto_sport" }],
+    ["alvo diferente", { ...ok, DEV_RESET_TARGET: "localhost/outro" }],
+    ["banco remoto", { ...ok, DATABASE_URL: "postgresql://u:p@ep-x.neon.tech/neondb", DEV_RESET_TARGET: "ep-x.neon.tech/neondb" }],
+  ])("bloqueia: %s", (_label, env) => {
+    expect(devResetAvailability(env).enabled).toBe(false);
   });
 });

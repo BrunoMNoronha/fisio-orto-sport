@@ -22,7 +22,7 @@ describe("contrato de nomes (#78)", () => {
   it("é aplicado nos schemas de usuário, primeiro acesso, paciente e clínica", () => {
     const user = { email: "a@x.com", role: "RECEPCAO", password: "12345678" };
     expect(createUserSchema.parse({ ...user, name: "  bia  souza " }).name).toBe("BIA SOUZA");
-    expect(updateUserSchema.parse({ id: "u1", name: "bia", role: "ADMIN" }).name).toBe("BIA");
+    expect(updateUserSchema.parse({ id: "u1", name: "bia", email: "bia@x.com", role: "ADMIN" }).name).toBe("BIA");
     expect(firstAdminSchema.parse({ ...user, name: "ana" }).name).toBe("ANA");
 
     const patient = patientSchema.parse({

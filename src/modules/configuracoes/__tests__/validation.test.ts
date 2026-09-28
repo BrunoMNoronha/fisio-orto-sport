@@ -101,4 +101,28 @@ describe("settingsSchema", () => {
       "agendaDayEndHour",
     ]);
   });
+
+  describe("expediente (#78)", () => {
+    const WEEK = ";08:00-12:00,13:00-18:00;08:00-12:00;;;;";
+
+    it("aceita a semana no formato canônico e o liga", () => {
+      const data = settingsSchema.parse({ ...base, businessHours: WEEK, businessHoursEnabled: "on" });
+      expect(data).toMatchObject({ businessHours: WEEK, businessHoursEnabled: true });
+    });
+
+    it("vazio vira semana fechada e desligada (padrão)", () => {
+      expect(settingsSchema.parse(base)).toMatchObject({ businessHours: ";;;;;;", businessHoursEnabled: false });
+    });
+
+    it("recusa intervalo invertido, incompleto ou sobreposto", () => {
+      for (const text of [";12:00-08:00;;;;;", ";08:00-;;;;;", ";08:00-12:00,11:00-13:00;;;;;", "lixo"]) {
+        expect(errorsOf({ businessHours: text }).businessHours?.[0]).toMatch(/Confira o expediente/);
+      }
+    });
+
+    it("não liga o expediente sem nenhum dia de atendimento", () => {
+      expect(errorsOf({ businessHoursEnabled: "on" }).businessHoursEnabled?.[0]).toMatch(/ao menos um dia/);
+      expect(errorsOf({ businessHoursEnabled: "on", businessHours: WEEK })).toEqual({});
+    });
+  });
 });

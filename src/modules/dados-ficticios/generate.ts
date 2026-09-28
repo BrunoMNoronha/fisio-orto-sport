@@ -26,6 +26,7 @@ import {
 import { addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
 import { writeAudit } from "@/modules/auditoria/write";
 import type { ReferenceSnapshot } from "@/modules/clinico/reassessment-validation";
+import { lockMaintenance } from "@/modules/manutencao/lock";
 import {
   APPOINTMENT_MINUTES,
   CLINICAL_PREFIX,
@@ -63,7 +64,6 @@ export type DevDataResult = { created: boolean; counts: EntityCounts; reference:
 // Ponto de teste: roda na transação depois das inserções e antes das conferências.
 export type DevDataHooks = { afterCreate?: (tx: Tx) => Promise<void> };
 
-const LOCK_KEY = "dados-ficticios";
 export const NO_PROFESSIONAL =
   "Nenhum fisioterapeuta ativo com CREFITO cadastrado. Cadastre ou ative um em Usuários e tente de novo; nada foi gravado.";
 export const NOT_ADMIN = "Apenas um Administrador ativo pode gerar dados fictícios.";
@@ -384,8 +384,9 @@ export async function generateDevData(
 
   return db.$transaction(
     async (tx) => {
-      // Uma geração por vez (duplo clique, duas abas, duas pessoas): a segunda espera e relê o estado.
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${LOCK_KEY}, 0))`;
+      // Uma operação de manutenção por vez (duplo clique, duas abas, geração x limpeza): a segunda espera
+      // e relê o estado.
+      await lockMaintenance(tx);
 
       const [{ db: database }] = await tx.$queryRaw<{ db: string }[]>`SELECT current_database() AS db`;
       if (database !== input.expectedDatabase) {

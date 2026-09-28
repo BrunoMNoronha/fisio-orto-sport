@@ -14,6 +14,9 @@ Administrador.
 
 ## Habilitação (desligada por padrão)
 
+A seção fica na aba **Desenvolvimento** das Configurações (#78), junto com a limpeza da base, que
+tem habilitação própria (`DEV_RESET_TARGET`, ver `manutencao/README.md`).
+
 Não é parâmetro de negócio: não há opção na interface que a ligue. A seção só aparece, e a action só
 executa, quando **todas** as condições valem:
 
@@ -41,9 +44,13 @@ Datas relativas à **data de referência** (hoje, em America/Sao_Paulo, no momen
 **Quantidades:** 4 pacientes, 10 agendamentos, 3 anamneses, 2 avaliações, 2 planos (2 revisões
 iniciais), 4 atendimentos e 1 reavaliação. Não cria bloqueios de agenda nem históricos de edição.
 
+**Expediente (#78):** com o expediente da clínica aplicado, os horários também precisam caber nele.
+Se o dia do catálogo estiver fechado ou sem horário, o gerador procura o próximo dia na mesma
+direção (passado para trás, futuro para frente, até uma semana), sem quebrar a cronologia.
+
 **Identificação fictícia:**
 
-- nomes com "Fictício/Fictícia Demonstração";
+- nomes com "Fictício/Fictícia Demonstração", gravados em maiúsculas (contrato de nomes, #78);
 - sem CPF, e-mail ou endereço; telefones `(11) 90000-000N`;
 - a observação administrativa do paciente começa com o marcador estável
   `[conjunto-ficticio:demo-v1:PN]`;
@@ -82,8 +89,9 @@ Nenhuma constraint, trigger ou validação é desligada.
 
 ## Repetição, concorrência e falhas
 
-- **Uma transação e um lock consultivo próprio:** duplo clique, duas abas ou duas pessoas esperam a
-  primeira terminar e então encontram o conjunto pronto.
+- **Uma transação e o lock consultivo de manutenção** (`manutencao/lock.ts`, o mesmo da limpeza):
+  duplo clique, duas abas, duas pessoas ou uma limpeza simultânea esperam a primeira terminar e então
+  encontram o estado final.
 - **Conjunto completo** (os 4 marcadores presentes): nada é criado; a resposta mostra as contagens
   existentes.
 - **Conjunto incompleto ou alterado manualmente** (marcador ausente, repetido ou desconhecido): a

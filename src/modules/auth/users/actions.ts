@@ -5,14 +5,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import type { Role } from "@/generated/prisma/enums";
-import type { AuditAction } from "@/generated/prisma/enums";
 import { requestIp } from "@/modules/auditoria/record";
 import { writeAudit } from "@/modules/auditoria/write";
-import { AuthorizationError, assertPermission, type CurrentUser } from "../dal";
+import { AuthorizationError, assertPermission } from "../dal";
 import { hashPassword } from "../password";
-import { ROLES, can } from "../permissions";
-import { checkUserChange } from "../safeguards";
+import { currentSessionTokenHash } from "../session";
+import { UserChangeError, auditEntry, changeUser, type UserChangeActor } from "./change";
 import { UserDeleteError, deleteDeactivatedUser } from "./delete";
 import {
   createUserSchema,
@@ -29,14 +27,12 @@ export type UserActionState =
   | undefined;
 
 const USERS_PATH = "/usuarios";
-const MANAGER_ROLES: Role[] = ROLES.filter((role) => can(role, "usuarios:gerir"));
 
-class SafeguardError extends Error {}
-
-// Não ecoa o valor informado.
+// Não ecoam o valor informado.
 const DUPLICATE_CREFITO: UserActionState = { fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } };
+const DUPLICATE_EMAIL: UserActionState = { fieldErrors: { email: ["Já existe um usuário com este e-mail."] } };
 
-type Actor = { actorId: string; actorRole: CurrentUser["role"]; ip: string | null };
+type Actor = UserChangeActor;
 
 async function guard(): Promise<Actor | UserActionState> {
   try {
@@ -66,46 +62,12 @@ function entries(formData: FormData, keys: string[]) {
   return Object.fromEntries(keys.map((key) => [key, formData.get(key) ?? undefined]));
 }
 
-// Registro de auditoria de uma alteração de usuário, na transação dela (A8).
-function auditEntry(actor: Actor, action: AuditAction, targetUserId: string) {
-  return { action, result: "SUCESSO" as const, actorId: actor.actorId, actorRole: actor.actorRole, targetUserId, ip: actor.ip };
-}
-
-// Ação registrada: ativação/desativação, troca de perfil ou edição simples.
-function changeAction(target: { role: Role; active: boolean }, data: { role?: Role; active?: boolean }): AuditAction {
-  if (data.active !== undefined) return data.active ? "USUARIO_ATIVADO" : "USUARIO_DESATIVADO";
-  if (data.role !== undefined && data.role !== target.role) return "PERFIL_ALTERADO";
-  return "USUARIO_EDITADO";
-}
-
-// Aplica a mudança de perfil/status numa transação serializável, validando as salvaguardas
-// contra o estado atual do banco (evita corrida entre dois admins).
-async function changeUser(
-  actor: Actor,
-  id: string,
-  data: { name?: string; role?: Role; crefito?: string | null; active?: boolean },
-) {
-  await prisma.$transaction(
-    async (tx) => {
-      const target = await tx.user.findUnique({ where: { id }, select: { id: true, role: true, active: true } });
-      if (!target) throw new SafeguardError("Usuário não encontrado.");
-      const activeManagerCount = await tx.user.count({ where: { active: true, role: { in: MANAGER_ROLES } } });
-      const problem = checkUserChange({ actorId: actor.actorId, target, next: data, activeManagerCount });
-      if (problem) throw new SafeguardError(problem);
-      await tx.user.update({ where: { id }, data });
-      if (data.active === false) await tx.session.deleteMany({ where: { userId: id } });
-      await writeAudit(tx, auditEntry(actor, changeAction(target, data), id));
-    },
-    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-  );
-}
-
 async function runChange(fn: () => Promise<void>, success: string): Promise<UserActionState> {
   try {
     await fn();
   } catch (error) {
-    if (error instanceof SafeguardError) return { error: error.message };
-    if (isUniqueViolation(error) && violatesCrefito(error)) return DUPLICATE_CREFITO;
+    if (error instanceof UserChangeError) return { error: error.message };
+    if (isUniqueViolation(error)) return violatesCrefito(error) ? DUPLICATE_CREFITO : DUPLICATE_EMAIL;
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return { error: "Outra alteração ocorreu ao mesmo tempo. Tente novamente." };
     }
@@ -131,8 +93,7 @@ export async function createUser(_prev: UserActionState, formData: FormData): Pr
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      if (violatesCrefito(error)) return DUPLICATE_CREFITO;
-      return { fieldErrors: { email: ["Já existe um usuário com este e-mail."] } };
+      return violatesCrefito(error) ? DUPLICATE_CREFITO : DUPLICATE_EMAIL;
     }
     throw error;
   }
@@ -144,11 +105,12 @@ export async function updateUser(_prev: UserActionState, formData: FormData): Pr
   const actor = await guard();
   if (!isActor(actor)) return actor;
 
-  const parsed = updateUserSchema.safeParse(entries(formData, ["id", "name", "role", "crefito"]));
+  const parsed = updateUserSchema.safeParse(entries(formData, ["id", "name", "email", "role", "crefito"]));
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const { id, ...data } = parsed.data;
-  return runChange(() => changeUser(actor, id, data), "Usuário atualizado.");
+  const keepTokenHash = id === actor.actorId ? await currentSessionTokenHash() : null;
+  return runChange(() => changeUser(prisma, actor, id, data, keepTokenHash), "Usuário atualizado.");
 }
 
 export async function setUserActive(_prev: UserActionState, formData: FormData): Promise<UserActionState> {
@@ -160,7 +122,7 @@ export async function setUserActive(_prev: UserActionState, formData: FormData):
 
   const { id, active } = parsed.data;
   return runChange(
-    () => changeUser(actor, id, { active }),
+    () => changeUser(prisma, actor, id, { active }),
     active ? "Usuário ativado." : "Usuário desativado.",
   );
 }

@@ -63,7 +63,8 @@ export const loginSchema = z.object({
 export const firstAdminSchema = z.object({ name, email, password });
 
 export const createUserSchema = z.object({ name, email, role, crefito, password }).transform(applyCrefitoRule);
-export const updateUserSchema = z.object({ id, name, role, crefito }).transform(applyCrefitoRule);
+// E-mail editável pelo Administrador (#78): mesma normalização do cadastro (trim + minúsculas).
+export const updateUserSchema = z.object({ id, name, email, role, crefito }).transform(applyCrefitoRule);
 export const setUserActiveSchema = z.object({
   id,
   active: z.enum(["true", "false"]).transform((value) => value === "true"),

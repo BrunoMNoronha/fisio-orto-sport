@@ -35,11 +35,17 @@ servidor; o consumidor recebe só o recorte de que precisa.
 | Agenda | Duração sugerida (`suggestedDurationMinutes`) | Minutos inteiros, 5 até o teto técnico do agendamento (720), ou em branco | desligada | No novo agendamento, sugere o fim a partir do início (também com o horário vindo da grade). Não sobrescreve um fim digitado, não vale no reagendamento, não altera agendamentos existentes, não muda a regra de conflito nem a duração das sessões clínicas |
 | Agenda | Visão inicial da agenda (`agendaDefaultView`, #69) | `dia`, `semana` ou `lista`; ausente no formulário = `dia` | `dia` | Visão que `/agenda` abre sem `view` na URL (menu lateral), para todos os perfis (consumidor: `parseAgendaView`, via `getAgendaPreferences`). Links com `view` explícita continuam valendo, e a pessoa troca de visão pela barra. Só exibição: não muda regras, dados nem permissões |
 | Impressões | Identificação nas impressões (`printShowClinicInfo`) | Liga/desliga | desligado | Termo de consentimento e ficha de anamnese: marca e dados lado a lado no cabeçalho (cabe no A4). Cartão de frequência: só nome e telefone. Campos vazios são omitidos, sem separadores soltos |
+| Agenda | Expediente (`businessHours`, #78) | Semana (domingo a sábado), até 2 intervalos por dia, texto canônico validado em `agenda/business-hours.ts` | todos os dias fechados | Dias e intervalos de atendimento; só restringe com a chave abaixo ligada. Regras em `agenda/README.md` |
+| Agenda | Aplicar expediente (`businessHoursEnabled`, #78) | Liga/desliga; não liga com a semana toda fechada | desligado | Ligado: o formulário de agendamento só oferece horários do expediente, e o servidor recusa criar/reagendar fora dele. Registros existentes não mudam (ficam sinalizados) |
+
+Nomes institucionais (`displayName`, `legalName`) são gravados em maiúsculas (contrato de nomes da
+#78, `src/lib/names.ts`).
 
 Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs no banco
-(migrações `20260927150000_configuracoes` e `20260928000000_config_visao_agenda`).
+(migrações `20260927150000_configuracoes`, `20260928000000_config_visao_agenda` e
+`20260928030000_config_expediente`).
 
-### Referências (somente leitura no painel, card "Referências")
+### Referências (somente leitura no painel, aba Administração)
 
 | Item | Valor | Origem | Consumidor | Por que não é editável |
 |---|---|---|---|---|
@@ -65,8 +71,8 @@ Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs 
 
 - **Textos de documentos** (termo de consentimento, cláusulas): editar conteúdo de consentimento
   exige definição específica. Continuam fixos em `pacientes/documents.ts`.
-- **Prazo e motivo de cancelamento, horário de funcionamento:** sem decisão (07-regras-negocio).
-  O horário de funcionamento é posterior ao MVP (DEC-01).
+- **Prazo e motivo de cancelamento:** sem decisão (07-regras-negocio). O expediente foi entregue
+  na #78 (global e semanal; decisões de 27/09/2026).
 - **Disponibilidade e conflitos:** as políticas da MEL-02 (#45) não criaram parâmetros editáveis.
 
 ## Regras
@@ -88,6 +94,16 @@ Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs 
   todas as instâncias. Só novas operações e documentos são afetados: horários salvos, prontuários
   e snapshots de autoria não são recalculados. Reimpressões usam a identificação vigente, não a da
   época do documento.
+- **Abas (#78):** Clínica, Agenda e expediente, Impressões, Administração e, só com ferramenta de
+  desenvolvimento habilitada e para Administrador, Desenvolvimento. As três primeiras são **um único
+  formulário** com um único "Salvar": os painéis ficam montados, então trocar de aba não perde nem
+  salva nada, e a gravação continua atômica e protegida pela versão (não há sobrescrita de campos de
+  outra aba). A aba alterada fica marcada; erro numa aba oculta abre essa aba e leva o foco ao campo.
+  Navegação por teclado do Base UI (setas, Home, End; Enter ou Espaço ativam) e lista de abas com
+  rolagem horizontal em telas pequenas. Administração traz os atalhos para usuários e auditoria e as
+  referências. Desenvolvimento reúne a geração de dados fictícios (#73) e a limpeza da base
+  (`manutencao/README.md`), cada uma com sua habilitação; abrir a aba ou salvar configurações nunca
+  dispara nenhuma delas.
 - **Painel:** mostra os valores vigentes, a última alteração (quem, quando, versão), a prévia do
   cabeçalho, erros por campo e o aviso "Há alterações não salvas". "Descartar alterações" volta à
   última versão salva, só no navegador. O aviso ao sair cobre recarregar e fechar a página, não a
@@ -98,8 +114,7 @@ Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs 
 Editor de termos ou cláusulas, prazo de cancelamento e faltas, fuso editável, retenção e expurgo,
 backup e restauração, matriz de permissões, parâmetros de senha, sessão e limite de tentativas,
 credenciais, financeiro, integrações, multi-clínica e upload de logotipo (ver a #63). Bloqueios e aviso
-de conflito foram entregues na MEL-02 (#45), sem parâmetros editáveis; horário de funcionamento é
-posterior ao MVP.
+de conflito foram entregues na MEL-02 (#45), sem parâmetros editáveis; o expediente, na #78.
 
 ## Testes
 

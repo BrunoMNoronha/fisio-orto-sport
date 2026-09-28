@@ -88,7 +88,7 @@ describe.each(["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"])("%s (pacientes:gerir)", (
     await expectRedirect(createPatient(undefined, form(adult)), "/pacientes/p1");
     expect(prismaMock.patient.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        fullName: "Maria Teste",
+        fullName: "MARIA TESTE",
         sex: "FEMININO",
         occupation: null,
         cpf: VALID_CPF,
@@ -106,7 +106,7 @@ describe.each(["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"])("%s (pacientes:gerir)", (
     await expectRedirect(updatePatient(undefined, form({ ...adult, id: "p1", fullName: "Maria Nova" })), "/pacientes/p1");
     const call = prismaMock.patient.update.mock.calls[0][0];
     expect(call.where).toEqual({ id: "p1" });
-    expect(call.data).toMatchObject({ fullName: "Maria Nova", updatedById: `u-${role}` });
+    expect(call.data).toMatchObject({ fullName: "MARIA NOVA", updatedById: `u-${role}` });
     expect(call.data).not.toHaveProperty("createdById");
     expect(call.data).not.toHaveProperty("status");
   });
@@ -187,7 +187,7 @@ describe.each(["RECEPCAO", "FISIOTERAPEUTA"])("regras de cadastro (%s)", (role) 
       "/pacientes/p1",
     );
     expect(prismaMock.patient.create.mock.calls[0][0].data).toMatchObject({
-      guardianName: "Ana Responsável",
+      guardianName: "ANA RESPONSÁVEL",
       guardianPhone: "11911112222",
       guardianRelationship: "Mãe",
     });

@@ -1,5 +1,6 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
+import { OUTSIDE_BUSINESS_HOURS, describeWeek, isWithinBusinessHours, parseBusinessHours } from "./business-hours";
 import { toLocalDate, toLocalTime } from "./validation";
 
 // Regras de negócio da agenda, executadas dentro da transação da action.
@@ -63,6 +64,22 @@ export async function assertNotBlocked(tx: Tx, slot: Slot) {
     select: { id: true },
   });
   if (block) throw new AgendaRuleError(BLOCKED_MESSAGE, "startTime");
+}
+
+// Expediente (#78): com a chave ligada, o atendimento inteiro precisa caber num intervalo do dia.
+// Lido do banco na própria transação, então vale o expediente vigente no envio, mesmo que tenha mudado
+// depois de o formulário abrir. Sem linha de configuração ou com a chave desligada, não restringe.
+export async function assertWithinBusinessHours(tx: Tx, slot: Slot) {
+  const settings = await tx.clinicSettings.findUnique({
+    where: { id: 1 },
+    select: { businessHoursEnabled: true, businessHours: true },
+  });
+  if (!settings?.businessHoursEnabled) return;
+  const week = parseBusinessHours(settings.businessHours);
+  if (!week) return;
+  if (!isWithinBusinessHours(week, slot.startsAt, slot.endsAt)) {
+    throw new AgendaRuleError(`${OUTSIDE_BUSINESS_HOURS} Expediente: ${describeWeek(week)}.`, "startTime");
+  }
 }
 
 // Item de conflito exibido ao usuário: só dados administrativos (horário, profissional ou paciente).

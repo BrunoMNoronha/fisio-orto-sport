@@ -6,6 +6,7 @@ import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/modules/auth/dal";
+import { isClosedWeek, parseBusinessHours } from "@/modules/agenda/business-hours";
 import { DEFAULT_SETTINGS, type ClinicIdentity, type ClinicSettings } from "./settings";
 import { SETTINGS_ID, pickValues } from "./write";
 
@@ -38,7 +39,15 @@ export type AgendaPreferences = {
   dayEndHour: number;
   suggestedDurationMinutes: number | null;
   defaultView: ClinicSettings["agendaDefaultView"];
+  // Expediente em vigor (#78), no formato canônico; null = sem restrição (chave desligada ou vazio).
+  businessHours: string | null;
 };
+
+function activeBusinessHours(settings: ClinicSettings): string | null {
+  if (!settings.businessHoursEnabled) return null;
+  const week = parseBusinessHours(settings.businessHours);
+  return week && !isClosedWeek(week) ? settings.businessHours : null;
+}
 
 export async function getAgendaPreferences(): Promise<AgendaPreferences> {
   const settings = await loadSettings();
@@ -47,6 +56,7 @@ export async function getAgendaPreferences(): Promise<AgendaPreferences> {
     dayEndHour: settings.agendaDayEndHour,
     suggestedDurationMinutes: settings.suggestedDurationMinutes,
     defaultView: settings.agendaDefaultView,
+    businessHours: activeBusinessHours(settings),
   };
 }
 

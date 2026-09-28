@@ -10,6 +10,7 @@
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
+import { normalizeName } from "@/lib/names";
 import { writeAudit } from "@/modules/auditoria/write";
 import { hashPassword } from "./password";
 import { PASSWORD_MAX, PASSWORD_MIN } from "./validation";
@@ -29,7 +30,11 @@ export type AdminCliDb = Pick<PrismaClient, "user" | "$transaction" | "$disconne
 
 const argsSchema = z.object({
   email: z.string({ error: "Informe --email." }).trim().toLowerCase().pipe(z.email("E-mail inválido.")),
-  name: z.string().trim().min(2, "--name deve ter pelo menos 2 caracteres.").max(120).default("Administrador"),
+  name: z
+    .string()
+    .default("Administrador")
+    .transform(normalizeName)
+    .pipe(z.string().min(2, "--name deve ter pelo menos 2 caracteres.").max(120)),
 });
 
 // Host e banco, sem usuário, senha nem parâmetros. null se a URL for inválida (sem ecoá-la).

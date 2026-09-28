@@ -67,7 +67,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
           blocks={blocks}
           professionalId={filter.professionalId} />
       )}
-      {view === "lista" && <AgendaListView items={items} />}
+      {view === "lista" && <AgendaListView items={items} businessHours={preferences.businessHours} />}
     </div>
   );
 }

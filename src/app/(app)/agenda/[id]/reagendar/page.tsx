@@ -5,6 +5,7 @@ import { requirePermission } from "@/modules/auth/dal";
 import { rescheduleAppointment } from "@/modules/agenda/actions";
 import { getAppointment, listProfessionals } from "@/modules/agenda/queries";
 import { toLocalDate, toLocalTime } from "@/modules/agenda/validation";
+import { getAgendaPreferences } from "@/modules/configuracoes/queries";
 import { AppointmentForm } from "../../appointment-form";
 
 export const metadata: Metadata = { title: "Reagendar — TechLab+ Fisio OrtoSport" };
@@ -12,7 +13,11 @@ export const metadata: Metadata = { title: "Reagendar — TechLab+ Fisio OrtoSpo
 export default async function ReagendarPage({ params }: PageProps<"/agenda/[id]/reagendar">) {
   await requirePermission("agenda:gerir");
   const { id } = await params;
-  const [appointment, professionals] = await Promise.all([getAppointment(id), listProfessionals()]);
+  const [appointment, professionals, preferences] = await Promise.all([
+    getAppointment(id),
+    listProfessionals(),
+    getAgendaPreferences(),
+  ]);
   if (!appointment) notFound();
 
   return (
@@ -39,6 +44,7 @@ export default async function ReagendarPage({ params }: PageProps<"/agenda/[id]/
             notes: "",
           }}
           professionals={professionals.map((p) => ({ id: p.id, label: p.name }))}
+          businessHours={preferences.businessHours}
           cancelHref={`/agenda/${id}`}
           submitLabel="Salvar novo horário"
         />

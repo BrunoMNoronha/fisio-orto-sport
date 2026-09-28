@@ -66,7 +66,7 @@ describe("saveSettings — autorização", () => {
       expect.objectContaining({
         expectedVersion: 0,
         actor: { id: "u-admin", role: "ADMIN", ip: "10.0.0.9" },
-        values: expect.objectContaining({ displayName: "Clínica Teste", agendaDayStartHour: 7 }),
+        values: expect.objectContaining({ displayName: "CLÍNICA TESTE", agendaDayStartHour: 7 }),
       }),
     );
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");

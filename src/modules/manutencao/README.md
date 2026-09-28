@@ -1,12 +1,13 @@
 # manutencao
 
-Ferramentas administrativas executadas por terminal, fora da aplicação, do build, do seed e das
-migrações.
+Ferramentas administrativas de manutenção de dados. As de terminal rodam fora da aplicação, do
+build, do seed e das migrações; a limpeza também tem uma ação web restrita a desenvolvimento (#78).
 
 ## `pnpm db:reset` — reinicializar dados preservando os usuários (issue #62)
 
-Núcleo em `reset-cli.ts`; entrada em `prisma/reset.ts`; leitor de terminal compartilhado com o
-`db:admin` em `prisma/prompt.ts`.
+Regras e transação em `reset.ts`, compartilhadas com a ação web (#78); interface de terminal em
+`reset-cli.ts`; entrada em `prisma/reset.ts`; leitor de terminal compartilhado com o `db:admin` em
+`prisma/prompt.ts`.
 
 ### Contrato de dados
 
@@ -85,3 +86,53 @@ Cobre:
 - alteração concorrente de usuário detectada;
 - tabela e dependência não previstas;
 - URL inválida.
+
+## Limpeza pela aba Desenvolvimento (issue #78)
+
+Mesma regra de dados e mesmas conferências do `pnpm db:reset` (`reset.ts`), acionada pela aba
+Desenvolvimento das Configurações. Nenhum comando de shell é executado pela interface.
+
+- **Habilitação própria**, desligada por padrão: `DEV_RESET_TARGET="host/banco"`, com as mesmas
+  condições da geração de dados fictícios (`pnpm dev`, fora da Vercel, banco local igual ao alvo;
+  ver `dados-ficticios/README.md`). Ligar a geração não liga a limpeza. Não há opção web para
+  produção.
+- **Só Administrador**, checado no servidor com a habilitação, antes de qualquer escrita.
+- **Simulação na tela:** alvo (`host/banco`, sem credenciais), o que será limpo e o que será
+  preservado, com contagens. Schema fora do previsto bloqueia a ação.
+- **Confirmação digitada:** nome do banco e `LIMPAR`. O servidor confere de novo e também confere
+  `current_database()` na transação.
+- **Auditoria sempre preservada:** a exceção `--incluir-auditoria` é exclusiva da CLI e não existe
+  na web. A limpeza grava `BASE_REINICIADA` (autor, IP e contagem total, sem dados) na mesma
+  transação.
+- **Sessões:** todas são encerradas, inclusive a de quem executou. Depois do sucesso, o cookie é
+  removido e a pessoa vai para `/login?base=limpa`, que avisa o que aconteceu.
+- **Nada combinado:** a limpeza não gera dados fictícios em seguida, e abrir a aba ou salvar
+  configurações nunca a dispara.
+
+### Serialização com a geração de dados fictícios
+
+Limpeza (web e CLI) e geração tomam o mesmo lock consultivo (`lock.ts`) no início da transação. Uma
+espera a outra terminar e só então confere o estado: o resultado é sempre base limpa ou conjunto
+completo, nunca parcial, duplicado ou enganoso. Coberto em
+`test/integration/limpeza-web.integration.ts`, com limpezas e gerações simultâneas repetidas.
+
+## `pnpm db:normalizar-nomes` — adequar nomes ao contrato em maiúsculas (issue #78)
+
+Núcleo em `names-cli.ts`; entrada em `prisma/normalize-names.ts`. É uma operação própria: nunca
+roda como efeito de leitura, deploy, reset ou geração de dados.
+
+- **Escopo:**
+  - `User.name`;
+  - `Patient.fullName` e `Patient.guardianName`;
+  - `ClinicSettings.displayName` e `legalName`.
+  Não toca snapshots clínicos de autoria, auditoria, e-mail, endereço, textos livres, `updatedAt`,
+  autoria da edição nem versão. É uma adequação técnica, não uma edição.
+- **Simulação por padrão:** mostra o alvo (sem credenciais) e as contagens por campo, sem nomes.
+  Aborta se algum nome passar do limite depois de normalizar.
+- **Execução:** `--executar`, com confirmação pelo nome do banco. Uma transação; cada linha só é
+  atualizada se ainda tiver o valor lido (alteração concorrente desfaz tudo); conferência final.
+- **Idempotente:** uma segunda execução responde "Nada a adequar".
+- **Base real:** exige alvo e autorização registrados, como o `db:reset`, e um ponto de
+  recuperação antes.
+
+Coberto em `test/integration/normalizar-nomes.integration.ts`.

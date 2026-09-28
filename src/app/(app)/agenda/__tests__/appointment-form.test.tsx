@@ -197,3 +197,60 @@ describe("AppointmentForm — conflito do paciente (MEL-02)", () => {
     expect(screen.getByRole("button", { name: "Reagendar" })).toBeInTheDocument();
   });
 });
+
+// Expediente (#78): segunda 08:00–12:00 e 13:00–18:00; domingo fechado. 2099-01-12 é segunda-feira.
+describe("AppointmentForm — expediente", () => {
+  const HOURS = ";08:00-12:00,13:00-18:00;;;;;";
+  const base: AppointmentFormValues = { patientId: "", professionalId: "", date: "2099-01-12", startTime: "", endTime: "", notes: "" };
+  const renderWith = (initial: Partial<AppointmentFormValues>, appointmentId?: string) =>
+    render(
+      <AppointmentForm
+        action={jest.fn()}
+        initial={{ ...base, ...initial }}
+        professionals={[]}
+        patientPicker={appointmentId ? undefined : { initial: null }}
+        patientName={appointmentId ? "PACIENTE" : undefined}
+        appointmentId={appointmentId}
+        businessHours={HOURS}
+        cancelHref="/agenda"
+        submitLabel="Agendar"
+      />,
+    );
+  const options = (label: string) =>
+    Array.from((screen.getByLabelText(label) as HTMLSelectElement).options).map((option) => option.value).filter(Boolean);
+
+  it("oferece só inícios dentro do expediente e fins até o fechamento do intervalo", () => {
+    renderWith({});
+    const starts = options("Início *");
+    expect(starts[0]).toBe("08:00");
+    expect(starts).not.toContain("12:00");
+    expect(starts).not.toContain("12:30");
+    expect(starts).toContain("13:00");
+    expect(screen.getByLabelText("Fim *")).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Início *"), { target: { value: "11:00" } });
+    const ends = options("Fim *");
+    expect(ends[0]).toBe("11:05");
+    expect(ends.at(-1)).toBe("12:00");
+    expect(screen.getByText(/Expediente: Seg 08:00–12:00, 13:00–18:00/)).toBeInTheDocument();
+  });
+
+  it("dia fechado desabilita os horários e orienta a escolher outra data", () => {
+    renderWith({ date: "2099-01-11" });
+    expect(screen.getByLabelText("Início *")).toBeDisabled();
+    expect(screen.getByText(/não tem expediente neste dia/)).toBeInTheDocument();
+  });
+
+  it("trocar para um dia fechado limpa início e fim já escolhidos", () => {
+    renderWith({ startTime: "09:00", endTime: "10:00" });
+    fireEvent.change(screen.getByLabelText("Data *"), { target: { value: "2099-01-11" } });
+    expect((screen.getByLabelText("Início *") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("Fim *") as HTMLSelectElement).value).toBe("");
+  });
+
+  it("reagendar um horário antigo fora do expediente pede um novo horário", () => {
+    renderWith({ startTime: "19:00", endTime: "20:00" }, "a1");
+    expect((screen.getByLabelText("Início *") as HTMLSelectElement).value).toBe("");
+    expect(screen.getByText(/horário atual está fora do expediente/)).toBeInTheDocument();
+  });
+});

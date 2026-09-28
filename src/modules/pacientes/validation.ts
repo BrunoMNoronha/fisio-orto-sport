@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeName } from "@/lib/names";
 
 export const PATIENT_STATUSES = ["ATIVO", "INATIVO"] as const;
 export type PatientStatusValue = (typeof PATIENT_STATUSES)[number];
@@ -103,6 +104,14 @@ const optionalText = (max: number, label: string) =>
     .optional()
     .transform((value) => (value ? value : null));
 
+const optionalName = (max: number, label: string) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => normalizeName(value ?? ""))
+    .pipe(z.string().max(max, { error: `${label} deve ter no máximo ${max} caracteres.` }))
+    .transform((value) => (value ? value : null));
+
 const phone = (label: string) =>
   z
     .string({ error: `Informe o ${label}.` })
@@ -167,11 +176,16 @@ const optionalPhone = z
   .transform((value) => (value ? value : null));
 
 const patientFields = z.object({
+  // Nomes em maiúsculas (contrato de nomes, #78), com o tamanho validado depois de normalizar.
   fullName: z
     .string({ error: "Informe o nome completo." })
-    .trim()
-    .min(2, { error: "O nome deve ter pelo menos 2 caracteres." })
-    .max(120, { error: "O nome deve ter no máximo 120 caracteres." }),
+    .transform(normalizeName)
+    .pipe(
+      z
+        .string()
+        .min(2, { error: "O nome deve ter pelo menos 2 caracteres." })
+        .max(120, { error: "O nome deve ter no máximo 120 caracteres." }),
+    ),
   birthDate,
   // Obrigatório em criação e edição; "Não informado" é uma opção explícita.
   sex: z.enum(SEXES, { error: "Selecione o sexo." }),
@@ -181,7 +195,7 @@ const patientFields = z.object({
   email,
   address: optionalText(300, "O endereço"),
   notes: optionalText(1000, "As observações"),
-  guardianName: optionalText(120, "O nome do responsável"),
+  guardianName: optionalName(120, "O nome do responsável"),
   guardianPhone: optionalPhone,
   guardianRelationship: optionalText(60, "O parentesco"),
 });

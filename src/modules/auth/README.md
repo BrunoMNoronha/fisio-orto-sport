@@ -51,6 +51,27 @@ Contrato: toda permissão da Recepção também é do Fisioterapeuta, que soma a
 - Fisioterapeutas cadastrados antes da 2c ficam com `NULL`, e a lista de usuários mostra "CREFITO não informado". Editar um deles exige informar o CREFITO.
 - Quem edita: só `usuarios:gerir` (Administrador), com a matriz inalterada. A anamnese **não** guarda o CREFITO na assinatura (append-only inalterado).
 
+## Nomes e e-mail (issue #78)
+
+- **Nomes em maiúsculas:** `User.name` é normalizado no servidor (`src/lib/names.ts`: NFC, espaços
+  nas pontas removidos e internos colapsados, maiúsculas pt-BR com acentos) no cadastro, na edição,
+  no primeiro acesso, no `pnpm db:admin` e no seed; o limite de 120 vale depois de normalizar. Nomes
+  antigos são adequados só pelo `pnpm db:normalizar-nomes` (`manutencao/README.md`). Snapshots
+  clínicos antigos e auditoria nunca são reescritos; novos snapshots já saem do nome normalizado.
+- **Edição do e-mail:** o Administrador (`usuarios:gerir`) altera o e-mail no diálogo "Editar", com
+  a mesma normalização do cadastro (trim, minúsculas, formato, até 254) e unicidade. Autoedição por
+  outros perfis não existe.
+  - **Tudo ou nada** (`users/change.ts`, transação serializável): e-mail repetido, inclusive em
+    disputa simultânea, responde "Já existe um usuário com este e-mail." sem ecoar o valor e não
+    altera nome, perfil nem CREFITO.
+  - **Login:** o novo e-mail passa a valer e o anterior deixa de funcionar. ID, senha, vínculos e
+    autoria histórica não mudam.
+  - **Sessões (decisão de 27/09/2026):** todas as sessões do usuário alterado são encerradas. Se o
+    Administrador altera o próprio e-mail, só a sessão atual dele é mantida.
+  - **Auditoria:** `USUARIO_EDITADO` (ou `PERFIL_ALTERADO`) com `details` listando só os nomes dos
+    campos alterados (ex.: "Campos: e-mail."), nunca os valores. Nenhum e-mail é enviado.
+  Coberto em `__tests__/users-actions.test.ts` e `test/integration/editar-email.integration.ts`.
+
 ## Exclusão de usuário (issue #76)
 
 - **Quem:** o Administrador (`usuarios:gerir`), pelo botão "Excluir". O botão aparece só em contas

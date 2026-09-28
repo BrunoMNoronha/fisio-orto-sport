@@ -47,6 +47,13 @@ export async function createSession(userId: string, verifiedPasswordHash: string
   return true;
 }
 
+// Hash do token da sessão desta requisição (ou null). Usado para preservar a sessão atual quando o
+// Administrador altera o próprio e-mail e as demais sessões dele são encerradas (#78).
+export async function currentSessionTokenHash(): Promise<string | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  return token ? hashToken(token) : null;
+}
+
 // Remove cookie: só pode ser chamada em Server Action ou Route Handler.
 export async function deleteSession() {
   const cookieStore = await cookies();

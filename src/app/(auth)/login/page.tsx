@@ -14,7 +14,7 @@ import { SetupForm } from "./setup-form";
 export const metadata: Metadata = { title: "Entrar — TechLab+ Fisio OrtoSport" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { next } = await searchParams;
+  const { next, base } = await searchParams;
   const nextPath = safeRedirectPath(next);
   if (await getCurrentUser()) redirect(nextPath);
 
@@ -42,6 +42,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {base === "limpa" && !needsSetup && (
+            <p className="mb-4 rounded-md border bg-muted px-3 py-2 text-sm" role="status">
+              A base foi limpa e todas as sessões foram encerradas. Entre de novo.
+            </p>
+          )}
           {needsSetup ? (
             setupEnabled && <SetupForm next={nextPath} />
           ) : (

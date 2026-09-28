@@ -72,7 +72,7 @@ describe("runAdminCli", () => {
     const { io, output, questions } = makeIO(["sim", PASSWORD, PASSWORD]);
     await expect(runAdminCli(["--email", " Ana@X.com ", "--name", "Ana"], LOCAL, io, db.open)).resolves.toBe(0);
     expect(db.tx.user.create).toHaveBeenCalledWith({
-      data: { name: "Ana", email: "ana@x.com", role: "ADMIN", passwordHash: expect.stringMatching(/^scrypt\$|\$/) },
+      data: { name: "ANA", email: "ana@x.com", role: "ADMIN", passwordHash: expect.stringMatching(/^scrypt\$|\$/) },
       select: { id: true },
     });
     // Auditoria na mesma transação, sem ator nem IP (issue #56).

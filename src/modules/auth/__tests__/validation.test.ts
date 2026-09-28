@@ -7,7 +7,7 @@ describe("createUserSchema", () => {
   it("aceita dados válidos e normaliza o e-mail", () => {
     const result = createUserSchema.parse(valid);
     expect(result.email).toBe("ana@clinica.com");
-    expect(result.name).toBe("Ana Souza");
+    expect(result.name).toBe("ANA SOUZA");
   });
 
   it("exige senha com pelo menos 8 caracteres", () => {
@@ -58,13 +58,14 @@ describe("CREFITO", () => {
 
   it("é descartado nos demais perfis", () => {
     expect(createUserSchema.parse({ ...valid, crefito: "123456-F" }).crefito).toBeNull();
-    expect(updateUserSchema.parse({ id: "u1", name: "Ana", role: "ADMIN", crefito: "123456-F" }).crefito).toBeNull();
+    expect(updateUserSchema.parse({ id: "u1", name: "Ana", email: "ana@x.com", role: "ADMIN", crefito: "123456-F" }).crefito).toBeNull();
   });
 });
 
 describe("demais schemas", () => {
-  it("updateUserSchema exige id, nome e perfil", () => {
-    expect(updateUserSchema.safeParse({ id: "u1", name: "Ana", role: "ADMIN" }).success).toBe(true);
+  it("updateUserSchema exige id, nome, e-mail e perfil", () => {
+    expect(updateUserSchema.safeParse({ id: "u1", name: "Ana", email: "ana@x.com", role: "ADMIN" }).success).toBe(true);
+    expect(updateUserSchema.safeParse({ id: "u1", name: "Ana", role: "ADMIN" }).success).toBe(false);
     expect(updateUserSchema.safeParse({ name: "Ana", role: "ADMIN" }).success).toBe(false);
   });
 

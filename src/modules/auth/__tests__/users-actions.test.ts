@@ -40,6 +40,7 @@ jest.mock("@/generated/prisma/client", () => ({
 }));
 
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
+jest.mock("../session", () => ({ currentSessionTokenHash: jest.fn(async () => "hash-sessao-atual") }));
 jest.mock("@/modules/auditoria/record", () => ({ requestIp: jest.fn(async () => "10.0.0.9") }));
 
 import { Prisma } from "@/generated/prisma/client";
@@ -66,9 +67,9 @@ beforeEach(() => {
 });
 
 // Registro gravado na transação da alteração (issue #56).
-function auditedWith(action: string, targetUserId: string) {
+function auditedWith(action: string, targetUserId: string, details: string | null = null) {
   expect(tx.auditLog.create).toHaveBeenCalledWith({
-    data: { action, result: "SUCESSO", actorId: "admin-1", actorRole: "ADMIN", targetUserId, ip: "10.0.0.9" },
+    data: { action, result: "SUCESSO", actorId: "admin-1", actorRole: "ADMIN", targetUserId, ip: "10.0.0.9", details },
     select: { id: true },
   });
 }
@@ -84,7 +85,7 @@ describe.each([
 
   it("recusa criar, editar, desativar e redefinir senha sem tocar no banco", async () => {
     await expect(createUser(undefined, form(newUser))).resolves.toEqual({ error: "Acesso negado." });
-    await expect(updateUser(undefined, form({ id: "u1", name: "A", role: "ADMIN" }))).resolves.toEqual({
+    await expect(updateUser(undefined, form({ id: "u1", email: "u1@x.com", name: "A", role: "ADMIN" }))).resolves.toEqual({
       error: "Acesso negado.",
     });
     await expect(setUserActive(undefined, form({ id: "u1", active: "false" }))).resolves.toEqual({
@@ -127,21 +128,23 @@ describe("ADMIN", () => {
   it("recusa fisioterapeuta sem CREFITO, na criação e na edição, sem tocar no banco", async () => {
     const created = await createUser(undefined, form({ ...newUser, role: "FISIOTERAPEUTA" }));
     expect(created?.fieldErrors?.crefito).toEqual(["Informe o CREFITO do fisioterapeuta."]);
-    const updated = await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "" }));
+    const updated = await updateUser(undefined, form({ id: "f1", email: "f1@x.com", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "" }));
     expect(updated?.fieldErrors?.crefito).toEqual(["Informe o CREFITO do fisioterapeuta."]);
     expect(tx.user.create).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
   it("descarta o CREFITO em outros perfis (ex.: ao deixar de ser fisioterapeuta)", async () => {
-    tx.user.findUnique.mockResolvedValue({ id: "f1", role: "FISIOTERAPEUTA", active: true });
+    tx.user.findUnique.mockResolvedValue({ id: "f1", role: "FISIOTERAPEUTA", active: true, name: "FISIO", email: "f1@x.com", crefito: "123456-F" });
     tx.user.count.mockResolvedValue(1);
-    const result = await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "RECEPCAO", crefito: "123456-F" }));
+    const result = await updateUser(undefined, form({ id: "f1", email: "f1@x.com", name: "Fisio", role: "RECEPCAO", crefito: "123456-F" }));
     expect(result).toMatchObject({ ok: true });
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: "f1" },
-      data: { name: "Fisio", role: "RECEPCAO", crefito: null },
+      data: { name: "FISIO", email: "f1@x.com", role: "RECEPCAO", crefito: null },
     });
+    // E-mail igual: as sessões continuam.
+    expect(tx.session.deleteMany).not.toHaveBeenCalled();
   });
 
   it("CREFITO duplicado vira erro de campo sem ecoar o valor; e-mail duplicado segue no e-mail", async () => {
@@ -162,7 +165,7 @@ describe("ADMIN", () => {
       uniqueError({ driverAdapterError: { cause: { constraint: { fields: ["crefito"] } } } }),
     );
     expect(
-      await updateUser(undefined, form({ id: "f1", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "999999-F" })),
+      await updateUser(undefined, form({ id: "f1", email: "f1@x.com", name: "Fisio", role: "FISIOTERAPEUTA", crefito: "999999-F" })),
     ).toEqual({ fieldErrors: { crefito: ["Já existe um usuário com este CREFITO."] } });
   });
 
@@ -177,7 +180,7 @@ describe("ADMIN", () => {
   it("não deixa rebaixar o último admin ativo", async () => {
     tx.user.findUnique.mockResolvedValue({ id: "admin-2", role: "ADMIN", active: true });
     tx.user.count.mockResolvedValue(1);
-    const result = await updateUser(undefined, form({ id: "admin-2", name: "Outro", role: "RECEPCAO" }));
+    const result = await updateUser(undefined, form({ id: "admin-2", email: "admin-2@x.com", name: "Outro", role: "RECEPCAO" }));
     expect(result).toEqual({ error: "Não é possível remover o último Administrador ativo." });
     expect(tx.user.update).not.toHaveBeenCalled();
   });
@@ -198,17 +201,61 @@ describe("ADMIN", () => {
     expect(tx.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "r1" } });
   });
 
+  describe("edição do e-mail (#78)", () => {
+    const target = { id: "r1", role: "RECEPCAO", active: true, name: "BIA", email: "bia@x.com", crefito: null };
+
+    beforeEach(() => {
+      currentUser.current = { id: "admin-1", name: "Admin", email: "a@x.com", role: "ADMIN" };
+      tx.user.count.mockResolvedValue(1);
+    });
+
+    it("normaliza, grava e encerra todas as sessões do usuário alterado; auditoria sem valores", async () => {
+      tx.user.findUnique.mockResolvedValue(target);
+      const result = await updateUser(undefined, form({ id: "r1", name: "Bia", email: "  Bia.Nova@X.com ", role: "RECEPCAO" }));
+      expect(result).toMatchObject({ ok: true });
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: "r1" },
+        data: { name: "BIA", email: "bia.nova@x.com", role: "RECEPCAO", crefito: null },
+      });
+      expect(tx.session.deleteMany).toHaveBeenCalledWith({ where: { userId: "r1" } });
+      auditedWith("USUARIO_EDITADO", "r1", "Campos: e-mail.");
+      expect(JSON.stringify(tx.auditLog.create.mock.calls)).not.toMatch(/bia/i);
+    });
+
+    it("na própria conta, mantém só a sessão atual do Administrador", async () => {
+      tx.user.findUnique.mockResolvedValue({ ...target, id: "admin-1", role: "ADMIN", email: "a@x.com" });
+      await updateUser(undefined, form({ id: "admin-1", name: "Admin", email: "admin.novo@x.com", role: "ADMIN" }));
+      expect(tx.session.deleteMany).toHaveBeenCalledWith({
+        where: { userId: "admin-1", tokenHash: { not: "hash-sessao-atual" } },
+      });
+    });
+
+    it("inválido não chega ao banco; repetido vira erro de campo sem ecoar o valor", async () => {
+      tx.user.findUnique.mockResolvedValue(target);
+      const invalid = await updateUser(undefined, form({ id: "r1", name: "Bia", email: "sem-arroba", role: "RECEPCAO" }));
+      expect(invalid?.fieldErrors?.email).toEqual(["Informe um e-mail válido."]);
+      expect(tx.user.update).not.toHaveBeenCalled();
+
+      // A transação é desfeita inteira: nome, perfil e CREFITO também não mudam (ver integração).
+      tx.user.update.mockRejectedValueOnce(uniqueError({ target: ["email"] }));
+      const duplicate = await updateUser(undefined, form({ id: "r1", name: "Outro", email: "dono@x.com", role: "RECEPCAO" }));
+      expect(duplicate).toEqual({ fieldErrors: { email: ["Já existe um usuário com este e-mail."] } });
+      expect(JSON.stringify(duplicate)).not.toMatch(/dono/);
+      expect(tx.auditLog.create).not.toHaveBeenCalled();
+    });
+  });
+
   describe("auditoria da gestão de usuários (issue #56)", () => {
     it("registra criação, edição, troca de perfil, (des)ativação e senha na mesma transação", async () => {
       await createUser(undefined, form(newUser));
       auditedWith("USUARIO_CRIADO", "novo-1");
 
-      tx.user.findUnique.mockResolvedValue({ id: "r1", role: "RECEPCAO", active: true });
+      tx.user.findUnique.mockResolvedValue({ id: "r1", role: "RECEPCAO", active: true, name: "NOME", email: "r1@x.com", crefito: null });
       tx.user.count.mockResolvedValue(1);
-      await updateUser(undefined, form({ id: "r1", name: "Novo nome", role: "RECEPCAO" }));
-      auditedWith("USUARIO_EDITADO", "r1");
-      await updateUser(undefined, form({ id: "r1", name: "Novo nome", role: "FISIOTERAPEUTA", crefito: "1-F" }));
-      auditedWith("PERFIL_ALTERADO", "r1");
+      await updateUser(undefined, form({ id: "r1", email: "r1@x.com", name: "Novo nome", role: "RECEPCAO" }));
+      auditedWith("USUARIO_EDITADO", "r1", "Campos: nome.");
+      await updateUser(undefined, form({ id: "r1", email: "r1@x.com", name: "Novo nome", role: "FISIOTERAPEUTA", crefito: "1-F" }));
+      auditedWith("PERFIL_ALTERADO", "r1", "Campos: nome, perfil, CREFITO.");
       await setUserActive(undefined, form({ id: "r1", active: "false" }));
       auditedWith("USUARIO_DESATIVADO", "r1");
       tx.user.findUnique.mockResolvedValue({ id: "r1", role: "RECEPCAO", active: false });

@@ -83,7 +83,7 @@ describe("setupFirstAdmin", () => {
     });
     expect(tx.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ name: "Ana Souza", email: "ana@x.com", role: "ADMIN" }),
+        data: expect.objectContaining({ name: "ANA SOUZA", email: "ana@x.com", role: "ADMIN" }),
       }),
     );
     // Auditoria na mesma transação, com o IP confiável da requisição (issue #56).

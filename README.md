@@ -281,6 +281,7 @@ Variáveis do `.env` (modelo em `.env.example`):
 | `SETUP_TOKEN` | Opcional. Habilita o primeiro acesso pela tela de login enquanto não há usuários (mínimo de 32 caracteres). Sem ela, o cadastro pela web fica desligado. Remova depois do primeiro cadastro; ver [`src/modules/auth/README.md`](src/modules/auth/README.md#primeiro-acesso-tabela-de-usuários-vazia). |
 | `TRUST_PROXY` | Opcional. `true` só atrás de um proxy próprio que sobrescreva `x-forwarded-for`; na Vercel não é necessária. Sem proxy confiável, o limite de tentativas por IP não é aplicado; ver [`src/modules/auth/README.md`](src/modules/auth/README.md#limites-de-tentativas). |
 | `DEMO_DATA_TARGET` | Opcional, só em desenvolvimento. Alvo `host/banco` (local) em que o Administrador pode popular dados fictícios em Configurações → Desenvolvimento. Ausente = desligado. Nunca defina em produção; ver [`src/modules/dados-ficticios/README.md`](src/modules/dados-ficticios/README.md). |
+| `DEV_RESET_TARGET` | Opcional, só em desenvolvimento e **destrutiva**. Alvo `host/banco` (local) em que o Administrador pode limpar a base pela aba Configurações → Desenvolvimento, preservando usuários, configurações e auditoria. Independente de `DEMO_DATA_TARGET`. Ausente = desligado. Nunca defina em produção; ver [`src/modules/manutencao/README.md`](src/modules/manutencao/README.md). |
 
 A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um token aleatório num cookie `httpOnly`, e o banco guarda só o hash dele. Detalhes em [`src/modules/auth/README.md`](src/modules/auth/README.md).
 
@@ -295,6 +296,7 @@ A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um
 | `pnpm db:seed` | Cria o primeiro Administrador a partir do `.env` |
 | `pnpm db:admin --email <e-mail> [--name "<nome>"]` | Cria o Administrador, se o e-mail não existir, ou redefine a senha dele (reativa e encerra as sessões). Recusa e-mail de outro perfil (não promove ninguém). Mostra só host e banco; pede confirmação (`sim` no banco local, o **nome do banco** no remoto) e a senha sem eco, nunca por argumento. Para o Neon, defina `DATABASE_URL` com a URL direta só nesse terminal |
 | `pnpm db:reset [--executar] [--incluir-auditoria]` | **Destrutivo.** Reinicializa os dados preservando todos os usuários e as configurações (issue #62). Sem `--executar` é só simulação; com ele, pede o nome do banco e `LIMPAR`, e roda numa transação com conferências. A auditoria só é apagada com `--incluir-auditoria` (exceção A5/A7). Execução em ambiente real exige alvo e autorização registrados; procedimento em `src/modules/manutencao/README.md` |
+| `pnpm db:normalizar-nomes [--executar]` | Adequa os nomes cadastrais já gravados (usuários, pacientes, responsáveis e identificação da clínica) ao contrato em maiúsculas (issue #78). Sem `--executar` é só simulação com contagens; com ele, pede o nome do banco e roda numa transação. Idempotente; não altera snapshots clínicos nem auditoria. Em ambiente real, registre alvo e autorização antes; ver `src/modules/manutencao/README.md` |
 
 ---
 

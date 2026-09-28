@@ -214,14 +214,33 @@ export function EditUserDialog({ user }: { user: UserRow }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar usuário</DialogTitle>
-          <DialogDescription>{user.email}</DialogDescription>
+          <DialogDescription>
+            Alterar o e-mail muda o login: o anterior deixa de funcionar e as sessões abertas dessa pessoa são
+            encerradas (a sua sessão atual é mantida se a conta for a sua).
+          </DialogDescription>
         </DialogHeader>
         {/* Remonta quando os dados mudam após a revalidação (campos não controlados). */}
-        <form key={`${user.name}|${user.role}|${user.crefito ?? ""}`} action={formAction} className="flex flex-col gap-4" noValidate>
+        <form
+          key={`${user.name}|${user.email}|${user.role}|${user.crefito ?? ""}`}
+          action={formAction}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           <input type="hidden" name="id" value={user.id} />
           <FormError state={state} />
           <Field id={`${prefix}-nome`} label="Nome" errors={errors?.name}>
             <Input {...inputA11y(`${prefix}-nome`, errors?.name)} name="name" defaultValue={user.name} required />
+          </Field>
+          <Field id={`${prefix}-email`} label="E-mail" errors={errors?.email}>
+            <Input
+              {...inputA11y(`${prefix}-email`, errors?.email)}
+              name="email"
+              type="email"
+              autoComplete="off"
+              defaultValue={user.email}
+              maxLength={254}
+              required
+            />
           </Field>
           <RoleAndCrefitoFields
             prefix={prefix}

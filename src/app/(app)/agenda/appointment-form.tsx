@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { AppointmentActionState } from "@/modules/agenda/actions";
+import { describeWeek, endOptions, parseBusinessHours, startOptions } from "@/modules/agenda/business-hours";
 import { startsInPast } from "@/modules/agenda/validation";
 import { suggestEndTime } from "@/modules/configuracoes/settings";
 import { PatientCombobox } from "./patient-combobox";
@@ -63,6 +64,7 @@ export function AppointmentForm({
   patientName,
   appointmentId,
   suggestedDurationMinutes = null,
+  businessHours = null,
   cancelHref,
   submitLabel,
 }: {
@@ -76,6 +78,9 @@ export function AppointmentForm({
   // Duração sugerida da configuração (issue #63), só na criação: preenche o fim a partir do início
   // enquanto o fim não for editado à mão. Não altera agendamentos existentes nem a regra de conflito.
   suggestedDurationMinutes?: number | null;
+  // Expediente em vigor (#78, formato canônico) ou null (sem restrição). Com ele, início e fim viram
+  // listas só com horários válidos do dia; o servidor valida de novo no envio.
+  businessHours?: string | null;
   cancelHref: string;
   submitLabel: string;
 }) {
@@ -91,6 +96,11 @@ export function AppointmentForm({
   const errors = state?.fieldErrors;
   const minute = useClientMinute();
   const past = minute !== null && startsInPast(values.date, values.startTime, new Date(minute));
+  const week = businessHours ? parseBusinessHours(businessHours) : null;
+  const starts = week ? startOptions(week, values.date) : [];
+  const ends = week ? endOptions(week, values.date, values.startTime) : [];
+  // Valor atual fora do expediente (ex.: reagendar um horário antigo) não é oferecido: a pessoa escolhe outro.
+  const outsideNow = Boolean(week && values.startTime && (!starts.includes(values.startTime) || !ends.includes(values.endTime)));
 
   function field(name: keyof AppointmentFormValues) {
     return {
@@ -104,6 +114,14 @@ export function AppointmentForm({
           const next = { ...current, [name]: value };
           if (name === "startTime" && suggestedDurationMinutes && !endTouched) {
             next.endTime = suggestEndTime(value, suggestedDurationMinutes);
+          }
+          // Com expediente, um fim que deixou de ser possível (outro dia ou outro início) é limpo.
+          if (week && (name === "startTime" || name === "date") && !endOptions(week, next.date, next.startTime).includes(next.endTime)) {
+            next.endTime = "";
+          }
+          if (week && name === "date" && !startOptions(week, next.date).includes(next.startTime)) {
+            next.startTime = "";
+            next.endTime = "";
           }
           return next;
         });
@@ -131,6 +149,39 @@ export function AppointmentForm({
 
   function input(name: "date" | "startTime" | "endTime", label: string, type: string) {
     const id = `agendamento-${name}`;
+    if (week && name !== "date") {
+      const options = name === "startTime" ? starts : ends;
+      const empty =
+        name === "startTime"
+          ? starts.length
+            ? "Selecione o início"
+            : "Sem expediente neste dia"
+          : values.startTime
+            ? "Selecione o fim"
+            : "Escolha o início antes";
+      const current = values[name];
+      return (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={id}>{label}</Label>
+          <NativeSelect
+            {...a11y(id, errors?.[name])}
+            {...field(name)}
+            value={options.includes(current) ? current : ""}
+            disabled={options.length === 0}
+            required
+            className="w-full"
+          >
+            <NativeSelectOption value="">{empty}</NativeSelectOption>
+            {options.map((option) => (
+              <NativeSelectOption key={option} value={option}>
+                {option}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <FieldError id={`${id}-erro`} messages={errors?.[name]} />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col gap-2">
         <Label htmlFor={id}>{label}</Label>
@@ -190,6 +241,17 @@ export function AppointmentForm({
         {input("startTime", "Início *", "time")}
         {input("endTime", "Fim *", "time")}
       </div>
+
+      {week && (
+        <p className="-mt-3 text-xs text-muted-foreground" aria-live="polite">
+          {starts.length === 0
+            ? "A clínica não tem expediente neste dia: escolha outra data. "
+            : outsideNow && appointmentId
+              ? "O horário atual está fora do expediente: escolha um novo início e fim. "
+              : ""}
+          Expediente: {describeWeek(week)}. Os horários oferecidos respeitam pausas e fechamento.
+        </p>
+      )}
 
       {suggestedDurationMinutes ? (
         <p className="-mt-3 text-xs text-muted-foreground">

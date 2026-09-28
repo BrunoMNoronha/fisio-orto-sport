@@ -41,6 +41,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   CLI_SENHA_REDEFINIDA: "Senha redefinida (db:admin)",
   CONFIGURACAO_ALTERADA: "Configurações alteradas",
   USUARIO_EXCLUIDO: "Usuário excluído",
+  DADOS_FICTICIOS_GERADOS: "Dados fictícios gerados (desenvolvimento)",
 };
 
 export const AUDIT_RESULT_LABELS: Record<AuditResult, string> = {

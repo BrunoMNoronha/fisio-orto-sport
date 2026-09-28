@@ -12,6 +12,7 @@
 // - Respeita as regras da agenda (profissional apto, bloqueios, conflitos) e as constraints do banco;
 //   nada é desligado. Conferências antes do COMMIT: contagens exatas e User idêntico.
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { normalizeName } from "@/lib/names";
 import { lockProfessionals } from "@/modules/agenda/service";
 import {
   AgendaRuleError,
@@ -174,7 +175,7 @@ async function createPatient(
 
   const patient = await tx.patient.create({
     data: {
-      fullName: spec.fullName,
+      fullName: normalizeName(spec.fullName),
       birthDate: day(`${Number(reference.slice(0, 4)) - spec.age}-01-15`),
       sex: spec.sex,
       occupation: spec.occupation,

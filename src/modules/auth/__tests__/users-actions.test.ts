@@ -140,7 +140,7 @@ describe("ADMIN", () => {
     expect(result).toMatchObject({ ok: true });
     expect(tx.user.update).toHaveBeenCalledWith({
       where: { id: "f1" },
-      data: { name: "Fisio", role: "RECEPCAO", crefito: null },
+      data: { name: "FISIO", role: "RECEPCAO", crefito: null },
     });
   });
 

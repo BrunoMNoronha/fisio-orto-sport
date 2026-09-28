@@ -1,6 +1,7 @@
 // Validação do painel de configurações (issue #63). Tudo é revalidado no servidor; o formulário
 // só repete as regras para o feedback imediato.
 import { z } from "zod";
+import { normalizeName } from "@/lib/names";
 import { onlyDigits } from "@/modules/pacientes/validation";
 import { AGENDA_VIEWS, DEFAULT_SETTINGS, SETTINGS_LIMITS, isValidCnpj } from "./settings";
 
@@ -9,6 +10,15 @@ const optionalText = (label: string, max: number) =>
     .string()
     .optional()
     .transform((value) => (value ?? "").trim())
+    .pipe(z.string().max(max, { error: `${label} deve ter no máximo ${max} caracteres.` }))
+    .transform((value) => (value ? value : null));
+
+// Nomes institucionais em maiúsculas (contrato de nomes, #78).
+const optionalName = (label: string, max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => normalizeName(value ?? ""))
     .pipe(z.string().max(max, { error: `${label} deve ter no máximo ${max} caracteres.` }))
     .transform((value) => (value ? value : null));
 
@@ -99,8 +109,8 @@ const checkbox = z
 
 export const settingsSchema = z
   .object({
-    displayName: optionalText("O nome de exibição", SETTINGS_LIMITS.displayName),
-    legalName: optionalText("A razão social", SETTINGS_LIMITS.legalName),
+    displayName: optionalName("O nome de exibição", SETTINGS_LIMITS.displayName),
+    legalName: optionalName("A razão social", SETTINGS_LIMITS.legalName),
     cnpj,
     phone,
     email,

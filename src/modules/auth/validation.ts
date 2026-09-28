@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeName } from "@/lib/names";
 import { ROLES } from "./permissions";
 
 export const PASSWORD_MIN = 8;
@@ -15,11 +16,16 @@ const password = z
   .min(PASSWORD_MIN, { error: `A senha deve ter pelo menos ${PASSWORD_MIN} caracteres.` })
   .max(PASSWORD_MAX, { error: `A senha deve ter no máximo ${PASSWORD_MAX} caracteres.` });
 
+// Nome em maiúsculas (contrato de nomes, #78): o tamanho é validado depois de normalizar.
 const name = z
   .string({ error: "Informe o nome." })
-  .trim()
-  .min(2, { error: "O nome deve ter pelo menos 2 caracteres." })
-  .max(120, { error: "O nome deve ter no máximo 120 caracteres." });
+  .transform(normalizeName)
+  .pipe(
+    z
+      .string()
+      .min(2, { error: "O nome deve ter pelo menos 2 caracteres." })
+      .max(120, { error: "O nome deve ter no máximo 120 caracteres." }),
+  );
 
 const role = z.enum(ROLES, { error: "Selecione um perfil válido." });
 const id = z.string().min(1).max(64);

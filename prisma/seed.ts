@@ -4,6 +4,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { z } from "zod";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { normalizeName } from "../src/lib/names";
 import { hashPassword } from "../src/modules/auth/password";
 import { PASSWORD_MAX, PASSWORD_MIN } from "../src/modules/auth/validation";
 
@@ -15,7 +16,11 @@ const env = z
       .string()
       .min(PASSWORD_MIN, `SEED_ADMIN_PASSWORD deve ter pelo menos ${PASSWORD_MIN} caracteres.`)
       .max(PASSWORD_MAX),
-    SEED_ADMIN_NAME: z.string().trim().min(2, "SEED_ADMIN_NAME deve ter pelo menos 2 caracteres."),
+    // Nome em maiúsculas (contrato de nomes, #78).
+    SEED_ADMIN_NAME: z
+      .string()
+      .transform(normalizeName)
+      .pipe(z.string().min(2, "SEED_ADMIN_NAME deve ter pelo menos 2 caracteres.").max(120)),
   })
   .safeParse(process.env);
 

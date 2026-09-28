@@ -7,7 +7,7 @@ describe("createUserSchema", () => {
   it("aceita dados válidos e normaliza o e-mail", () => {
     const result = createUserSchema.parse(valid);
     expect(result.email).toBe("ana@clinica.com");
-    expect(result.name).toBe("Ana Souza");
+    expect(result.name).toBe("ANA SOUZA");
   });
 
   it("exige senha com pelo menos 8 caracteres", () => {

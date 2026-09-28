@@ -48,7 +48,7 @@ describe("settingsSchema", () => {
       printShowClinicInfo: "on",
     });
     expect(parsed).toMatchObject({
-      displayName: "Clínica Teste",
+      displayName: "CLÍNICA TESTE",
       cnpj: "11222333000181",
       phone: "61999990000",
       email: "contato@exemplo.test",

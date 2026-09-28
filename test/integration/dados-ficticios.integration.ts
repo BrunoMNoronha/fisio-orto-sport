@@ -213,7 +213,7 @@ describe("dados fictícios no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATA
     const patients = await prisma.patient.findMany({ where: { notes: { startsWith: MARKER_PREFIX } }, orderBy: { fullName: "asc" } });
     assert.equal(patients.length, 4);
     for (const p of patients) {
-      assert.match(p.fullName, /Fictíci[oa] Demonstração/);
+      assert.match(p.fullName, /FICTÍCI[OA] DEMONSTRAÇÃO/);
       assert.equal(p.cpf, null);
       assert.equal(p.email, null);
       assert.equal(p.address, null);

@@ -136,7 +136,7 @@ describe("responsável legal", () => {
       guardianName: "João Responsável",
       guardianPhone: "(11) 91111-2222",
     });
-    expect(data.guardianName).toBe("João Responsável");
+    expect(data.guardianName).toBe("JOÃO RESPONSÁVEL");
     expect(data.guardianPhone).toBe("11911112222");
     expect(data.guardianRelationship).toBeNull();
   });
@@ -164,7 +164,7 @@ describe("responsável legal", () => {
 describe("demais campos", () => {
   it("normaliza nome e e-mail; opcionais vazios viram null", () => {
     const data = patientSchema.parse({ ...adult, email: "  Maria@Example.COM " });
-    expect(data.fullName).toBe("Maria Teste");
+    expect(data.fullName).toBe("MARIA TESTE");
     expect(data.email).toBe("maria@example.com");
     expect(data.address).toBeNull();
     expect(data.notes).toBeNull();

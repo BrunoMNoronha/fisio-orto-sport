@@ -18,6 +18,7 @@ import {
   AgendaRuleError,
   assertNoConflict,
   assertNotBlocked,
+  assertWithinBusinessHours,
   assertProfessionalAvailable,
   checkPatientConflict,
   PatientConflictWarning,
@@ -142,13 +143,15 @@ const day = (date: string) => new Date(`${date}T00:00:00.000Z`);
 const clinical = (text: string) => `${CLINICAL_PREFIX} ${text}`;
 const hh = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 
-// Primeiro horário livre do dia para o profissional, a partir da hora preferida (regras da agenda).
-async function findSlot(tx: Tx, professionalId: string, patientId: string, date: string, preferred: number) {
+// Primeiro horário livre do dia para o profissional, a partir da hora preferida (regras da agenda,
+// inclusive o expediente quando ligado, #78). null = nenhum horário possível no dia.
+async function findSlotOn(tx: Tx, professionalId: string, patientId: string, date: string, preferred: number) {
   const start = Math.max(0, SLOT_HOURS.indexOf(preferred as (typeof SLOT_HOURS)[number]));
   for (const hour of [...SLOT_HOURS.slice(start), ...SLOT_HOURS.slice(0, start)]) {
     const startsAt = toInstant(date, hh(hour));
     const slot = { professionalId, startsAt, endsAt: new Date(startsAt.getTime() + APPOINTMENT_MINUTES * 60_000) };
     try {
+      await assertWithinBusinessHours(tx, slot);
       await assertNotBlocked(tx, slot);
       await assertNoConflict(tx, slot);
       await checkPatientConflict(tx, { ...slot, patientId });
@@ -158,9 +161,28 @@ async function findSlot(tx: Tx, professionalId: string, patientId: string, date:
       throw error;
     }
   }
-  const [y, m, d] = date.split("-");
+  return null;
+}
+
+// Dia preferido do catálogo e, se não houver horário (dia fechado, pausa, bloqueio, lotado), os dias
+// seguintes na mesma direção: passado para trás, futuro para frente, até uma semana. `minDay` protege a
+// cronologia (atendimento nunca antes do plano) e o passado nunca vira hoje ou futuro.
+const DAY_SEARCH = 7;
+async function findSlot(
+  tx: Tx,
+  input: { professionalId: string; patientId: string; reference: string; day: number; hour: number; minDay?: number },
+) {
+  const direction = input.day < 0 ? -1 : 1;
+  for (let k = 0; k < DAY_SEARCH; k++) {
+    const offset = input.day + direction * k;
+    if (input.day < 0 && offset >= 0) break;
+    if (input.minDay !== undefined && offset < input.minDay) break;
+    const slot = await findSlotOn(tx, input.professionalId, input.patientId, addDays(input.reference, offset), input.hour);
+    if (slot) return slot;
+  }
+  const [y, m, d] = addDays(input.reference, input.day).split("-");
   throw new DevDataError(
-    `Não há horário livre na agenda do profissional em ${d}/${m}/${y} para o conjunto fictício. Nada foi gravado.`,
+    `Não há horário possível na agenda do profissional perto de ${d}/${m}/${y} (expediente, bloqueios ou ocupação) para o conjunto fictício. Nada foi gravado.`,
   );
 }
 
@@ -260,7 +282,14 @@ async function createPatient(
 
   let sessionNumber = 0;
   for (const appointment of spec.appointments) {
-    const slot = await findSlot(tx, professional.id, patient.id, date(appointment.day), appointment.hour);
+    const slot = await findSlot(tx, {
+      professionalId: professional.id,
+      patientId: patient.id,
+      reference,
+      day: appointment.day,
+      hour: appointment.hour,
+      minDay: appointment.session ? spec.plan?.day : undefined,
+    });
     await assertProfessionalAvailable(tx, professional.id);
     const created = await tx.appointment.create({
       data: {

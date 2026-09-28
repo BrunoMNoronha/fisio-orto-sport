@@ -6,8 +6,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
+import { OUTSIDE_BADGE, isOutsideBusinessHours } from "@/modules/agenda/business-hours";
 import { getAppointment } from "@/modules/agenda/queries";
 import { APPOINTMENT_ATTENDANCE_LABELS, APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
+import { getAgendaPreferences } from "@/modules/configuracoes/queries";
 import { AttendanceForm } from "../attendance-form";
 import { CancelAppointmentForm } from "../cancel-appointment-form";
 import { agendaHref, formatDateTime, formatDay, formatTime } from "../format";
@@ -27,8 +29,10 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
   const actor = await requirePermission("agenda:ler");
   const canManage = can(actor.role, "agenda:gerir");
   const { id } = await params;
-  const appointment = await getAppointment(id);
+  const [appointment, preferences] = await Promise.all([getAppointment(id), getAgendaPreferences()]);
   if (!appointment) notFound();
+  // Salvo fora do expediente em vigor: continua consultável, cancelável e com presença; só é avisado.
+  const outside = isOutsideBusinessHours(preferences.businessHours, appointment);
 
   const active = appointment.status === "AGENDADO";
   const cancelledBy = appointment.cancelledBy ? ` por ${appointment.cancelledBy.name}` : "";
@@ -64,6 +68,7 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">Agendamento</h1>
             <Badge variant={active ? "secondary" : "outline"}>{APPOINTMENT_STATUS_LABELS[appointment.status]}</Badge>
+            {outside && <Badge variant="outline">{OUTSIDE_BADGE}</Badge>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link

@@ -36,6 +36,8 @@ const prismaMock = {
     delete: jest.fn(),
     deleteMany: jest.fn(),
   },
+  // Expediente (#78): sem linha de configuração, não restringe.
+  clinicSettings: { findUnique: jest.fn() },
   // Bloqueios (MEL-02).
   scheduleBlock: {
     findFirst: jest.fn(),
@@ -257,6 +259,47 @@ describe("createAppointment", () => {
   it("propaga erros inesperados", async () => {
     prismaMock.appointment.create.mockRejectedValue(new Error("falha de rede"));
     await expect(createAppointment(undefined, form(newAppointment))).rejects.toThrow("falha de rede");
+  });
+});
+
+// Expediente (#78). `slot` é segunda-feira, 21/09/2026, 09:00–10:00 em America/Sao_Paulo.
+describe("expediente no servidor", () => {
+  // Semana: domingo a sábado; só a segunda (índice 1) varia.
+  const week = (monday: string) => `;${monday};;;;;`;
+  const withHours = (monday: string, enabled = true) =>
+    prismaMock.clinicSettings.findUnique.mockResolvedValueOnce({ businessHoursEnabled: enabled, businessHours: week(monday) });
+
+  it.each([
+    ["dentro do intervalo", "08:00-12:00"],
+    ["exatamente no início e no fim", "09:00-10:00"],
+    ["no segundo intervalo", "07:00-08:00,09:00-12:00"],
+  ])("aceita: %s", async (_label, monday) => {
+    withHours(monday);
+    await expectRedirect(createAppointment(undefined, form(newAppointment)), "/agenda/a1");
+  });
+
+  it.each([
+    ["antes da abertura", "10:00-12:00"],
+    ["duração que ultrapassa o fechamento", "08:00-09:30"],
+    ["atravessando a pausa", "08:00-09:30,09:45-12:00"],
+    ["dia fechado", ""],
+  ])("recusa sem gravar: %s", async (_label, monday) => {
+    withHours(monday);
+    const result = await createAppointment(undefined, form(newAppointment));
+    expect(result?.fieldErrors?.startTime?.[0]).toMatch(/^Fora do expediente da clínica\./);
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+  });
+
+  it("chave desligada não restringe, mesmo com expediente preenchido", async () => {
+    withHours("", false);
+    await expectRedirect(createAppointment(undefined, form(newAppointment)), "/agenda/a1");
+  });
+
+  it("reagendar também respeita o expediente vigente no envio", async () => {
+    withHours("10:00-12:00");
+    const result = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
+    expect(result?.fieldErrors?.startTime?.[0]).toMatch(/^Fora do expediente/);
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
   });
 });
 

@@ -2,6 +2,7 @@
 // Sem `server-only`: também é usado pelos formulários no cliente. Limites compartilhados com a
 // agenda vêm de lá (uma definição só); o catálogo completo, com o que é só referência ou constante
 // técnica, está no README do módulo.
+import { CLOSED_WEEK } from "@/modules/agenda/business-hours";
 import { AGENDA_VIEWS, MAX_DURATION_MINUTES, type AgendaView } from "@/modules/agenda/validation";
 
 export type ClinicSettingsValues = {
@@ -16,6 +17,9 @@ export type ClinicSettingsValues = {
   suggestedDurationMinutes: number | null;
   agendaDefaultView: AgendaView;
   printShowClinicInfo: boolean;
+  // Expediente (#78): texto canônico semanal (agenda/business-hours.ts) e chave que o aplica.
+  businessHoursEnabled: boolean;
+  businessHours: string;
 };
 
 export type SettingsField = keyof ClinicSettingsValues;
@@ -41,6 +45,9 @@ export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   suggestedDurationMinutes: null,
   agendaDefaultView: "dia",
   printShowClinicInfo: false,
+  // Sem expediente e sem restrição: parametrizar precede ativar.
+  businessHoursEnabled: false,
+  businessHours: CLOSED_WEEK,
 };
 
 export const SETTINGS_FIELDS = Object.keys(DEFAULT_SETTINGS) as SettingsField[];
@@ -71,6 +78,8 @@ export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
   suggestedDurationMinutes: "Duração sugerida",
   agendaDefaultView: "Visão inicial da agenda",
   printShowClinicInfo: "Identificação nas impressões",
+  businessHoursEnabled: "Aplicar expediente",
+  businessHours: "Expediente",
 };
 
 export function changedFields(before: ClinicSettingsValues, after: ClinicSettingsValues): SettingsField[] {

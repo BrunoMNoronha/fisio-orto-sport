@@ -33,6 +33,8 @@ describe("settingsSchema", () => {
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
       printShowClinicInfo: false,
+      businessHoursEnabled: false,
+      businessHours: ";;;;;;",
       expectedVersion: 0,
     });
   });

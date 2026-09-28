@@ -669,6 +669,11 @@ model ClinicSettings {
   // Visão que /agenda abre sem `view` na URL (#69): "dia", "semana" ou "lista" (CHECK manual).
   agendaDefaultView        String   @default("dia") @db.VarChar(10)
   printShowClinicInfo      Boolean  @default(false)
+  // Expediente real (#78), separado da faixa visual: semanal, até 2 intervalos por dia, formato em
+  // src/modules/agenda/business-hours.ts (CHECK manual "ClinicSettings_business_hours_format"). Só
+  // restringe novos agendamentos e reagendamentos com businessHoursEnabled ligado.
+  businessHoursEnabled     Boolean  @default(false)
+  businessHours            String   @default(";;;;;;") @db.VarChar(200)
   version                  Int      @default(1)
   updatedAt                DateTime @updatedAt @db.Timestamptz(3)
   updatedById              String

@@ -12,6 +12,7 @@ import {
   assertNotBlocked,
   assertPatientActive,
   assertProfessionalAvailable,
+  assertWithinBusinessHours,
   checkPatientConflict,
   isOverlapViolation,
   type ConflictItem,
@@ -127,6 +128,7 @@ export async function insertAppointment(
     await lockProfessionals(tx, [data.professionalId]);
     await assertPatientActive(tx, data.patientId);
     await assertProfessionalAvailable(tx, data.professionalId);
+    await assertWithinBusinessHours(tx, data);
     await assertNotBlocked(tx, data);
     await assertNoConflict(tx, data);
     if (!allowPatientConflict) await checkPatientConflict(tx, data);
@@ -160,6 +162,7 @@ export async function moveAppointment(
     const blocked = await blockedByRecord(tx, id, locked);
     if (blocked) return blocked;
     await assertProfessionalAvailable(tx, slot.professionalId);
+    await assertWithinBusinessHours(tx, slot);
     await assertNotBlocked(tx, slot);
     await assertNoConflict(tx, slot, id);
     if (!allowPatientConflict) await checkPatientConflict(tx, { ...slot, patientId: current.patientId }, id);

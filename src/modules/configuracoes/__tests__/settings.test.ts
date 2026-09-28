@@ -23,6 +23,8 @@ describe("padrões", () => {
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
       printShowClinicInfo: false,
+      businessHoursEnabled: false,
+      businessHours: ";;;;;;",
     });
   });
 });

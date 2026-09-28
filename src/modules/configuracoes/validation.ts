@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { normalizeName } from "@/lib/names";
 import { onlyDigits } from "@/modules/pacientes/validation";
+import { formatBusinessHours, isClosedWeek, parseBusinessHours } from "@/modules/agenda/business-hours";
 import { AGENDA_VIEWS, DEFAULT_SETTINGS, SETTINGS_LIMITS, isValidCnpj } from "./settings";
 
 const optionalText = (label: string, max: number) =>
@@ -101,6 +102,23 @@ const agendaView = z
     return view;
   });
 
+// Expediente semanal no formato canônico (montado pelo formulário); vazio = sem expediente.
+const businessHours = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    const text = (value ?? "").trim() || DEFAULT_SETTINGS.businessHours;
+    const week = parseBusinessHours(text);
+    if (!week) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Confira o expediente: em cada dia, o fim deve ser depois do início e o segundo intervalo, depois do primeiro.",
+      });
+      return z.NEVER;
+    }
+    return formatBusinessHours(week);
+  });
+
 // Checkbox: presente = "on"; ausente = desligado.
 const checkbox = z
   .string()
@@ -120,12 +138,19 @@ export const settingsSchema = z
     suggestedDurationMinutes: duration,
     agendaDefaultView: agendaView,
     printShowClinicInfo: checkbox,
+    businessHoursEnabled: checkbox,
+    businessHours,
     // Versão lida quando o formulário abriu (0 = nunca salvo).
     expectedVersion: z.coerce.number().int().min(0).max(1_000_000_000),
   })
   .refine((data) => data.agendaDayEndHour > data.agendaDayStartHour, {
     path: ["agendaDayEndHour"],
     error: "O fim da faixa deve ser depois do início.",
+  })
+  // Parametrização precede ativação: não se aplica um expediente sem nenhum dia de atendimento.
+  .refine((data) => !data.businessHoursEnabled || !isClosedWeek(parseBusinessHours(data.businessHours) ?? []), {
+    path: ["businessHoursEnabled"],
+    error: "Defina ao menos um dia com expediente antes de aplicá-lo à agenda.",
   });
 
 export type SettingsInput = z.infer<typeof settingsSchema>;

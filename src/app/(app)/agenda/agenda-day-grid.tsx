@@ -51,7 +51,7 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
     <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
       <div
         className="grid min-w-fit"
-        style={{ gridTemplateColumns: `3.5rem repeat(${columns.length}, minmax(11rem, 1fr))` }}
+        style={{ gridTemplateColumns: `3.5rem ${columns.map(column => `minmax(${Math.max(11, assignLanes(column.items).lanes * 9)}rem, 1fr)`).join(" ")}` }}
       >
         <div className="sticky left-0 z-[4] border-b bg-card" />
         {columns.map(({ professional, items: own }) => (
@@ -144,6 +144,7 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
                     key={item.id}
                     href={`/agenda/${item.id}`}
                     aria-label={`${time}, ${item.patient.fullName}, ${APPOINTMENT_STATUS_LABELS[item.status]}`}
+                    title={`${item.patient.fullName} · ${time}`}
                     className={cn(
                       "absolute z-[2] flex flex-col overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-xs transition-colors",
                       cancelled

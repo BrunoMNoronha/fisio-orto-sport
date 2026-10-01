@@ -45,6 +45,7 @@ export async function saveClinicSettings(
   const { values, expectedVersion, actor } = input;
   try {
     return await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended('agenda:capacity', 0))`;
       const current = await tx.clinicSettings.findUnique({ where: { id: SETTINGS_ID } });
       const currentVersion = current?.version ?? 0;
       if (currentVersion !== expectedVersion) throw new SettingsConflictError();

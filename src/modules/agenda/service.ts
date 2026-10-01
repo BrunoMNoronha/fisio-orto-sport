@@ -63,12 +63,12 @@ function isWriteConflict(error: unknown) {
   return typeof error === "object" && error !== null && (error as { code?: unknown }).code === "P2034";
 }
 
-// Serializa, por profissional, as transações que criam ou movem agendamentos (issue #39). Sem isso,
-// duas transações simultâneas passam pela checagem de conflito, esperam uma pela outra na constraint
-// e o PostgreSQL pode abortar uma por deadlock (erro 500 em vez da mensagem de conflito). Com o lock,
-// a segunda espera a primeira terminar e a checagem já enxerga o que foi confirmado. Os locks são
-// tomados em ordem fixa (reagendar pode envolver dois profissionais) e liberados no fim da transação.
+// Serializa criações, reagendamentos e bloqueios por profissional (#39/#82). A segunda
+// transação consulta ocupação confirmada após aguardar. Locks de origem/destino em ordem
+// fixa reduzem deadlocks; todos são liberados no fim da transação.
 export async function lockProfessionals(tx: Prisma.TransactionClient, ids: string[]) {
+  // Compartilhado entre agendas; alteração da capacidade toma o exclusivo no banco.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtextextended('agenda:capacity', 0))`;
   for (const id of [...new Set(ids)].sort()) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`agenda:${id}`}, 0))`;
   }
@@ -116,8 +116,8 @@ export function ruleFailure(error: unknown): AgendaFailure | null {
   return null;
 }
 
-// A checagem de conflito na transação dá a mensagem amigável; a constraint Appointment_no_overlap
-// (23P01) continua barrando qualquer escrita que não passe por aqui.
+// A checagem de capacidade na transação dá a mensagem amigável; o trigger Appointment_capacity
+// (23P01) também protege SQL direto, seed e ferramentas administrativas.
 export async function insertAppointment(
   db: Db,
   data: NewAppointment,

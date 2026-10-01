@@ -1,3 +1,4 @@
+import { peakOccupancy } from "@/modules/agenda/capacity";
 // Integração da geração de dados fictícios (issue #73) com PostgreSQL real. Cria um banco PRÓPRIO
 // (CREATE DATABASE), aplica as migrações, semeia usuários e registros "preexistentes" e o descarta no
 // fim, para não interferir nas outras suítes. Exige permissão CREATEDB (CI e Docker local têm).
@@ -245,18 +246,17 @@ describe("dados fictícios no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATA
     }
     assert.equal(appointments.filter((a) => a.status === "CANCELADO").length, 1);
 
-    // Conflitos: o horário preferido de Ana (hoje+3 09:00) estava ocupado e o de Beto (hoje+2 10:00)
-    // bloqueado; os agendamentos foram para o próximo horário livre.
+    // Com capacidade 3, Ana permanece às 09:00 apesar de outra pessoa;
+    // o bloqueio de Beto continua deslocando o agendamento para 11:00.
     const on = (date: string, pro: string) =>
       appointments.filter((a) => a.professionalId === pro && toLocalDate(a.startsAt) === date && a.status === "AGENDADO");
-    assert.deepEqual(on(addDays(reference, 3), ids.ana).map((a) => toLocalTime(a.startsAt)), ["10:00"]);
+    assert.deepEqual(on(addDays(reference, 3), ids.ana).map((a) => toLocalTime(a.startsAt)), ["09:00"]);
     assert.deepEqual(on(addDays(reference, 2), ids.beto).map((a) => toLocalTime(a.startsAt)), ["11:00"]);
-    const overlap = await raw.query(
-      `SELECT count(*)::int AS n FROM "Appointment" a JOIN "Appointment" b ON a.id < b.id
-        AND a."professionalId" = b."professionalId" AND a.status = 'AGENDADO' AND b.status = 'AGENDADO'
-        AND a."startsAt" < b."endsAt" AND b."startsAt" < a."endsAt"`,
-    );
-    assert.equal(overlap.rows[0].n, 0);
+    for (const professionalId of [ids.ana, ids.beto]) {
+      const slots = await prisma.appointment.findMany({ where: { professionalId, status: "AGENDADO" },
+        select: { startsAt: true, endsAt: true } });
+      assert.ok(peakOccupancy(slots) <= 3, "capacidade padrão respeitada inclusive pelo gerador");
+    }
 
     const anamneses = await prisma.anamnesis.findMany({ where: { patientId: { in: ptIds } } });
     for (const an of anamneses) {

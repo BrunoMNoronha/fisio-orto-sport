@@ -30,6 +30,7 @@ describe("settingsSchema", () => {
       address: null,
       agendaDayStartHour: 7,
       agendaDayEndHour: 20,
+      maxSimultaneousAppointments: 3,
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
       printShowClinicInfo: false,

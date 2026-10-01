@@ -139,8 +139,8 @@ enum AppointmentAttendance {
 }
 
 // Agendamento. Não há exclusão física: cancelar muda o status e preserva o registro.
-// Sobreposição para o mesmo profissional é barrada na action e, no banco, pela constraint
-// de exclusão "Appointment_no_overlap" (btree_gist, intervalo [início, fim), só AGENDADO).
+// Excesso de capacidade por profissional é barrado na action e pelo trigger de banco
+// "Appointment_capacity" (intervalo [início, fim), só AGENDADO, issue #82).
 // Presença (MEL-01): `attendance` com quem/quando marcou (só o último); CHECK manual
 // "Appointment_attendance_consistent": os três campos vêm juntos e só em agendamento AGENDADO.
 model Appointment {
@@ -666,6 +666,7 @@ model ClinicSettings {
   agendaDayStartHour       Int      @default(7)
   agendaDayEndHour         Int      @default(20)
   // Duração sugerida para novos agendamentos; null = desligada.
+  maxSimultaneousAppointments Int @default(3)
   suggestedDurationMinutes Int?
   // Visão que /agenda abre sem `view` na URL (#69): "dia", "semana" ou "lista" (CHECK manual).
   agendaDefaultView        String   @default("dia") @db.VarChar(10)

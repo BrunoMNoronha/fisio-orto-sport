@@ -39,6 +39,7 @@ type FormValues = {
   address: string;
   agendaDayStartHour: string;
   agendaDayEndHour: string;
+  maxSimultaneousAppointments: string;
   suggestedDurationMinutes: string;
   agendaDefaultView: string;
   printShowClinicInfo: boolean;
@@ -58,6 +59,7 @@ function toForm(values: ClinicSettingsValues): FormValues {
     agendaDayStartHour: String(values.agendaDayStartHour),
     agendaDayEndHour: String(values.agendaDayEndHour),
     suggestedDurationMinutes: values.suggestedDurationMinutes ? String(values.suggestedDurationMinutes) : "",
+    maxSimultaneousAppointments: String(values.maxSimultaneousAppointments),
     agendaDefaultView: values.agendaDefaultView,
     printShowClinicInfo: values.printShowClinicInfo,
     businessHoursEnabled: values.businessHoursEnabled,
@@ -78,6 +80,7 @@ function fromFormData(formData: FormData): FormValues {
     agendaDayStartHour: get("agendaDayStartHour"),
     agendaDayEndHour: get("agendaDayEndHour"),
     suggestedDurationMinutes: get("suggestedDurationMinutes"),
+    maxSimultaneousAppointments: get("maxSimultaneousAppointments"),
     agendaDefaultView: get("agendaDefaultView"),
     printShowClinicInfo: formData.get("printShowClinicInfo") === "on",
     businessHoursEnabled: formData.get("businessHoursEnabled") === "on",
@@ -108,6 +111,7 @@ const FIELD_TAB: Record<keyof FormValues, TabId> = {
   agendaDayStartHour: "agenda",
   agendaDayEndHour: "agenda",
   suggestedDurationMinutes: "agenda",
+  maxSimultaneousAppointments: "agenda",
   agendaDefaultView: "agenda",
   businessHoursEnabled: "agenda",
   businessHours: "agenda",
@@ -398,7 +402,7 @@ export function SettingsForm({
             <CardHeader>
               <CardTitle>Grade da agenda</CardTitle>
               <CardDescription>
-                Preferências de exibição e de preenchimento. A faixa do dia é só visual: não é o expediente (abaixo) nem
+                Preferências de exibição, preenchimento e capacidade. A faixa do dia é só visual: não é o expediente (abaixo) nem
                 bloqueio de horários, e não muda a regra de conflito.
               </CardDescription>
             </CardHeader>
@@ -467,6 +471,22 @@ export function SettingsForm({
                 />
               </div>
               <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="config-maxSimultaneousAppointments">Agendamentos simultâneos por fisioterapeuta</Label>
+                <Input
+                  {...a11y("config-maxSimultaneousAppointments", errors?.maxSimultaneousAppointments, true)}
+                  name="maxSimultaneousAppointments"
+                  type="number" min={1} max={2147483647} step={1}
+                  value={values.maxSimultaneousAppointments}
+                  disabled={!canManage}
+                  onChange={(event) => set("maxSimultaneousAppointments", event.target.value)}
+                />
+                <p id="config-maxSimultaneousAppointments-ajuda" className="text-xs text-muted-foreground">
+                  Padrão: 3. Vale separadamente para cada fisioterapeuta durante todo o atendimento.
+                  Reduzir o limite preserva os agendamentos existentes.
+                </p>
+                <FieldError id="config-maxSimultaneousAppointments-erro" messages={errors?.maxSimultaneousAppointments} />
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="config-agendaDefaultView">Visão inicial da agenda</Label>
                 <NativeSelect
                   {...a11y("config-agendaDefaultView", errors?.agendaDefaultView, true)}

@@ -77,7 +77,7 @@ Nenhum `User` é criado, alterado ou removido: perfil, estado, senha e CREFITO f
   - sem agendamento sobre bloqueio ativo ou sobre outro agendamento do profissional;
   - aviso de conflito do paciente respeitado.
   Se o horário preferido estiver ocupado, usa o próximo livre do dia; sem horário livre, recusa tudo.
-  A constraint `Appointment_no_overlap` continua valendo.
+  O trigger `Appointment_capacity` garante o limite vigente (#82); um horário ocupado ainda pode receber outro paciente quando houver capacidade. Bloqueios continuam impedindo o encaixe.
 - **Clínico:**
   - datas clínicas não futuras;
   - avaliação a partir da anamnese, plano a partir da avaliação;

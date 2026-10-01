@@ -116,6 +116,7 @@ beforeEach(() => {
   prismaMock.user.findUnique.mockResolvedValue({ role: "FISIOTERAPEUTA", active: true });
   prismaMock.appointment.findFirst.mockResolvedValue(null);
   prismaMock.appointment.findMany.mockResolvedValue([]);
+  prismaMock.clinicSettings.findUnique.mockResolvedValue({ maxSimultaneousAppointments: 1, businessHoursEnabled: false });
   prismaMock.scheduleBlock.findFirst.mockResolvedValue(null);
   prismaMock.scheduleBlock.create.mockResolvedValue({ id: "b1" });
   prismaMock.scheduleBlock.updateMany.mockResolvedValue({ count: 1 });
@@ -181,7 +182,7 @@ describe("Fisioterapeuta gerindo a agenda de outro profissional", () => {
   });
 
   it("as regras de negócio continuam valendo (conflito e profissional inativo)", async () => {
-    prismaMock.appointment.findFirst.mockResolvedValueOnce({ id: "outro" });
+    prismaMock.appointment.findMany.mockResolvedValueOnce([{ startsAt: STARTS, endsAt: ENDS }]);
     expect((await createAppointment(undefined, form(newAppointment)))?.fieldErrors).toBeDefined();
     prismaMock.user.findUnique.mockResolvedValueOnce({ role: "FISIOTERAPEUTA", active: false });
     expect(await createAppointment(undefined, form(newAppointment))).toMatchObject({
@@ -240,12 +241,12 @@ describe("createAppointment", () => {
   });
 
   it("rejeita conflito com agendamento ativo do mesmo profissional", async () => {
-    prismaMock.appointment.findFirst.mockResolvedValue({ id: "outro" });
+    prismaMock.appointment.findMany.mockResolvedValue([{ startsAt: STARTS, endsAt: ENDS }]);
     const result = await createAppointment(undefined, form(newAppointment));
     expect(result).toEqual({ fieldErrors: { startTime: [CONFLICT_MESSAGE] } });
-    expect(prismaMock.appointment.findFirst).toHaveBeenCalledWith({
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith({
       where: { professionalId: "f1", status: "AGENDADO", startsAt: { lt: ENDS }, endsAt: { gt: STARTS } },
-      select: { id: true },
+      select: { startsAt: true, endsAt: true },
     });
     expect(prismaMock.appointment.create).not.toHaveBeenCalled();
   });
@@ -309,7 +310,7 @@ describe("rescheduleAppointment", () => {
       rescheduleAppointment(undefined, form({ id: "a1", ...slot, startTime: "14:00", endTime: "15:00" })),
       "/agenda/a1",
     );
-    expect(prismaMock.appointment.findFirst).toHaveBeenCalledWith(
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: { not: "a1" }, status: "AGENDADO" }) }),
     );
     expect(prismaMock.appointment.update).toHaveBeenCalledWith({
@@ -325,7 +326,7 @@ describe("rescheduleAppointment", () => {
   });
 
   it("repete a validação de conflito", async () => {
-    prismaMock.appointment.findFirst.mockResolvedValue({ id: "outro" });
+    prismaMock.appointment.findMany.mockResolvedValue([{ startsAt: STARTS, endsAt: ENDS }]);
     const result = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
     expect(result).toEqual({ fieldErrors: { startTime: [CONFLICT_MESSAGE] } });
     expect(prismaMock.appointment.update).not.toHaveBeenCalled();
@@ -565,9 +566,9 @@ describe("lock por profissional", () => {
     prismaMock.appointment.findFirst.mockResolvedValue(null);
     prismaMock.appointment.create.mockResolvedValue({ id: "a9" });
     await expect(createAppointment(undefined, form(newAppointment))).rejects.toThrow("NEXT_REDIRECT");
-    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(1);
+    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(2);
     expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
-      prismaMock.appointment.findFirst.mock.invocationCallOrder[0],
+      prismaMock.appointment.findMany.mock.invocationCallOrder[0],
     );
   });
 
@@ -576,7 +577,7 @@ describe("lock por profissional", () => {
     prismaMock.appointment.findFirst.mockResolvedValue(null);
     prismaMock.appointment.update.mockResolvedValue({ id: "a1" });
     await expect(rescheduleAppointment(undefined, form({ id: "a1", ...slot }))).rejects.toThrow("NEXT_REDIRECT");
-    const keys = prismaMock.$executeRaw.mock.calls.map((call: unknown[]) => call[1]);
+    const keys = prismaMock.$executeRaw.mock.calls.map((call: unknown[]) => call[1]).filter(Boolean);
     expect(keys).toEqual(["agenda:f1", "agenda:f2"]);
     // A linha do agendamento é travada (FOR UPDATE) depois dos locks por profissional.
     expect(prismaMock.$queryRaw.mock.invocationCallOrder[0]).toBeGreaterThan(
@@ -620,7 +621,7 @@ describe("MEL-02: conflito do paciente é aviso", () => {
   const other = { id: "a7", startsAt: STARTS, endsAt: ENDS, professional: { name: "Dra. Outra" } };
 
   it("sem confirmação, avisa e não grava", async () => {
-    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    prismaMock.appointment.findMany.mockImplementation(async (args) => args.where.patientId ? [other] : []);
     const result = await createAppointment(undefined, form(newAppointment));
     expect(result).toMatchObject({
       patientConflicts: [{ id: "a7", label: "21/09/2026 09:00–10:00 com Dra. Outra" }],
@@ -634,13 +635,13 @@ describe("MEL-02: conflito do paciente é aviso", () => {
   });
 
   it("com confirmação, agenda mesmo assim (encaixe)", async () => {
-    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    prismaMock.appointment.findMany.mockImplementation(async (args) => args.where.patientId ? [other] : []);
     await expectRedirect(createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" })), "/agenda/a1");
     expect(prismaMock.appointment.create).toHaveBeenCalledTimes(1);
   });
 
   it("confirmação não libera conflito do profissional nem bloqueio", async () => {
-    prismaMock.appointment.findFirst.mockResolvedValueOnce({ id: "outro" });
+    prismaMock.appointment.findMany.mockResolvedValueOnce([{ startsAt: STARTS, endsAt: ENDS }]);
     expect(await createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" }))).toEqual({
       fieldErrors: { startTime: [CONFLICT_MESSAGE] },
     });
@@ -653,7 +654,7 @@ describe("MEL-02: conflito do paciente é aviso", () => {
 
   it("reagendar avisa pelo paciente do próprio agendamento, ignorando ele mesmo", async () => {
     prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f1", patientId: "p9" });
-    prismaMock.appointment.findMany.mockResolvedValue([other]);
+    prismaMock.appointment.findMany.mockImplementation(async (args) => args.where.patientId ? [other] : []);
     const result = await rescheduleAppointment(undefined, form({ id: "a1", ...slot }));
     expect(result?.patientConflicts).toHaveLength(1);
     expect(prismaMock.appointment.update).not.toHaveBeenCalled();
@@ -724,7 +725,7 @@ describe("MEL-02: createScheduleBlock", () => {
 
   it("trava o profissional antes de checar os agendamentos", async () => {
     await expect(createScheduleBlock(undefined, form(block))).rejects.toThrow("NEXT_REDIRECT");
-    expect(prismaMock.$executeRaw.mock.calls[0][1]).toBe("agenda:f1");
+    expect(prismaMock.$executeRaw.mock.calls[1][1]).toBe("agenda:f1");
     expect(prismaMock.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
       prismaMock.appointment.findMany.mock.invocationCallOrder[0],
     );
@@ -751,5 +752,32 @@ describe("MEL-02: removeBlock", () => {
     prismaMock.scheduleBlock.findUnique.mockResolvedValueOnce({ id: "b1" });
     expect(await removeBlock(undefined, form({ id: "b1" }))).toEqual({ error: "Este bloqueio já foi removido." });
     expect(await removeBlock(undefined, form({ id: "zz" }))).toEqual({ error: "Bloqueio não encontrado." });
+  });
+});
+
+
+describe("capacidade simultânea (#82)", () => {
+  it("padrão 3 permite terceiro e recusa quarto por chamada direta", async () => {
+    prismaMock.clinicSettings.findUnique.mockResolvedValue(null);
+    prismaMock.appointment.findMany.mockResolvedValue(Array.from({ length: 2 }, () => ({ startsAt: STARTS, endsAt: ENDS })));
+    await expectRedirect(createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" })), "/agenda/a1");
+    prismaMock.appointment.create.mockClear();
+    prismaMock.appointment.findMany.mockResolvedValue(Array.from({ length: 3 }, () => ({ startsAt: STARTS, endsAt: ENDS })));
+    expect(await createAppointment(undefined, form({ ...newAppointment, confirmPatientConflict: "1" }))).toEqual({
+      fieldErrors: { startTime: [CONFLICT_MESSAGE] },
+    });
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+  });
+  it("usa limite vigente no reagendamento e ignora o próprio registro", async () => {
+    prismaMock.clinicSettings.findUnique.mockResolvedValue({ maxSimultaneousAppointments: 2 });
+    prismaMock.appointment.findUnique.mockResolvedValue({ professionalId: "f2", patientId: "p1" });
+    prismaMock.appointment.findMany.mockResolvedValue(Array.from({ length: 2 }, () => ({ startsAt: STARTS, endsAt: ENDS })));
+    expect(await rescheduleAppointment(undefined, form({ id: "a1", ...slot, confirmPatientConflict: "1" }))).toEqual({
+      fieldErrors: { startTime: [CONFLICT_MESSAGE] },
+    });
+    expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: { not: "a1" }, professionalId: "f1" }),
+    }));
   });
 });

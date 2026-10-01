@@ -113,9 +113,11 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
       select: { id: true },
     });
     patientId = patient.id;
+    await prisma.clinicSettings.create({ data: { id: 1, maxSimultaneousAppointments: 1, updatedById: actorId } });
   });
 
   after(async () => {
+    await prisma?.clinicSettings.deleteMany({});
     await other?.end();
     await monitor?.end();
     await Promise.all(clients.map((c) => c.$disconnect()));
@@ -177,7 +179,7 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
     await other.query("COMMIT");
     const result = await loser;
     assert.deepEqual(result.failure, CONFLICT);
-    assert.ok(isOverlapViolation(result.error));
+    assert.ok(result.error instanceof AgendaRuleError);
     const persisted = await activeIn(fisioA, at(0), at(24));
     assert.deepEqual(persisted.map((row) => row.id), [`race-${suffix}-${day}`]);
   });

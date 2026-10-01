@@ -14,6 +14,7 @@ export type ClinicSettingsValues = {
   address: string | null;
   agendaDayStartHour: number;
   agendaDayEndHour: number;
+  maxSimultaneousAppointments: number;
   suggestedDurationMinutes: number | null;
   agendaDefaultView: AgendaView;
   printShowClinicInfo: boolean;
@@ -33,6 +34,7 @@ export type ClinicSettings = ClinicSettingsValues & {
 
 // Padrões = comportamento anterior às issues: sem dados institucionais, grade 07:00–20:00, sem
 // duração sugerida, agenda abrindo no dia e impressões só com a marca do produto.
+// A #82 muda a capacidade simultânea padrão de 1 para 3.
 export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   displayName: null,
   legalName: null,
@@ -42,6 +44,7 @@ export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   address: null,
   agendaDayStartHour: 7,
   agendaDayEndHour: 20,
+  maxSimultaneousAppointments: 3,
   suggestedDurationMinutes: null,
   agendaDefaultView: "dia",
   printShowClinicInfo: false,
@@ -75,6 +78,7 @@ export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
   address: "Endereço",
   agendaDayStartHour: "Início da faixa do dia",
   agendaDayEndHour: "Fim da faixa do dia",
+  maxSimultaneousAppointments: "Agendamentos simultâneos por fisioterapeuta",
   suggestedDurationMinutes: "Duração sugerida",
   agendaDefaultView: "Visão inicial da agenda",
   printShowClinicInfo: "Identificação nas impressões",

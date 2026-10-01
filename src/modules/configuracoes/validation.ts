@@ -135,6 +135,17 @@ export const settingsSchema = z
     address: optionalText("O endereço", SETTINGS_LIMITS.address),
     agendaDayStartHour: hour("o início da faixa", 0, 23),
     agendaDayEndHour: hour("o fim da faixa", 1, 24),
+    maxSimultaneousAppointments: z.string().optional().transform((value, ctx) => {
+      if (value === undefined) return DEFAULT_SETTINGS.maxSimultaneousAppointments;
+      const text = value.trim();
+      const limit = Number(text);
+      // Teto de armazenamento do INTEGER do PostgreSQL, não limite clínico.
+      if (!/^\d+$/.test(text) || !Number.isInteger(limit) || limit < 1 || limit > 2_147_483_647) {
+        ctx.addIssue({ code: "custom", message: "Informe um limite inteiro positivo de até 2147483647." });
+        return z.NEVER;
+      }
+      return limit;
+    }),
     suggestedDurationMinutes: duration,
     agendaDefaultView: agendaView,
     printShowClinicInfo: checkbox,

@@ -1,4 +1,5 @@
 import "server-only";
+import { occupancyIn } from "./capacity";
 import type { Prisma } from "@/generated/prisma/client";
 import { OUTSIDE_BUSINESS_HOURS, describeWeek, isWithinBusinessHours, parseBusinessHours } from "./business-hours";
 import { toLocalDate, toLocalTime } from "./validation";
@@ -17,7 +18,7 @@ export class AgendaRuleError extends Error {
   }
 }
 
-export const CONFLICT_MESSAGE = "O profissional já tem um agendamento nesse horário.";
+export const CONFLICT_MESSAGE = "O limite de agendamentos simultâneos do profissional foi atingido.";
 
 export async function assertPatientActive(tx: Tx, patientId: string) {
   const patient = await tx.patient.findUnique({ where: { id: patientId }, select: { status: true } });
@@ -36,7 +37,9 @@ export async function assertProfessionalAvailable(tx: Tx, professionalId: string
 
 // Sobreposição de intervalos [início, fim) com agendamentos ativos do mesmo profissional.
 export async function assertNoConflict(tx: Tx, slot: Slot, excludeId?: string) {
-  const conflict = await tx.appointment.findFirst({
+  const settings = await tx.clinicSettings.findUnique({ where: { id: 1 }, select: { maxSimultaneousAppointments: true } });
+  const limit = settings?.maxSimultaneousAppointments ?? 3;
+  const conflicts = await tx.appointment.findMany({
     where: {
       professionalId: slot.professionalId,
       status: "AGENDADO",
@@ -44,9 +47,9 @@ export async function assertNoConflict(tx: Tx, slot: Slot, excludeId?: string) {
       endsAt: { gt: slot.startsAt },
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
-    select: { id: true },
+    select: { startsAt: true, endsAt: true },
   });
-  if (conflict) throw new AgendaRuleError(CONFLICT_MESSAGE, "startTime");
+  if (occupancyIn(slot, conflicts) >= limit) throw new AgendaRuleError(CONFLICT_MESSAGE, "startTime");
 }
 
 export const BLOCKED_MESSAGE = "O profissional está com a agenda bloqueada nesse horário.";
@@ -154,7 +157,7 @@ export async function assertNoAppointmentsInBlock(tx: Tx, slot: Slot) {
   }
 }
 
-// A constraint "Appointment_no_overlap" (SQLSTATE 23P01) barra a corrida entre duas requisições simultâneas.
+// O trigger "Appointment_capacity" (SQLSTATE 23P01) também valida escritores diretos.
 export function isOverlapViolation(error: unknown): boolean {
   const seen = new Set<unknown>();
   let current: unknown = error;
@@ -162,7 +165,7 @@ export function isOverlapViolation(error: unknown): boolean {
     seen.add(current);
     const record = current as Record<string, unknown>;
     const text = `${String(record.message ?? "")} ${String(record.code ?? "")} ${JSON.stringify(record.meta ?? {})}`;
-    if (text.includes("Appointment_no_overlap") || text.includes("23P01")) return true;
+    if (text.includes("Appointment_capacity") || text.includes("Appointment_no_overlap") || text.includes("23P01")) return true;
     current = record.cause;
   }
   return false;

@@ -18,9 +18,9 @@ em `validation.ts` e CHECK no banco.
 
 ### Editáveis (Administrador, `configuracoes:gerir`)
 
-Todos são opcionais ou têm padrão. Sem configuração salva, vale o padrão, que é o comportamento
-anterior, e nenhuma leitura grava nada. A leitura (`queries.ts`) acontece a cada requisição, no
-servidor; o consumidor recebe só o recorte de que precisa.
+Todos são opcionais ou têm padrão. Sem configuração salva, vale o padrão documentado
+(capacidade 3 a partir da #82), e nenhuma leitura grava nada. A leitura (`queries.ts`) acontece
+a cada requisição, no servidor; o consumidor recebe só o recorte de que precisa.
 
 | Grupo | Campo | Tipo e limites | Padrão | Efeito |
 |---|---|---|---|---|
@@ -32,6 +32,7 @@ servidor; o consumidor recebe só o recorte de que precisa.
 | Clínica | Endereço (`address`) | Texto, até 300 | vazio | Cabeçalho das impressões |
 | Agenda | Início da faixa do dia (`agendaDayStartHour`) | Hora inteira, 0–23 | 7 | Primeira hora da grade do dia |
 | Agenda | Fim da faixa do dia (`agendaDayEndHour`) | Hora inteira, 1–24, maior que o início | 20 | Última hora da grade do dia. A grade continua se ampliando para mostrar agendamentos fora da faixa. Não é horário de funcionamento nem bloqueio |
+| Agenda | Agendamentos simultâneos por fisioterapeuta (`maxSimultaneousAppointments`, #82) | Inteiro positivo, até 2147483647 (armazenamento INTEGER) | 3 | Capacidade por profissional durante todo o intervalo. Reduzir preserva registros, sinaliza excesso e restringe novas criações/reagendamentos. Validação transacional e trigger no banco |
 | Agenda | Duração sugerida (`suggestedDurationMinutes`) | Minutos inteiros, 5 até o teto técnico do agendamento (720), ou em branco | desligada | No novo agendamento, sugere o fim a partir do início (também com o horário vindo da grade). Não sobrescreve um fim digitado, não vale no reagendamento, não altera agendamentos existentes, não muda a regra de conflito nem a duração das sessões clínicas |
 | Agenda | Visão inicial da agenda (`agendaDefaultView`, #69) | `dia`, `semana` ou `lista`; ausente no formulário = `dia` | `dia` | Visão que `/agenda` abre sem `view` na URL (menu lateral), para todos os perfis (consumidor: `parseAgendaView`, via `getAgendaPreferences`). Links com `view` explícita continuam valendo, e a pessoa troca de visão pela barra. Só exibição: não muda regras, dados nem permissões |
 | Impressões | Identificação nas impressões (`printShowClinicInfo`) | Liga/desliga | desligado | Termo de consentimento e ficha de anamnese: marca e dados lado a lado no cabeçalho (cabe no A4). Cartão de frequência: só nome e telefone. Campos vazios são omitidos, sem separadores soltos |
@@ -43,7 +44,8 @@ Nomes institucionais (`displayName`, `legalName`) são gravados em maiúsculas (
 
 Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs no banco
 (migrações `20260927150000_configuracoes`, `20260928000000_config_visao_agenda` e
-`20260928030000_config_expediente`).
+`20260928030000_config_expediente`). A capacidade foi adicionada em
+`20261001000000_agenda_capacity`.
 
 ### Referências (somente leitura no painel, aba Administração)
 
@@ -73,7 +75,7 @@ Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs 
   exige definição específica. Continuam fixos em `pacientes/documents.ts`.
 - **Prazo e motivo de cancelamento:** sem decisão (07-regras-negocio). O expediente foi entregue
   na #78 (global e semanal; decisões de 27/09/2026).
-- **Disponibilidade e conflitos:** as políticas da MEL-02 (#45) não criaram parâmetros editáveis.
+- **Disponibilidade e conflitos:** a #82 parametriza a capacidade simultânea; bloqueios e aviso do paciente da MEL-02 (#45) mantêm suas regras.
 
 ## Regras
 

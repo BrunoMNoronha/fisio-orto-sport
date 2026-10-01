@@ -1,3 +1,5 @@
+import { groupByProfessional } from "./day-layout";
+import { peakOccupancy } from "@/modules/agenda/capacity";
 import type { Metadata } from "next";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
@@ -39,6 +41,10 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
     ? professionals.filter((professional) => professional.id === filter.professionalId)
     : professionals;
 
+  const exceeded = groupByProfessional(items, columns).filter(column =>
+    peakOccupancy(column.items.filter(item => item.status === "AGENDADO")) > preferences.maxSimultaneousAppointments
+  ).map(column => column.professional);
+
   return (
     <div className="flex flex-col gap-6">
       <AgendaToolbar
@@ -49,6 +55,13 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
         professionals={professionals}
         canManage={canManage}
       />
+      {exceeded.length > 0 && (
+        <p role="status" className="rounded-md border border-destructive p-3 text-sm">
+          Limite atual: {preferences.maxSimultaneousAppointments} agendamentos simultâneos por fisioterapeuta.
+          Há horários acima do limite para {exceeded.map(person => person.name).join(", ")} neste período.
+          Os agendamentos foram preservados; consulte-os para reagendar ou cancelar quando permitido.
+        </p>
+      )}
       {view === "dia" && (
         <AgendaDayGrid
           date={date}

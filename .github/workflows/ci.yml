@@ -4,13 +4,18 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main, production]
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: fisio
           POSTGRES_PASSWORD: fisio_ci_password
@@ -25,15 +30,26 @@ jobs:
       INTEGRATION_DATABASE_URL: postgresql://fisio:fisio_ci_password@localhost:5432/fisio_orto_sport_test?schema=public
     steps:
       - uses: actions/checkout@v4
+      - name: Conferir origem da release
+        if: github.event_name == 'pull_request' && github.base_ref == 'production'
+        env:
+          RELEASE_HEAD: ${{ github.head_ref }}
+          RELEASE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          test "$RELEASE_HEAD" = main
+          test "$RELEASE_REPOSITORY" = "$GITHUB_REPOSITORY"
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm exec jest --runInBand
+      - run: pnpm test:pipeline
       - run: pnpm exec prisma migrate deploy
       - run: pnpm test:integration
       - run: pnpm build

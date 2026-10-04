@@ -68,7 +68,11 @@ na própria linha.
 - **Nenhum snapshot** listado no projeto; agendamento de snapshots não consultado.
 - Não há cópia fora do Neon nem teste de restauração registrado. Objetivos de
   recuperação e responsável: B2, B3 e B6 (abaixo).
-- Procedimento vigente: criar ponto de restauração antes de cada migração
+- Procedimento vigente (04/10/2026): o workflow manual registra o deployment
+  anterior e o timestamp UTC antes de cada migração Production. O artefato é
+  referência de PITR, não snapshot; a janela permanece seis horas. Ver
+  [pipeline-deploy](pipeline-deploy.md#recuperação).
+- Procedimento histórico: criar ponto de restauração antes de cada migração
   ([12-ambiente](12-ambiente.md)); rollback por redeploy na Vercel e restauração
   no Neon ([13-stack-infraestrutura](13-stack-infraestrutura.md)).
 
@@ -155,7 +159,7 @@ restauração (T7).
 | Variável | Escopo | Origem | Uso |
 |---|---|---|---|
 | `DATABASE_URL` | Production | Integração Neon (Storage) | Conexão com pooling usada pela aplicação |
-| `DATABASE_URL_UNPOOLED` e demais `DATABASE_*` | Production | Integração Neon (Storage) | URL direta e componentes; a aplicação não lê diretamente |
+| `DATABASE_URL_UNPOOLED` e demais `DATABASE_*` | Production | Integração Neon (Storage) | URL direta preferida pela configuração Prisma e componentes; aplicação usa pooling |
 | `SETUP_TOKEN` | Production, só enquanto não há usuários | Manual | Libera o primeiro acesso pela web; remover após o primeiro cadastro |
 | `VERCEL`, `NODE_ENV` | Automático | Plataforma | Proxy confiável para IP e modo de execução |
 
@@ -163,6 +167,10 @@ Recuperar a configuração: reconectar o banco pelo Storage da Vercel (regenera
 `DATABASE_*`) e redeploy. `SEED_ADMIN_*`, `POSTGRES_*` e
 `INTEGRATION_DATABASE_URL` são locais (`.env.example`) e não devem existir em
 produção; `TRUST_PROXY` é dispensável na Vercel (`VERCEL` já cumpre o papel).
+
+Desde 04/10/2026, Preview usa conexões separadas para sua branch Neon; nunca
+ampliar o escopo das credenciais Production. Secrets GitHub por ambiente e
+variables com alvos públicos estão em [pipeline-deploy](pipeline-deploy.md#variáveis-e-secrets).
 
 ## Pendências
 

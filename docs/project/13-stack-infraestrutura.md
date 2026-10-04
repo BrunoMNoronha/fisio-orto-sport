@@ -21,14 +21,20 @@ O alvo de publicação do aplicativo Next.js é a Vercel. O repositório contém
 As funções rodam em `gru1` (São Paulo), perto do banco e dos usuários.
 
 A Vercel não deve executar migrações ou seed durante o build. Banco gerenciado:
-**Neon**, só em produção (Bruno, 2026-09-19). A integração Neon ↔ Vercel cria
+**Neon**, com branches persistentes `production` e `preview` (Bruno, 2026-10-04).
+Preview usa schema sem dados produtivos e role própria. A integração Neon ↔ Vercel cria
 `DATABASE_URL` (com pooling, usada pela aplicação via `@prisma/adapter-pg`)
-somente no escopo Production. As migrações usam a URL direta (sem pooling), com
-`pnpm exec prisma migrate deploy` rodado localmente por Bruno. A extensão
+somente no escopo Production. Preview é configurado separadamente. As migrações
+usam `DATABASE_URL_UNPOOLED` com `pnpm exec prisma migrate deploy` nos workflows,
+antes do build/deploy. Atualizar `production` publica só Preview; Production é
+manual e exige Preview válido do mesmo SHA. A extensão
 `btree_gist` (agenda) é suportada pelo Neon.
 
 Rollback: redeploy de um deployment anterior na Vercel e restauração
 point-in-time/branch no Neon.
+
+Workflows, proteções, variáveis e recuperação: [pipeline-deploy](pipeline-deploy.md).
+O build não altera bancos e a integração Git da Vercel fica desabilitada.
 
 ## PENDENTE / TBD
 

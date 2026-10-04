@@ -11,6 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:integration": "tsx --conditions=react-server --test --test-concurrency=1 test/integration/*.integration.ts",
+    "test:pipeline": "node --test test/pipeline/*.node-test.mjs",
     "postinstall": "prisma generate",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",

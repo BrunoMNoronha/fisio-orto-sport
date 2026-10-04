@@ -13,7 +13,22 @@ Fonte: `git status --short --branch` e `git log`.
 
 O checklist antigo de Agenda no `README.md` estava divergente do código e da documentação dos módulos. O roadmap foi atualizado para refletir a implementação verificada.
 
-## CONFIRMADO — AMBIENTES (Bruno, 2026-09-19)
+## CONFIRMADO — AMBIENTES (Bruno, 2026-10-04)
+
+- GitHub mantém `main` (desenvolvimento) e `production` (candidatos a release).
+- PR manual `main → production`, com CI obrigatório. Atualizar `production`
+  migra o Neon Preview e publica Vercel Preview; Production depende do workflow
+  manual associado à execução de Preview bem-sucedida do mesmo SHA.
+- Neon tem branches persistentes `production` e `preview`, com endpoints,
+  roles e credenciais separados. Preview nasceu somente com schema e histórico
+  técnico Prisma, sem dados clínicos, usuários ou sessões produtivas.
+- Next.js na Vercel, Node 24, região `gru1`; PostgreSQL 18 no Neon/CI.
+  Integração Git não publica; workflows controlam migração antes do deploy.
+- Migrações e seeds seguem fora do build. A aplicação usa pooling; o Prisma
+  prefere `DATABASE_URL_UNPOOLED`. Geração/limpeza automáticas ficam locais.
+- Procedimento, inventário e recuperação em [pipeline-deploy](pipeline-deploy.md).
+
+## HISTÓRICO — AMBIENTES (Bruno, 2026-09-19; substituído em 2026-10-04)
 
 - **Apenas produção**, sem homologação: Vercel (região `gru1`, São Paulo) e banco
   Neon (região São Paulo), ligado ao projeto Vercel pela integração nativa.

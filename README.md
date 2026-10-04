@@ -277,6 +277,7 @@ Variáveis do `.env` (modelo em `.env.example`):
 | Variável | Uso |
 |---|---|
 | `POSTGRES_*`, `DATABASE_URL` | Banco local via Docker Compose |
+| `DATABASE_URL_UNPOOLED` | Opcional no desenvolvimento. Conexão direta usada pelo Prisma; se ausente, migrações usam `DATABASE_URL`. Nos ambientes remotos, as duas URLs são obrigatórias e próprias de cada ambiente. |
 | `SEED_ADMIN_NAME`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Primeiro Administrador criado por `pnpm db:seed`. Senha com no mínimo 8 caracteres. Se o e-mail já existir, o seed não altera nada. |
 | `SETUP_TOKEN` | Opcional. Habilita o primeiro acesso pela tela de login enquanto não há usuários (mínimo de 32 caracteres). Sem ela, o cadastro pela web fica desligado. Remova depois do primeiro cadastro; ver [`src/modules/auth/README.md`](src/modules/auth/README.md#primeiro-acesso-tabela-de-usuários-vazia). |
 | `TRUST_PROXY` | Opcional. `true` só atrás de um proxy próprio que sobrescreva `x-forwarded-for`; na Vercel não é necessária. Sem proxy confiável, o limite de tentativas por IP não é aplicado; ver [`src/modules/auth/README.md`](src/modules/auth/README.md#limites-de-tentativas). |
@@ -285,12 +286,15 @@ Variáveis do `.env` (modelo em `.env.example`):
 
 A autenticação não usa segredo de assinatura (`AUTH_SECRET`). A sessão é um token aleatório num cookie `httpOnly`, e o banco guarda só o hash dele. Detalhes em [`src/modules/auth/README.md`](src/modules/auth/README.md).
 
+O fluxo de publicação é `main → PR manual para production → Neon/Vercel Preview → workflow manual para Neon/Vercel Production`. Push em `main` executa somente CI. Alvos, variáveis, homologação e recuperação estão em [`docs/project/pipeline-deploy.md`](docs/project/pipeline-deploy.md).
+
 | Script | Função |
 |---|---|
 | `pnpm dev` / `pnpm build` / `pnpm start` | Desenvolvimento, build e servidor de produção |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | Gera tipos de rotas do Next.js e roda `tsc --noEmit` |
 | `pnpm test` | Jest + Testing Library |
+| `pnpm test:pipeline` | Verifica isolamento dos bancos, histórico de migrações e vínculo do candidato Preview com a release |
 | `pnpm db:up` / `pnpm db:down` | Sobe/derruba o PostgreSQL local |
 | `pnpm db:migrate` / `pnpm db:generate` / `pnpm db:studio` | Migrações, geração do client e Prisma Studio |
 | `pnpm db:seed` | Cria o primeiro Administrador a partir do `.env` |

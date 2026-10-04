@@ -1,0 +1,81 @@
+name: Deploy Preview
+
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+# Compartilhado com Production: nunca interromper uma migração em andamento.
+concurrency:
+  group: fisio-orto-sport-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+
+  preview:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: Preview
+      url: ${{ steps.manifest.outputs.url }}
+    env:
+      RELEASE_ENV: Preview
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_BRANCH_ID: ${{ vars.NEON_BRANCH_ID }}
+      NEON_HOST: ${{ vars.NEON_HOST }}
+      NEON_DATABASE: ${{ vars.NEON_DATABASE }}
+      NEON_ROLE: ${{ vars.NEON_ROLE }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Conferir branch, secrets e projetos
+        run: node scripts/pipeline/release.mjs preflight
+      - name: Conferir alvo e histórico do banco
+        run: node scripts/pipeline/release.mjs audit
+      - name: Aplicar migrações somente no Preview
+        run: pnpm exec prisma migrate deploy
+      - name: Confirmar migrações aplicadas
+        run: node scripts/pipeline/release.mjs audit --complete
+      - name: Carregar configuração Vercel Preview
+        run: pnpm dlx vercel@62.2.0 pull --yes --environment=preview --git-branch=production
+      - name: Construir para Preview
+        run: pnpm dlx vercel@62.2.0 build --yes
+      - name: Publicar em Preview
+        run: |
+          pnpm dlx vercel@62.2.0 deploy --prebuilt --target=preview --yes \
+            --meta githubCommitSha="$GITHUB_SHA" --meta githubCommitRef=production \
+            --meta githubRepo=fisio-orto-sport --meta githubOrg=BrunoMNoronha \
+            > release/preview-url.txt
+      - name: Verificar deployment e registrar candidato
+        id: manifest
+        run: node scripts/pipeline/release.mjs preview-manifest
+      - name: Guardar manifesto sem secrets
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-release
+          path: release/preview.json
+          if-no-files-found: error
+          retention-days: 30

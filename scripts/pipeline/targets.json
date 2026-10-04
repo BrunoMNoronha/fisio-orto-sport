@@ -1,0 +1,22 @@
+{
+  "repository": "BrunoMNoronha/fisio-orto-sport",
+  "vercelProjectId": "prj_EXTtYsk845lwKW8pbRhIr0oDLI3H",
+  "vercelOrgId": "team_ICY1aaLTQI5BmxlyrSjpRTJC",
+  "productionDomain": "fisio-orto-sport.vercel.app",
+  "neonProjectId": "falling-star-59523600",
+  "recoveryWindowSeconds": 21600,
+  "environments": {
+    "Preview": {
+      "branchId": "br-rough-block-ac7wwnvx",
+      "host": "ep-blue-grass-ack24t6t.sa-east-1.aws.neon.tech",
+      "database": "neondb",
+      "role": "preview_owner"
+    },
+    "Production": {
+      "branchId": "br-divine-pine-acip2yet",
+      "host": "ep-plain-cherry-acntveqy.sa-east-1.aws.neon.tech",
+      "database": "neondb",
+      "role": "neondb_owner"
+    }
+  }
+}

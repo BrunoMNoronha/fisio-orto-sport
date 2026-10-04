@@ -1,0 +1,112 @@
+name: Deploy Production (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      preview_run_id:
+        description: ID da execução bem-sucedida de Deploy Preview do commit atual de production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: fisio-orto-sport-release
+  cancel-in-progress: false
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: Production
+      url: https://fisio-orto-sport.vercel.app
+    env:
+      RELEASE_ENV: Production
+      PREVIEW_RUN_ID: ${{ inputs.preview_run_id }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_BRANCH_ID: ${{ vars.NEON_BRANCH_ID }}
+      NEON_HOST: ${{ vars.NEON_HOST }}
+      NEON_DATABASE: ${{ vars.NEON_DATABASE }}
+      NEON_ROLE: ${{ vars.NEON_ROLE }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Conferir acionamento manual
+        run: |
+          test "$GITHUB_REF" = refs/heads/production
+          test "$GITHUB_REPOSITORY" = BrunoMNoronha/fisio-orto-sport
+          [[ "$PREVIEW_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Obter manifesto da execução aprovada
+        uses: actions/download-artifact@v4
+        with:
+          name: preview-release
+          path: release/candidate
+          run-id: ${{ inputs.preview_run_id }}
+          github-token: ${{ github.token }}
+      - name: Exigir Preview válido do mesmo commit
+        run: node scripts/pipeline/release.mjs candidate
+      - name: Conferir secrets e projetos
+        run: node scripts/pipeline/release.mjs preflight
+      - name: Conferir banco e compatibilidade das migrações
+        run: node scripts/pipeline/release.mjs audit
+      - name: Registrar recuperação antes da migração
+        run: node scripts/pipeline/release.mjs recovery-point
+      - name: Guardar ponto de recuperação
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-recovery-${{ github.run_id }}
+          path: release/recovery.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Aplicar migrações em Production
+        run: pnpm exec prisma migrate deploy
+      - name: Confirmar migrações aplicadas
+        run: node scripts/pipeline/release.mjs audit --complete
+      - name: Carregar configuração Vercel Production
+        run: pnpm dlx vercel@62.2.0 pull --yes --environment=production
+      - name: Construir o mesmo commit para Production
+        run: pnpm dlx vercel@62.2.0 build --prod --yes
+      - name: Publicar sem atribuir os domínios
+        run: |
+          pnpm dlx vercel@62.2.0 deploy --prebuilt --prod --skip-domain --yes \
+            --meta githubCommitSha="$GITHUB_SHA" --meta githubCommitRef=production \
+            --meta githubRepo=fisio-orto-sport --meta githubOrg=BrunoMNoronha \
+            > release/production-url.txt
+      - name: Verificar deployment antes da promoção
+        id: deployment
+        run: node scripts/pipeline/release.mjs production-deployment
+      - name: Atribuir domínios ao deployment Production verificado
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+        run: pnpm dlx vercel@62.2.0 promote "$DEPLOYMENT_ID" --yes
+      - name: Confirmar domínio e funcionamento
+        run: node scripts/pipeline/release.mjs published
+      - name: Guardar resultado sem secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-result-${{ github.run_id }}
+          path: |
+            release/production.json
+            release/database-production.json
+          if-no-files-found: ignore
+          retention-days: 30

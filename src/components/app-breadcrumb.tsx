@@ -18,6 +18,8 @@ const LABELS: Record<string, string> = {
   usuarios: "Usuários",
   auditoria: "Auditoria",
   configuracoes: "Configurações",
+  financeiro: "Financeiro",
+  substituir: "Substituir",
   novo: "Novo",
   editar: "Editar",
   reagendar: "Reagendar",
@@ -41,6 +43,7 @@ const CONTEXT_LABELS: Record<string, string> = {
   "planos/novo": "Novo plano",
   "sessoes/nova": "Nova sessão",
   "reavaliacoes/nova": "Nova reavaliação",
+  "financeiro/novo": "Nova cobrança",
 }
 
 export function AppBreadcrumb() {

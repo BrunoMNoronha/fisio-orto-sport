@@ -56,6 +56,8 @@ model User {
   reassessmentsAuthored           Reassessment[]
   reassessmentChangesAuthored     ReassessmentChange[]
   clinicSettingsUpdated           ClinicSettings[]
+  chargesCreated                  Charge[]                  @relation("ChargeCreatedBy")
+  chargesCancelled                Charge[]                  @relation("ChargeCancelledBy")
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -125,6 +127,7 @@ model Patient {
   therapyPlans                TherapyPlan[]
   treatmentSessions           TreatmentSession[]
   reassessments               Reassessment[]
+  charges                     Charge[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -685,4 +688,46 @@ model ClinicSettings {
   updatedAt                DateTime @updatedAt @db.Timestamptz(3)
   updatedById              String
   updatedBy                User     @relation(fields: [updatedById], references: [id], onDelete: Restrict)
+}
+
+enum ChargeStatus {
+  ATIVA
+  CANCELADA
+}
+
+// Cobrança manual de um paciente (FIN-01, #86), protegida por `financeiro:*`. Domínio próprio,
+// ligado só ao cadastro do paciente: nada clínico, sem geração por agenda ou atendimento.
+// Imutável: não há edição nem exclusão física. Corrigir = cancelar com motivo e lançar a substituta
+// (replacesChargeId aponta para a original cancelada; uma substituta por original). Valor exato em
+// centavos (inteiro). dueDate é data civil; createdAt e cancelledAt são técnicos.
+// idempotencyKey (gerada pelo formulário) impede que um reenvio crie a mesma cobrança duas vezes.
+// Manuais na migração: CHECKs "Charge_amount_positive", "Charge_description_not_blank",
+// "Charge_cancellation_consistent" e "Charge_not_self_replacement"; trigger "Charge_immutable"
+// (só ATIVA → CANCELADA, sem DELETE) e "Charge_replacement_cancelled" (substituta só de cancelada).
+model Charge {
+  id               String       @id @default(cuid())
+  patientId        String
+  // Descrição administrativa; nunca conteúdo clínico.
+  description      String       @db.VarChar(200)
+  amountCents      Int
+  dueDate          DateTime     @db.Date
+  status           ChargeStatus @default(ATIVA)
+  idempotencyKey   String       @unique @db.VarChar(64)
+  replacesChargeId String?      @unique
+  createdById      String
+  createdAt        DateTime     @default(now()) @db.Timestamptz(3)
+  cancelledAt      DateTime?    @db.Timestamptz(3)
+  cancelledById    String?
+  cancelReason     String?      @db.VarChar(500)
+  patient          Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdBy        User         @relation("ChargeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  cancelledBy      User?        @relation("ChargeCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  replaces         Charge?      @relation("ChargeReplacement", fields: [replacesChargeId], references: [id], onDelete: Restrict)
+  replacedBy       Charge?      @relation("ChargeReplacement")
+
+  @@index([dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([patientId, dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([status, dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([createdById])
+  @@index([cancelledById])
 }

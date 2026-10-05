@@ -2,7 +2,8 @@
 // integração exercitar exatamente esta transação.
 //
 // Regra: só se exclui fisicamente uma conta DESATIVADA, que não seja a do próprio executor e que
-// não tenha nenhum vínculo de negócio (pacientes, agenda, bloqueios, prontuário ou configurações).
+// não tenha nenhum vínculo de negócio (pacientes, agenda, bloqueios, prontuário, configurações ou
+// financeiro).
 // Com vínculo, a conta fica desativada e a mensagem diz as categorias, sem mostrar registros. Nada
 // é apagado em cascata, transferido ou anonimizado. Sessões de login residuais são removidas, e a
 // auditoria anterior fica (AuditLog guarda só ids, sem FK). O evento USUARIO_EXCLUIDO entra na
@@ -44,6 +45,8 @@ export const USER_LINKS = [
   { table: "Reassessment", column: "authorId", category: "prontuario" },
   { table: "ReassessmentChange", column: "editorId", category: "prontuario" },
   { table: "ClinicSettings", column: "updatedById", category: "configuracoes" },
+  { table: "Charge", column: "createdById", category: "financeiro" },
+  { table: "Charge", column: "cancelledById", category: "financeiro" },
 ] as const;
 
 export type LinkCategory = (typeof USER_LINKS)[number]["category"];
@@ -54,6 +57,7 @@ export const LINK_CATEGORY_LABELS: Record<LinkCategory, string> = {
   bloqueios: "bloqueios de agenda",
   prontuario: "registros de prontuário (anamneses, avaliações, planos, atendimentos ou reavaliações)",
   configuracoes: "configurações da clínica",
+  financeiro: "lançamentos financeiros (cobranças)",
 };
 
 export class UserDeleteError extends Error {}

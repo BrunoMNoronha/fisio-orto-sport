@@ -13,10 +13,10 @@ O núcleo das Fases 1 a 4 está implementado. A maior lacuna funcional é a cont
 
 ## Cadastro de plano de saúde — #85
 
-Implementação local validada: quatro campos opcionais no cadastro, edição e ficha;
+Implementação validada: quatro campos opcionais no cadastro, edição e ficha;
 migração aditiva e permissões cadastrais preservadas. 883 testes unitários, 149 de integração,
 tipos, lint, build e fluxo autenticado nos três perfis verificados. Sem integração com operadoras
-ou financeiro. Integração da branch/publicação ainda pendentes. Ver [contrato e evidências](evidencias/85-plano-saude.md).
+ou financeiro. Publicação e migração em Preview/Production ainda pendentes. Ver [contrato e evidências](evidencias/85-plano-saude.md).
 
 ## Legenda
 

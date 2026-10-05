@@ -59,6 +59,8 @@ e `fisio85-fisioterapeuta`; não utilizam credenciais reais.
 
 ## Entrega e limites
 
-Implementação e validação locais. Issue permanece aberta até a entrega integrada; sem publicação,
-merge, migração remota ou deploy nesta execução. O contrato cadastral não comprova cobertura
+Validação local anterior à publicação da PR. A solicitação posterior de merge autoriza a entrega
+em `main`, rastreada pela PR que encerra a #85. Antes de publicar, a branch foi atualizada sem
+conflitos sobre `main` (`9a9a446`), que acrescentava apenas documentação da #48; os nove testes
+de pipeline também passaram. Migração remota e deploy não fazem parte desta entrega. O contrato cadastral não comprova cobertura
 ou autorização de atendimento. Impressão e demais exclusões da issue permanecem fora do escopo.

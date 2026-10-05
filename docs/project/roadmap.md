@@ -11,6 +11,13 @@ O núcleo das Fases 1 a 4 está implementado. A maior lacuna funcional é a cont
 - `prisma/admin.ts`, o script `db:admin` e suas instruções no README são trabalho local preexistente, ainda não uma entrega versionada neste HEAD. Sua revisão funcional permanece pendente.
 - Publicação, migrações em produção e funcionamento autenticado no ambiente publicado **não foram verificados nesta revisão**. Não interpretar isso como ausência de produção.
 
+## Cadastro de plano de saúde — #85
+
+Implementação local validada: quatro campos opcionais no cadastro, edição e ficha;
+migração aditiva e permissões cadastrais preservadas. 883 testes unitários, 149 de integração,
+tipos, lint, build e fluxo autenticado nos três perfis verificados. Sem integração com operadoras
+ou financeiro. Integração da branch/publicação ainda pendentes. Ver [contrato e evidências](evidencias/85-plano-saude.md).
+
 ## Legenda
 
 - **IMPLEMENTADO:** verificado no código; não implica publicação ou homologação.

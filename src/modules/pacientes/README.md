@@ -27,6 +27,18 @@ Cadastro e consulta cadastral de pacientes (Fase 2a; sexo e profissão na Fase 2
 - **Autoria**: `createdById` e `updatedById` apontam para `User` com `onDelete: Restrict`. Não é trilha de auditoria.
 - **Observações** são administrativas. A tela avisa para não registrar informação clínica.
 
+## Plano de saúde (#85)
+
+Seção opcional na criação, edição e resumo da ficha. Um conjunto atual por paciente, sem histórico:
+operadora/convênio e nome do plano em texto livre (120 caracteres), carteirinha textual (60 caracteres,
+preservando zeros iniciais, letras e pontuação) e validade como data civil opcional.
+Todos os campos são independentes e opcionais. Texto aparado; vazio vira `null`. Ausência aparece como
+**Não informado**, sem presumir atendimento particular. Datas existentes de 0001 a 9999 são aceitas,
+passadas ou futuras, exibidas em UTC sem deslocar o dia; validade é informativa e não bloqueia atendimento.
+Segue `pacientes:ler/gerir` e autoria do cadastro, sem alterar listagem ou permissões clínicas.
+Titular/dependente, catálogo, múltiplos planos, histórico e integração com operadoras ficam fora desta entrega.
+Contrato e evidências: [issue #85](../../../docs/project/evidencias/85-plano-saude.md).
+
 ## Documentos para impressão
 
 A aba **Documentos** (`[id]/documentos`) lista os documentos e abre cada um em nova aba em `/impressao/pacientes/[id]/...`, fora do shell do app. As páginas são geradas na hora a partir do cadastro (**nada é gravado no servidor**) e o botão "Imprimir / Salvar em PDF" usa a impressão do navegador. A folha é A4, sempre clara (classe `.documento` em `globals.css`), e `@page` não tem margem, o que suprime o cabeçalho e o rodapé do navegador.

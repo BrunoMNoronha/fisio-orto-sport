@@ -20,6 +20,8 @@ export const SEX_LABELS: Record<SexValue, string> = {
 };
 
 export const OCCUPATION_MAX = 120;
+export const HEALTH_INSURANCE_NAME_MAX = 120;
+export const HEALTH_INSURANCE_CARD_MAX = 60;
 
 export const ADULT_AGE = 18;
 export const PAGE_SIZE = 20;
@@ -175,6 +177,22 @@ const optionalPhone = z
   })
   .transform((value) => (value ? value : null));
 
+// Data civil opcional: validade passada ou futura é apenas informação cadastral.
+const healthInsuranceValidUntil = z.string().trim().optional().transform((value, ctx) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value ||
+    date.getUTCFullYear() < 1
+  ) {
+    ctx.addIssue({ code: "custom", message: "Informe uma data de validade válida." });
+    return z.NEVER;
+  }
+  return date;
+});
+
 const patientFields = z.object({
   // Nomes em maiúsculas (contrato de nomes, #78), com o tamanho validado depois de normalizar.
   fullName: z
@@ -190,6 +208,10 @@ const patientFields = z.object({
   // Obrigatório em criação e edição; "Não informado" é uma opção explícita.
   sex: z.enum(SEXES, { error: "Selecione o sexo." }),
   occupation: optionalText(OCCUPATION_MAX, "A profissão"),
+  healthInsuranceProvider: optionalText(HEALTH_INSURANCE_NAME_MAX, "A operadora"),
+  healthInsurancePlan: optionalText(HEALTH_INSURANCE_NAME_MAX, "O plano"),
+  healthInsuranceCard: optionalText(HEALTH_INSURANCE_CARD_MAX, "A carteirinha"),
+  healthInsuranceValidUntil,
   cpf,
   phone: phone("telefone"),
   email,

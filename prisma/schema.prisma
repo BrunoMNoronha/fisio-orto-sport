@@ -86,40 +86,45 @@ enum Sex {
 // avaliações, sessões) ficam em entidades próprias, protegidas por `clinico:*`.
 // Não há exclusão física; futuras relações com Patient devem usar onDelete: Restrict.
 model Patient {
-  id                   String             @id @default(cuid())
-  fullName             String
+  id                          String                @id @default(cuid())
+  fullName                    String
   // Nome sem acentos e em minúsculas, para a busca. Mantido pelo trigger "Patient_search_name"
   // (ver migração busca_sem_acento): a aplicação nunca grava este campo.
-  searchName           String             @default("")
-  birthDate            DateTime           @db.Date
+  searchName                  String                @default("")
+  birthDate                   DateTime              @db.Date
   // Fase 2c. Obrigatório no formulário; nulo apenas em cadastros anteriores à 2c.
-  sex                  Sex?
-  occupation           String?            @db.VarChar(120)
+  sex                         Sex?
+  occupation                  String?               @db.VarChar(120)
+  // Informações cadastrais opcionais do plano de saúde (#85), sem histórico.
+  healthInsuranceProvider     String?               @db.VarChar(120)
+  healthInsurancePlan         String?               @db.VarChar(120)
+  healthInsuranceCard         String?               @db.VarChar(60)
+  healthInsuranceValidUntil   DateTime?             @db.Date
   // Só os 11 dígitos. Único quando informado (o Postgres aceita vários NULL).
-  cpf                  String?            @unique
+  cpf                         String?               @unique
   // Só dígitos (DDD + número).
-  phone                String
-  email                String?
-  address              String?
-  status               PatientStatus      @default(ATIVO)
+  phone                       String
+  email                       String?
+  address                     String?
+  status                      PatientStatus         @default(ATIVO)
   // Observações administrativas; nunca conteúdo clínico.
-  notes                String?
+  notes                       String?
   // Responsável legal: obrigatório (nome e telefone) para menores de 18 anos; nulo para adultos.
-  guardianName         String?
-  guardianPhone        String?
-  guardianRelationship String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  createdById          String
-  updatedById          String
-  createdBy            User               @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy            User               @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  appointments         Appointment[]
-  anamneses            Anamnesis[]
-  assessments          Assessment[]
-  therapyPlans         TherapyPlan[]
-  treatmentSessions    TreatmentSession[]
-  reassessments        Reassessment[]
+  guardianName                String?
+  guardianPhone               String?
+  guardianRelationship        String?
+  createdAt                   DateTime              @default(now())
+  updatedAt                   DateTime              @updatedAt
+  createdById                 String
+  updatedById                 String
+  createdBy                   User                  @relation("PatientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                   User                  @relation("PatientUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  appointments                Appointment[]
+  anamneses                   Anamnesis[]
+  assessments                 Assessment[]
+  therapyPlans                TherapyPlan[]
+  treatmentSessions           TreatmentSession[]
+  reassessments               Reassessment[]
 
   @@index([fullName])
   @@index([status, fullName])

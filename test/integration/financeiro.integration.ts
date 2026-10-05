@@ -156,8 +156,9 @@ describe("cobranças manuais no PostgreSQL", { skip: !url && "INTEGRATION_DATABA
     );
     assert.equal(await sqlState(`UPDATE "Charge" SET "cancelReason" = 'outro' WHERE "id" = $1`, [id]), "23514");
     assert.equal(await sqlState(`DELETE FROM "Charge" WHERE "id" = $1`, [id]), "23001");
-    // Paciente e autor com cobrança não podem ser apagados (FK Restrict).
-    assert.equal(await sqlState(`DELETE FROM "Patient" WHERE "id" = $1`, [activePatient]), "23503");
+    // Paciente e autor com cobrança não podem ser apagados (FK Restrict). O PostgreSQL 18 informa
+    // ON DELETE RESTRICT como restrict_violation (23001); até o 17, foreign_key_violation (23503).
+    assert.ok(["23503", "23001"].includes(String(await sqlState(`DELETE FROM "Patient" WHERE "id" = $1`, [activePatient]))));
     const saved = await row(id);
     assert.equal(saved.amountCents, 35_000);
     assert.equal(saved.cancelReason, "Teste");

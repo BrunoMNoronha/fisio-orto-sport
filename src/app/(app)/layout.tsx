@@ -13,6 +13,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const allowed: NavKey[] = ["inicio"];
   if (can(user.role, "pacientes:ler")) allowed.push("pacientes");
   if (can(user.role, "agenda:ler")) allowed.push("agenda");
+  if (can(user.role, "financeiro:ler")) allowed.push("financeiro");
   if (can(user.role, "usuarios:ler")) allowed.push("usuarios");
   if (can(user.role, "configuracoes:ler")) allowed.push("configuracoes");
   const clinicName = await getClinicDisplayName();

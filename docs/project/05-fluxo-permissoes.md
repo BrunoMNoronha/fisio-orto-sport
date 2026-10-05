@@ -16,10 +16,13 @@ Matriz técnica vigente em `src/modules/auth/permissions.ts`:
 | `agenda:ler` | ✓ | ✓ | ✓ |
 | `agenda:gerir` | ✓ | ✓ | ✓ |
 | `clinico:ler` / `clinico:gerir` | ✓ | — | ✓ |
+| `financeiro:ler` / `financeiro:gerir` | ✓ | ✓ | ✓ |
 
 Recepção não acessa dados clínicos; Fisioterapeuta acessa os pacientes conforme a matriz técnica atual.
 
 **Decisão confirmada (issue #31, 26/09/2026):** o Fisioterapeuta tem todos os acessos da Recepção (o "atendente" do dia a dia; não existe perfil separado), além dos clínicos. Isso inclui cadastro de todos os pacientes e agenda de qualquer profissional apto, sem restrição aos próprios pacientes ou à própria agenda. Um teste garante que as permissões de `RECEPCAO` estão contidas nas de `FISIOTERAPEUTA`. A gestão de usuários (`usuarios:*`) continua exclusiva do Administrador. Nas gravações, o autor (`createdById`, `updatedById`, `cancelledById`) é sempre quem está logado, independentemente do profissional atendente.
+
+**Decisão confirmada (#48/#86, 04/10/2026):** os três perfis consultam e operam as cobranças manuais de todos os pacientes com alcance igual (`financeiro:*`). O acesso financeiro não amplia o acesso da Recepção a dados clínicos, usuários ou configurações. Ver [`src/modules/financeiro/README.md`](../../src/modules/financeiro/README.md).
 
 ## PENDENTE / TBD
 

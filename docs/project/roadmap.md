@@ -18,6 +18,14 @@ migração aditiva e permissões cadastrais preservadas. 883 testes unitários, 
 tipos, lint, build e fluxo autenticado nos três perfis verificados. Sem integração com operadoras
 ou financeiro. Publicação e migração em Preview/Production ainda pendentes. Ver [contrato e evidências](evidencias/85-plano-saude.md).
 
+## Cobranças manuais — FIN-01 #86
+
+Implementação validada após o gate do MVP (VAL-03): lançar, consultar, cancelar e substituir
+cobranças de qualquer paciente, com valor em centavos, histórico imutável, proteção contra envio
+duplicado e `financeiro:*` para os três perfis. Migração aditiva; sem pagamentos (FIN-02) nem
+relatórios (FIN-03). Publicação e migração em Preview/Production pendentes. Ver
+[evidências](evidencias/86-fin-01-cobrancas.md).
+
 ## Legenda
 
 - **IMPLEMENTADO:** verificado no código; não implica publicação ou homologação.
@@ -34,7 +42,7 @@ ou financeiro. Publicação e migração em Preview/Production ainda pendentes. 
 | 2 — Pacientes | Parcial e testada | Cadastro, busca inclusive sem acento, consulta, edição, ativação/inativação, sexo/profissão, anamnese versionada e documentos de impressão sem armazenamento | Histórico clínico e agenda em abas separadas (vínculo agenda–sessão desde a MEL-01); CREFITO na anamnese desde a MEL-03, sem backfill das versões antigas |
 | 3 — Agenda | Primeira fatia implementada e testada | Agenda por profissional/período, criar, consultar, reagendar, cancelar, visões dia/semana/lista e agenda na ficha do paciente | Presença (MEL-01, #44), bloqueios por profissional e aviso de conflito do paciente (MEL-02, #45) implementados; horário de funcionamento e visão mensal posteriores ao MVP |
 | 4 — Prontuário | Núcleo implementado e testado | Avaliação inicial, plano com revisões imutáveis, sessões/evoluções, correções com histórico, invalidação e reavaliação comparativa com retorno ao plano | Alta apenas documentada; encerramento manual do plano não equivale a alta operacional; sem anexos, assinatura digital ou impressão dos novos registros |
-| 5 — Financeiro | Posterior ao MVP | Nenhuma implementação verificada | Cobranças, pagamentos, contas a receber, controle financeiro e relatórios |
+| 5 — Financeiro | Primeira fatia implementada e testada (FIN-01) | Cobranças manuais com cancelamento, substituição, histórico e permissões | Pagamentos e estornos (FIN-02), contas a receber e recebimentos (FIN-03); publicação pendente |
 | 6 — Evoluções | Posteriores ao MVP | Nenhuma implementação verificada | Notificações/lembretes, WhatsApp, portal, aplicativo mobile, teleatendimento, assinatura digital, dashboards avançados e IA |
 
 Profissionais são usuários ativos com perfil `FISIOTERAPEUTA` e CREFITO cadastral; não existe módulo próprio de profissionais/especialidades implementado. Recepção continua sem acesso clínico. Evolução existe por sessão; indicação de alta não encerra plano, inativa paciente ou cancela agenda.

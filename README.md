@@ -453,7 +453,7 @@ Casos de teste devem contemplar, quando aplicável:
 
 ### Fase 5 — Financeiro
 
-- [ ] Cobranças;
+- [x] Cobranças manuais com cancelamento, substituição e histórico (FIN-01, #86);
 - [ ] Pagamentos;
 - [ ] Controle financeiro;
 - [ ] Relatórios.

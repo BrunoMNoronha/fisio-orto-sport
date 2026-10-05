@@ -8,7 +8,8 @@ import type { Role } from "@/generated/prisma/enums";
 import { writeAudit } from "@/modules/auditoria/write";
 import { lockMaintenance } from "./lock";
 
-// Contrato de dados (issue #62; ScheduleBlock e ClinicSettings decididos em 27/09/2026).
+// Contrato de dados (issue #62; ScheduleBlock e ClinicSettings decididos em 27/09/2026). Charge
+// (FIN-01, #86) depende de Patient e sai junto: só nesta reinicialização manual, nunca em expurgo.
 export const PRESERVED_TABLES = ["User", "ClinicSettings", "_prisma_migrations"] as const;
 export const CLEARED_TABLES = [
   "Session",
@@ -26,6 +27,7 @@ export const CLEARED_TABLES = [
   "TreatmentSessionChange",
   "Reassessment",
   "ReassessmentChange",
+  "Charge",
 ] as const;
 export const AUDIT_TABLE = "AuditLog";
 // Palavra de confirmação (CLI e web).

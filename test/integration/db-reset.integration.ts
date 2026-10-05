@@ -76,6 +76,18 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       data: { fullName: "Paciente Fictício", birthDate: new Date("1990-01-01"), phone: "11999999999", createdById: adm.id, updatedById: adm.id },
       select: { id: true },
     });
+    // Cobrança cancelada e a substituta que aponta para ela (FK da própria tabela).
+    const charge = await prisma.charge.create({
+      data: { patientId: patient.id, description: "Cobrança fictícia", amountCents: 15000, dueDate: new Date("2026-10-10"), idempotencyKey: `c1-${suffix}`, createdById: adm.id },
+      select: { id: true },
+    });
+    await prisma.charge.update({
+      where: { id: charge.id },
+      data: { status: "CANCELADA", cancelledAt: new Date(), cancelledById: adm.id, cancelReason: "Valor errado" },
+    });
+    await prisma.charge.create({
+      data: { patientId: patient.id, description: "Cobrança fictícia", amountCents: 12000, dueDate: new Date("2026-10-10"), idempotencyKey: `c2-${suffix}`, replacesChargeId: charge.id, createdById: adm.id },
+    });
     const appointment = await prisma.appointment.create({
       data: {
         patientId: patient.id,

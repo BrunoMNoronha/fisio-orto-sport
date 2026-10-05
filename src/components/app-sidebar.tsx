@@ -10,6 +10,7 @@ import {
   SettingsIcon,
   UserRoundCogIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react"
 import { BrandMark, BrandWordmark } from "@/components/brand-logo"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Início", icon: LayoutDashboardIcon, key: "inicio" },
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon, key: "pacientes" },
   { href: "/agenda", label: "Agenda", icon: CalendarDaysIcon, key: "agenda" },
+  { href: "/financeiro", label: "Financeiro", icon: WalletIcon, key: "financeiro" },
   { href: "/usuarios", label: "Usuários", icon: UserRoundCogIcon, key: "usuarios" },
   { href: "/configuracoes", label: "Configurações", icon: SettingsIcon, key: "configuracoes" },
 ] as const

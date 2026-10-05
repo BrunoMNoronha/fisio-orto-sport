@@ -88,7 +88,7 @@ contratar serviços ou alterar dados reais.
 
 | Fatia | Resultado | Dependência | Esforço relativo |
 |---|---|---|---|
-| [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) | Cobranças manuais, consulta, cancelamento, histórico e permissões | Gate de conclusão do MVP abaixo | Médio |
+| [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) | Cobranças manuais, consulta, cancelamento, histórico e permissões — **implementada em 05/10/2026** ([evidências](evidencias/86-fin-01-cobrancas.md); publicação pendente) | Gate de conclusão do MVP abaixo | Médio |
 | [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) | Pagamentos parciais/integral, saldo, estornos, idempotência e concorrência | FIN-01 entregue e gate do MVP | Grande |
 | [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) | Contas a receber e recebimentos com filtros e totais conciliáveis | FIN-02 entregue e gate do MVP | Médio |
 

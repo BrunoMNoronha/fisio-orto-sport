@@ -22,6 +22,15 @@ Sexo é enum Prisma; profissão tem até 120 caracteres; CREFITO fica em `User.c
 
 Fonte: `src/modules/pacientes/README.md` e `src/modules/auth/README.md`.
 
+## Plano de saúde cadastral (#85)
+
+Contrato adotado na execução da proposta: um conjunto atual por paciente, com operadora/convênio e
+nome do plano (texto livre, 120 caracteres), carteirinha (texto, 60 caracteres) e validade (data civil).
+Todos opcionais e independentes; vazio significa não informado. Validade passada ou futura é
+informativa, sem bloqueio ou verificação de cobertura. Segue as permissões cadastrais existentes.
+Titular/dependente, múltiplos planos, histórico e integrações precisam de nova definição de escopo.
+Fonte: [contrato e evidências da #85](evidencias/85-plano-saude.md).
+
 ## PENDENTE / TBD
 
 Antecedência/motivo obrigatório de cancelamento ainda precisa de decisão. Horário de funcionamento é posterior ao MVP (DEC-01). A duração sugerida é configuração (#63), não regra.

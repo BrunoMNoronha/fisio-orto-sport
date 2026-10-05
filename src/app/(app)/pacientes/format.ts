@@ -19,6 +19,10 @@ export function toFormValues(patient: PatientDetail): PatientFormValues {
     // Cadastros anteriores à Fase 2c não têm sexo: a edição exige escolher.
     sex: patient.sex ?? "",
     occupation: patient.occupation ?? "",
+    healthInsuranceProvider: patient.healthInsuranceProvider ?? "",
+    healthInsurancePlan: patient.healthInsurancePlan ?? "",
+    healthInsuranceCard: patient.healthInsuranceCard ?? "",
+    healthInsuranceValidUntil: patient.healthInsuranceValidUntil?.toISOString().slice(0, 10) ?? "",
     cpf: maskCpf(patient.cpf ?? ""),
     phone: maskPhone(patient.phone),
     email: patient.email ?? "",

@@ -79,6 +79,21 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Plano de saúde</CardTitle>
+            <CardDescription>Informações cadastrais; validade apenas informativa.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <Item label="Operadora / convênio" value={patient.healthInsuranceProvider || "Não informado"} />
+              <Item label="Nome do plano" value={patient.healthInsurancePlan || "Não informado"} />
+              <Item label="Número da carteirinha" value={patient.healthInsuranceCard || "Não informado"} />
+              <Item label="Validade da carteirinha" value={patient.healthInsuranceValidUntil ? formatDate(patient.healthInsuranceValidUntil) : "Não informado"} />
+            </dl>
+          </CardContent>
+        </Card>
+
         {hasGuardian && (
           <Card>
             <CardHeader>

@@ -31,6 +31,10 @@ const ALLOWED_FIELDS = [
   "birthDate",
   "sex",
   "occupation",
+  "healthInsuranceProvider",
+  "healthInsurancePlan",
+  "healthInsuranceCard",
+  "healthInsuranceValidUntil",
   "cpf",
   "phone",
   "email",
@@ -137,4 +141,11 @@ describe("sem dados clínicos", () => {
       expect(select).not.toHaveProperty("anamneses");
     }
   });
+});
+
+it("plano de saúde fica apenas no detalhe cadastral", () => {
+  for (const key of ["healthInsuranceProvider", "healthInsurancePlan", "healthInsuranceCard", "healthInsuranceValidUntil"]) {
+    expect(PATIENT_DETAIL_SELECT).toHaveProperty(key, true);
+    expect(PATIENT_LIST_SELECT).not.toHaveProperty(key);
+  }
 });

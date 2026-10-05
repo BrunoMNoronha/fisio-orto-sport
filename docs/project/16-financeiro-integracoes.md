@@ -109,12 +109,13 @@ CI aprovado e deployment READY isoladamente não comprovam fluxo por perfil publ
 | 4. Estabilização P1 | PRs #49–#54, auditoria #56, CI do baseline e [exceção da COR-02](../AUDITORIA-DEPENDENCIAS.md) | Tratamento técnico documentado; audit não é declarado limpo e exceção é preservada |
 | 5. DEC-02 antes de dados reais | [DEC-02](15-retencao-rastreabilidade-recuperacao.md): T2/T4/T5 na #56 e T7 na #42 | Evidência histórica registrada; restauração isolada demonstrada, com riscos aceitos e limitações originais |
 | 6. Definição de pronto por fatia | [CI do baseline](https://github.com/BrunoMNoronha/fisio-orto-sport/actions/runs/37241608368), com typecheck, lint, testes, integração e build aprovados; [MEL-04](evidencias/mel-04-verificacao-fluxo.md) | Evidência automatizada do baseline e fluxo técnico local; não equivale ao critério 7 |
-| 7. Revalidação por perfil após publicar MEL-01/MEL-02 | VAL-02 antecede essas entregas; MEL-04 é local; [Preview de 04/10](evidencias/pipeline-preview-2026-10-04.md) cobre login/configurações/logout somente de ADMIN | **COMPROVADO em 04/10/2026:** [VAL-03](evidencias/val-03-revalidacao-perfis.md) no SHA publicado `20b3282`, três perfis, MEL-01/MEL-02 e fluxo clínico fictício em build de produção local, com as limitações da VAL-02 |
+| 7. Revalidação por perfil após publicar MEL-01/MEL-02 | VAL-02 antecede essas entregas; MEL-04 é local; [Preview de 04/10](evidencias/pipeline-preview-2026-10-04.md) cobre login/configurações/logout somente de ADMIN | **COMPROVADO em 04/10/2026:** [VAL-03](evidencias/val-03-revalidacao-perfis.md) no SHA publicado `20b3282`, com os três perfis, MEL-01/MEL-02 e fluxo clínico fictício em build de produção local, mantidas as limitações da VAL-02 |
 
-**Gate satisfeito em 04/10/2026 pela [VAL-03](evidencias/val-03-revalidacao-perfis.md); texto original a seguir.** Antes de iniciar FIN-01, registrar o fechamento
-dos sete critérios, com SHA, ambiente, fontes e limites do fluxo por perfil. Reutilizar
-o aceite vigente da DEC-01/VAL-02, sem criar exigência adicional de homologação manual
-nem autorização implícita para gravar dados fictícios em produção. FIN-02 e FIN-03
+**Gate satisfeito em 04/10/2026.** Os sete critérios estão registrados, com SHA,
+ambiente, fontes e limites. O critério 7 foi fechado pela
+[VAL-03](evidencias/val-03-revalidacao-perfis.md), que reutilizou o aceite vigente
+da DEC-01/VAL-02, sem exigência adicional de homologação manual e sem gravar
+dados fictícios em produção. A FIN-01 pode ser iniciada. FIN-02 e FIN-03
 herdam esse gate, além de suas dependências funcionais. A pipeline produtiva permanece
 manual; esta entrega documental não aciona release.
 
@@ -150,6 +151,7 @@ contábeis ou prazo legal de guarda.
   migrations, dados reais, dependências, contratação ou publicação em Production.
 
 Issue de origem: [#48](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/48).
-O planejamento foi antecipado por autorização expressa; a fase permanece não iniciada.
-Manter #48 aberta enquanto faltar comprovar o fechamento do MVP e registrar a abertura
-da fase, conforme sua sequência original. As issues derivadas podem permanecer no backlog.
+O planejamento foi antecipado por autorização expressa. Com o fechamento do MVP
+comprovado em 04/10/2026 ([VAL-03](evidencias/val-03-revalidacao-perfis.md)), a fase
+financeira está aberta: a FIN-01 pode começar, e a FIN-02/FIN-03 seguem suas
+dependências funcionais. A #48 pode ser encerrada depois de integrar este registro.

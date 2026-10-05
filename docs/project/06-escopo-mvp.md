@@ -100,6 +100,11 @@ registrada (issue ou PR com aceite verificado):
 7. Fluxo por perfil revalidado depois de publicar MEL-01 e MEL-02, no mesmo
    formato da VAL-02.
 
+**Fechamento registrado em 04/10/2026.** O critério 7 foi comprovado pela
+[VAL-03](evidencias/val-03-revalidacao-perfis.md) no SHA publicado `20b3282`.
+Os critérios 1–6, com seus limites históricos, estão resumidos no
+[gate do briefing financeiro](16-financeiro-integracoes.md#gate-de-início--critérios-do-mvp-e-evidências).
+
 MEL-03 (CREFITO na anamnese) e MEL-04 (verificação de experiência) não foram
 decididos na DEC-01. Se a clínica os incluir, passam a somar-se a esta lista.
 A MEL-03 foi implementada na #46 (27/09/2026): snapshot de CREFITO nas versões

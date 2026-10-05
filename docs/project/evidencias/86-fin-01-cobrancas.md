@@ -5,8 +5,8 @@
 Antes de codificar, o gate da DEC-01 foi conferido no [briefing financeiro](../16-financeiro-integracoes.md#gate-de-início--critérios-do-mvp-e-evidências):
 critérios 1–6 com a evidência histórica já registrada e critério 7 comprovado pela
 [VAL-03](val-03-revalidacao-perfis.md) (04/10/2026, SHA publicado `20b3282`, três perfis, MEL-01/MEL-02,
-build de produção local com as limitações da VAL-02). O registro da VAL-03 e a atualização do gate
-entram nesta mesma entrega, em commit próprio.
+build de produção local com as limitações da VAL-02). O fechamento do MVP e a abertura da fase
+financeira foram registrados na #48 ([PR #91](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/91)).
 
 ## Contrato implementado
 

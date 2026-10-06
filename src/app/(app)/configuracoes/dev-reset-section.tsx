@@ -26,6 +26,8 @@ const TABLE_LABELS: Record<string, string> = {
   Reassessment: "Reavaliações",
   ReassessmentChange: "Histórico das reavaliações",
   Charge: "Cobranças",
+  Payment: "Pagamentos",
+  PaymentReversal: "Estornos",
   User: "Usuários",
   ClinicSettings: "Configurações",
   _prisma_migrations: "Histórico de migrações",

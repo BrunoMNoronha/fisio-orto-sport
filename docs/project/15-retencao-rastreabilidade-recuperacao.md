@@ -81,6 +81,50 @@ desse prazo não é recuperável pelo Neon. **Risco aceito por Bruno em
 26/09/2026** (B4/B5); recomenda-se reavaliar antes de volume relevante de dados
 reais. O ponto de restauração antes de cada migração continua obrigatório.
 
+### Histórico financeiro — FIN-02 (#87)
+
+Complemento técnico de **05/10/2026** para o candidato da FIN-02, conforme o
+[contrato financeiro](16-financeiro-integracoes.md) e o
+[módulo implementado](../../src/modules/financeiro/README.md). Não altera as
+decisões B/R/O, a janela PITR, os responsáveis nem o prazo legal de guarda.
+
+- O backup completo de B1 passa a incluir `Charge`, `Payment` e
+  `PaymentReversal`, todos os seus campos e as relações com `Patient` e `User`.
+  Preservar autores, datas civis e técnicas, motivos, vínculos de substituição,
+  chaves de idempotência e fingerprints. A estrutura restaurada deve incluir
+  FKs, unicidades, índices, constraints, funções e triggers que protegem esse
+  histórico; não basta copiar somente as linhas financeiras.
+- Na conferência da restauração, comparar os registros e os totais em centavos
+  com a origem. Para cada cobrança ativa, conciliar valor cobrado, soma dos
+  pagamentos **sem estorno** e saldo derivado; não admitir saldo negativo.
+  Cobrança cancelada não pode ter pagamento válido, mas conserva pagamentos
+  estornados e correções no histórico. Paciente inativo mantém seus lançamentos.
+- Verificar um único estorno por pagamento e um único substituto por original;
+  o substituto deve apontar para pagamento estornado da **mesma cobrança**.
+  Conferir datas do estorno em relação ao recebimento original e a presença de
+  todos os autores e vínculos, sem referências órfãs nem perda de histórico.
+  Preservar a diferença entre data civil informada e instante técnico do registro.
+- Um rollback da aplicação conserva as tabelas e o histórico financeiro.
+  Remover `Payment`, `PaymentReversal` ou `Charge` não faz parte do rollback;
+  exige decisão e autorização próprias para os dados existentes.
+- A reinicialização manual `db:reset` inclui as tabelas financeiras no conjunto
+  previamente autorizado de limpeza. **Reset não é recuperação**: não restaura
+  um ponto anterior nem demonstra que um backup pode ser recuperado. O histórico
+  financeiro continua separado do expurgo de sete dias do `AuditLog`.
+- A prova de recuperação deve ocorrer em branch/banco **isolado**, com alvo
+  identificado e sem sobrescrever produção. Para o ensaio da FIN-02, usar dados
+  fictícios que contenham recebimento parcial, quitação, estorno, substituição e
+  cancelamento após todos os estornos. Registrar origem/ponto, destino isolado,
+  schema, contagens, conciliação dos totais e responsáveis, sem dados pessoais ou
+  valores de credenciais. Considerar a ordem das FKs e os guards de inserção no
+  procedimento administrativo de carga dos dados.
+
+Estes critérios complementam a conferência de B7 para as novas entidades. O
+teste histórico de restauração da VAL-02 antecede a FIN-02 e não comprova sua
+recuperação. Uma migração aplicada ou um backup produzido também não comprova
+restauração. Nenhuma restauração de produção foi executada ou atestada nesta
+atualização documental.
+
 ## Decisões da clínica
 
 Todas as perguntas têm decisão registrada por Bruno. Várias valem "por ora" e

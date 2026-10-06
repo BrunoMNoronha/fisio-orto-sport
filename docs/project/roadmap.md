@@ -1,10 +1,15 @@
 # Roadmap — Fisio OrtoSport
 
-Revisado em **26/09/2026** com código, testes locais, histórico e evidências do GitHub. Esta revisão atualiza o planejamento; as correções funcionais abaixo ainda não foram executadas.
+Revisão base em **26/09/2026** com código, testes locais, histórico e evidências do GitHub;
+os limites e SHAs dessa revisão são históricos. Atualização financeira em **05/10/2026**:
+FIN-01 integrada à `main`; FIN-02 implementada e validada localmente no candidato, com integração à `main` pendente.
 
-## Estado verificado
+## Estado verificado na revisão base de 26/09/2026
 
-O núcleo das Fases 1 a 4 está implementado. A maior lacuna funcional é a continuidade entre agenda e atendimento: os dois registros ainda são independentes. Financeiro permanece posterior ao MVP. Não há base para atribuir um percentual de conclusão enquanto o escopo complementar da agenda estiver em decisão.
+Na revisão base, o núcleo das Fases 1 a 4 estava implementado, e a maior lacuna funcional
+era a continuidade entre agenda e atendimento. As entregas posteriores MEL-01/MEL-02 e o
+fechamento do gate do MVP pela VAL-03 estão registrados abaixo. Financeiro permanece
+posterior ao escopo do MVP; sua expansão não altera aqueles critérios.
 
 - Checkout analisado: `feat/fisio-acessos-recepcao`, HEAD `ae2b054901878f97f8f0c84223aa8e07463ec169`, com alterações locais preexistentes.
 - As entregas clínicas #24–#27 estão integradas, pelas PRs #29, #30, #32 e #33. A [PR #34](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/34), de permissões do fisioterapeuta, foi confirmada como mesclada durante a revisão; issue #31 encerrada. `main` remota consultada: `01824c8ae478bb95e85e6a6c603ff4c6be9b2c63`.
@@ -22,9 +27,40 @@ ou financeiro. Publicação e migração em Preview/Production ainda pendentes. 
 
 Implementação validada após o gate do MVP (VAL-03): lançar, consultar, cancelar e substituir
 cobranças de qualquer paciente, com valor em centavos, histórico imutável, proteção contra envio
-duplicado e `financeiro:*` para os três perfis. Migração aditiva; sem pagamentos (FIN-02) nem
-relatórios (FIN-03). Publicação e migração em Preview/Production pendentes. Ver
+duplicado e `financeiro:*` para os três perfis. A fatia FIN-01 não incluía pagamentos nem
+relatórios; pagamentos entram no candidato FIN-02 abaixo e relatórios continuam na FIN-03.
+Publicação e migração em Preview/Production pendentes. Ver
 [evidências](evidencias/86-fin-01-cobrancas.md).
+
+## Pagamentos parciais e estornos — FIN-02 #87
+
+**Implementada e validada localmente em 05/10/2026**, na branch `codex/fin-02-pagamentos-estornos`,
+após a integração da FIN-01 e o gate do MVP. integração à `main` ainda pendente;
+não representa release publicado nem migração aplicada em Preview/Production.
+
+O candidato registra recebimentos parciais/integral até o saldo, estorno interno e correção
+vinculada na mesma cobrança, com originais imutáveis e autoria da sessão. Recebimento aceita
+retroatividade anterior à cobrança e até hoje em `America/Sao_Paulo`; estorno usa data civil
+entre o recebimento original e hoje. Corrigir um pagamento válido grava estorno e substituto
+atomicamente; original já estornado permite um substituto explícito, sem vincular automaticamente
+um recebimento comum. O saldo é derivado dos pagamentos válidos; estorno de quitação reabre o saldo.
+
+Identificador estável e fingerprint completo preservam o primeiro resultado nos reenvios,
+inclusive após estorno/cancelamento, e recusam conteúdo incompatível. As operações da mesma
+cobrança são serializadas, com guards no banco e migração aditiva; novos vínculos integram
+exclusão de usuários e manutenção. ADMIN, RECEPCAO e FISIOTERAPEUTA mantêm o mesmo alcance
+financeiro, sem conteúdo clínico para Recepção e sem bloquear atendimento por dívida.
+
+Lint, tipos, 88 suítes/1.068 testes Jest, nove testes da pipeline e fluxo autenticado
+dos três perfis aprovados localmente; anônimo/inativo negados, Recepção sem acesso clínico
+e tela de 375 px sem overflow. Resultados e limites, incluindo PostgreSQL e build finais,
+nas [evidências da FIN-02](evidencias/87-fin-02-pagamentos.md). Teste de integração no banco
+é validação local; a integração do código à `main` ainda depende da PR.
+
+Contratos no [briefing financeiro](16-financeiro-integracoes.md) e no
+[módulo financeiro](../../src/modules/financeiro/README.md). Relatórios, contas a receber,
+meios de pagamento, devolução bancária e integrações permanecem fora da #87. A FIN-03
+depende desta entrega; prazo, orçamento, volume e responsável seguem TBD.
 
 ## Legenda
 
@@ -42,7 +78,7 @@ relatórios (FIN-03). Publicação e migração em Preview/Production pendentes.
 | 2 — Pacientes | Parcial e testada | Cadastro, busca inclusive sem acento, consulta, edição, ativação/inativação, sexo/profissão, anamnese versionada e documentos de impressão sem armazenamento | Histórico clínico e agenda em abas separadas (vínculo agenda–sessão desde a MEL-01); CREFITO na anamnese desde a MEL-03, sem backfill das versões antigas |
 | 3 — Agenda | Primeira fatia implementada e testada | Agenda por profissional/período, criar, consultar, reagendar, cancelar, visões dia/semana/lista e agenda na ficha do paciente | Presença (MEL-01, #44), bloqueios por profissional e aviso de conflito do paciente (MEL-02, #45) implementados; horário de funcionamento e visão mensal posteriores ao MVP |
 | 4 — Prontuário | Núcleo implementado e testado | Avaliação inicial, plano com revisões imutáveis, sessões/evoluções, correções com histórico, invalidação e reavaliação comparativa com retorno ao plano | Alta apenas documentada; encerramento manual do plano não equivale a alta operacional; sem anexos, assinatura digital ou impressão dos novos registros |
-| 5 — Financeiro | Primeira fatia implementada e testada (FIN-01) | Cobranças manuais com cancelamento, substituição, histórico e permissões | Pagamentos e estornos (FIN-02), contas a receber e recebimentos (FIN-03); publicação pendente |
+| 5 — Financeiro | FIN-01 integrada; FIN-02 implementada e validada localmente no candidato | Cobranças manuais, pagamentos parciais/integral, saldo derivado, estornos/correções vinculadas, histórico e permissões | Integração da FIN-02 à `main`; relatórios de contas a receber/recebimentos (FIN-03); publicação e migrações em Preview/Production pendentes |
 | 6 — Evoluções | Posteriores ao MVP | Nenhuma implementação verificada | Notificações/lembretes, WhatsApp, portal, aplicativo mobile, teleatendimento, assinatura digital, dashboards avançados e IA |
 
 Profissionais são usuários ativos com perfil `FISIOTERAPEUTA` e CREFITO cadastral; não existe módulo próprio de profissionais/especialidades implementado. Recepção continua sem acesso clínico. Evolução existe por sessão; indicação de alta não encerra plano, inativa paciente ou cancela agenda.
@@ -66,7 +102,7 @@ Prioridade por risco de acesso indevido/perda de dados, impedimento do fluxo, al
 | MEL-04 — P2 | Experiência: fluxo clínico extenso e cinco abas clínicas, sem verificação visual nesta revisão | Verificar navegação completa, teclado, mensagens de conflito/erro, telas pequenas e impressão com dados fictícios; registrar defeitos reproduzíveis. Visão mensal posterior ao MVP (DEC-01), revista só se o uso mostrar necessidade | Médio; validação técnica de interface; não há defeito visual confirmado |
 | DEC-01 — P2, antes de fechar escopo | Produto: alta operacional, módulo próprio de profissionais e itens complementares da agenda permanecem indefinidos | Registrar o que fecha o MVP, responsável pela decisão e aceite. Não tratar encerramento do plano como alta nem cadastro de usuário como módulo de especialidades. **Decidida em 27/09/2026 (#43):** decisões, distinção entre encerramento e alta e critérios de conclusão em [06-escopo-mvp](06-escopo-mvp.md) | Pequeno; decisor Bruno M Noronha |
 | DEC-02 — P1 antes de uso com dados reais | Operação: retenção/anonimização e auditoria de leitura permanecem pendentes no briefing | Definir responsáveis e requisitos de retenção, acesso, backup/restauração e rastreabilidade; derivar tarefas técnicas com aceite. Este roadmap não estabelece prazos legais nem política clínica. Decisões registradas em 26/09/2026 em [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md); auditoria de login/usuários na #56; teste de restauração concluído na #42; orientação especializada pendente | Médio; decisões da clínica e orientação especializada pertinente |
-| FUT-01 — P3 | Expansão: financeiro e integrações ainda não implementados; planejamento antecipado aprovado em 04/10/2026 na #48 | [Briefing próprio](16-financeiro-integracoes.md): cobranças manuais, pagamentos parciais/integral e relatórios; operação igual para ADMIN, Recepção e Fisioterapeuta; histórico por estorno/cancelamento. Integrações posteriores, sem acoplar atendimento a cobrança | [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) (médio) → [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) (grande) → [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) (médio). Conclusão do MVP comprovada em 04/10/2026 ([VAL-03](evidencias/val-03-revalidacao-perfis.md)); fase aberta, com início pela FIN-01 |
+| FUT-01 — P3 | Expansão financeira autorizada após o MVP: FIN-01 integrada, FIN-02 implementada e validada localmente; relatórios e integrações posteriores | [Briefing próprio](16-financeiro-integracoes.md): cobranças manuais, pagamentos e estornos com saldo exato; operação igual para ADMIN, Recepção e Fisioterapeuta; histórico por estorno/cancelamento. Relatórios na FIN-03; integrações posteriores, sem acoplar atendimento a cobrança | [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) (médio) → [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) (grande; integração à `main` pendente) → [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) (médio). Gate do MVP satisfeito em 04/10/2026 ([VAL-03](evidencias/val-03-revalidacao-perfis.md)), com limites históricos preservados |
 
 Os itens acima são backlog recomendado, sem criação automática de issues ou autorização implícita para alterar dependências, banco ou produção. Os IDs são locais deste roadmap, não números de issues do GitHub.
 
@@ -75,8 +111,8 @@ Os itens acima são backlog recomendado, sem criação automática de issues ou 
 1. **Estabilização:** verificar a condição de COR-01; tratar COR-02/COR-03, COR-04 e VAL-01; concluir revisão de COR-05. DEC-02 deve anteceder uso com dados reais.
 2. **Evidência da entrega:** VAL-02 foi concluída em 27/09/2026 (#42), com o resultado técnico registrado. Homologação manual não foi executada nem adicionada como bloqueio obrigatório, conforme governança atual.
 3. **Fechamento do escopo:** a DEC-01 foi decidida em 27/09/2026 (#43), com os critérios de conclusão do MVP em [06-escopo-mvp](06-escopo-mvp.md). As regras da MEL-01 e da MEL-02 foram decididas em 27/09/2026 e estão na mesma página.
-4. **Próxima fatia:** MEL-01 (vínculo e presença, #44) e MEL-02 (bloqueios e aviso, #45) implementadas; falta revalidar o fluxo por perfil depois de publicá-las (critério 7 do MVP). Assinatura da anamnese e experiência entram conforme decisões e defeitos encontrados.
-5. **Expansão:** financeiro, notificações e demais evoluções ficam fora da rodada de estabilização. Visão mensal, horário de funcionamento, alta operacional e módulo de profissionais ficam posteriores ao MVP (DEC-01).
+4. **Fechamento do MVP:** MEL-01 (vínculo e presença, #44) e MEL-02 (bloqueios e aviso, #45) implementadas; a revalidação dos três perfis foi registrada na [VAL-03](evidencias/val-03-revalidacao-perfis.md), em 04/10/2026, com os limites aceitos na VAL-02. Assinatura da anamnese e experiência seguem suas decisões e evidências próprias.
+5. **Expansão:** concluir os checks finais registrados na evidência, PR e integração do candidato FIN-02 à `main` antes de iniciar a FIN-03. Publicação/migrações seguem a pipeline vigente, com Production manual. Notificações, visão mensal, horário de funcionamento, alta operacional e módulo de profissionais continuam posteriores ao MVP (DEC-01).
 
 ## Evidências e limites da revisão
 
@@ -95,4 +131,8 @@ Alertas da auditoria: [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv
 
 Fontes locais: [schema](../../prisma/schema.prisma), [CI](../../.github/workflows/ci.yml), [auth](../../src/modules/auth/README.md), [agenda](../../src/modules/agenda/README.md), [clínico](../../src/modules/clinico/README.md), [profissionais](../../src/modules/profissionais/README.md), [escopo](06-escopo-mvp.md), [permissões](05-fluxo-permissoes.md) e [privacidade](08-dados-privacidade.md).
 
-**Conclusão:** base técnica apta com ressalvas para evolução; encerramento do MVP e prontidão do ambiente publicado ainda não demonstrados. A revisão é direcionada ao andamento e ao backlog, não uma auditoria exaustiva de segurança ou conformidade.
+**Conclusão da revisão base de 26/09/2026:** base técnica apta com ressalvas para evolução;
+o encerramento do MVP e a prontidão do ambiente publicado ainda não tinham sido demonstrados
+naquela revisão. O fechamento posterior do gate está na VAL-03; os estados das fatias
+financeiras acima distinguem código, validação e entrega. Este roadmap não é uma auditoria
+exaustiva de segurança ou conformidade.

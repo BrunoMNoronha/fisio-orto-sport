@@ -10,6 +10,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import type { AdminCliIO } from "@/modules/auth/admin-cli";
 import { CLEARED_TABLES, runResetCli, type ResetHooks } from "@/modules/manutencao/reset-cli";
+import { createPayment, reversePayment } from "@/modules/financeiro/payment-service";
 
 const baseUrl = process.env.INTEGRATION_DATABASE_URL;
 if (process.env.CI && !baseUrl) throw new Error("INTEGRATION_DATABASE_URL é obrigatória na CI.");
@@ -85,8 +86,17 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       where: { id: charge.id },
       data: { status: "CANCELADA", cancelledAt: new Date(), cancelledById: adm.id, cancelReason: "Valor errado" },
     });
-    await prisma.charge.create({
+    const replacementCharge = await prisma.charge.create({
       data: { patientId: patient.id, description: "Cobrança fictícia", amountCents: 12000, dueDate: new Date("2026-10-10"), idempotencyKey: `c2-${suffix}`, replacesChargeId: charge.id, createdById: adm.id },
+    });
+    const originalPayment = await createPayment(prisma, fisio.id, {
+      chargeId: replacementCharge.id, amountCents: 1000, receivedOn: new Date("2026-09-01"), requestId: `reset-pay-${suffix}`,
+    });
+    await reversePayment(prisma, adm.id, {
+      paymentId: originalPayment.id, reason: "Correção fictícia", reversedOn: new Date("2026-09-02"), requestId: `reset-rev-${suffix}`,
+    });
+    await createPayment(prisma, fisio.id, {
+      chargeId: replacementCharge.id, amountCents: 2000, receivedOn: new Date("2026-09-01"), requestId: `reset-sub-${suffix}`, replacesPaymentId: originalPayment.id,
     });
     const appointment = await prisma.appointment.create({
       data: {
@@ -213,7 +223,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     assert.deepEqual(await countAll(), before);
   });
 
-  it("execução limpa as 15 tabelas, preserva usuários (todos os campos), configurações, migrações e auditoria", async () => {
+  it("execução limpa todas as tabelas previstas, preserva usuários (todos os campos), configurações, migrações e auditoria", async () => {
     const users = await usersSnapshot();
     const before = await countAll();
     assert.ok(Object.values(before).every((n) => n > 0), "todas as tabelas começam com dados");

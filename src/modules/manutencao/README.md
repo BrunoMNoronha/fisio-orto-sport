@@ -11,14 +11,15 @@ Regras e transação em `reset.ts`, compartilhadas com a ação web (#78); inter
 
 ### Contrato de dados
 
-Decidido na #62, e em 27/09/2026 para as tabelas criadas depois dela. `Charge` (FIN-01, #86) entra
+Decidido na #62, e em 27/09/2026 para as tabelas criadas depois dela. `Charge` (FIN-01, #86),
+`Payment` e `PaymentReversal` (FIN-02, #87) entram
 na limpeza porque referencia `Patient`: a reinicialização manual é a única remoção prevista para o
 histórico financeiro, que não tem expurgo automático.
 
 | Destino | Tabelas |
 |---|---|
 | **Preservar integralmente** | `User`: todas as linhas e todos os campos (id, nome, e-mail, hash de senha, perfil, CREFITO, ativo, datas), inclusive inativos. `ClinicSettings`, que é configuração. `_prisma_migrations` |
-| **Limpar** | `Patient`, `Appointment`, `ScheduleBlock`, `Anamnesis`, `Assessment`, `AssessmentChange`, `TherapyPlan`, `TherapyPlanRevision`, `TherapyPlanStatusChange`, `TreatmentSession`, `TreatmentSessionChange`, `Reassessment`, `ReassessmentChange`, `Charge` (cobranças, FIN-01: dependem de `Patient`), `Session` (todos precisam entrar de novo) e `AuthRateLimit` |
+| **Limpar** | `Patient`, `Appointment`, `ScheduleBlock`, `Anamnesis`, `Assessment`, `AssessmentChange`, `TherapyPlan`, `TherapyPlanRevision`, `TherapyPlanStatusChange`, `TreatmentSession`, `TreatmentSessionChange`, `Reassessment`, `ReassessmentChange`, `Charge`, `Payment`, `PaymentReversal` (financeiro: dependem de `Patient`), `Session` (todos precisam entrar de novo) e `AuthRateLimit` |
 | **Auditoria (`AuditLog`)** | Preservada por padrão. Com `--incluir-auditoria`, os eventos anteriores são apagados. Isso é uma **exceção** às regras A5 (retenção) e A7 (imutabilidade) da DEC-02 e exige autorização registrada para aquela execução. A política permanente não muda |
 | **Infraestrutura** | Schema, índices, constraints, funções, triggers, extensões e permissões ficam intactos |
 

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { requirePermission } from "@/modules/auth/dal";
 import { replaceChargeAction } from "@/modules/financeiro/actions";
-import { getCharge } from "@/modules/financeiro/queries";
+import { getPaymentFormContext } from "@/modules/financeiro/payment-queries";
 import { formatAmountInput, formatBRL, formatCivilDate, patientLabel, toDateInput } from "@/modules/financeiro/validation";
 import { ChargeForm } from "../../charge-form";
 
@@ -13,8 +13,9 @@ export const metadata: Metadata = { title: "Substituir cobrança — TechLab+ Fi
 export default async function SubstituirCobrancaPage({ params }: PageProps<"/financeiro/[id]/substituir">) {
   await requirePermission("financeiro:gerir");
   const { id } = await params;
-  const charge = await getCharge(id);
-  if (!charge) notFound();
+  const context = await getPaymentFormContext(id);
+  if (!context) notFound();
+  const { charge, receivedCents } = context;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -28,7 +29,7 @@ export default async function SubstituirCobrancaPage({ params }: PageProps<"/fin
           {formatCivilDate(charge.dueDate)}
         </p>
       </div>
-      {charge.status === "ATIVA" ? (
+      {charge.status === "ATIVA" && receivedCents === 0 ? (
         <ChargeForm
           action={replaceChargeAction}
           requestId={crypto.randomUUID()}
@@ -46,7 +47,7 @@ export default async function SubstituirCobrancaPage({ params }: PageProps<"/fin
       ) : (
         <Alert>
           <AlertDescription>
-            Esta cobrança está cancelada e não pode mais ser substituída.{" "}
+            {charge.status === "ATIVA" ? "Estorne todos os pagamentos válidos antes de substituir esta cobrança." : "Esta cobrança está cancelada e não pode mais ser substituída."}{" "}
             {charge.replacedBy && (
               <Link href={`/financeiro/${charge.replacedBy.id}`} className="underline underline-offset-4">
                 Ver a cobrança substituta

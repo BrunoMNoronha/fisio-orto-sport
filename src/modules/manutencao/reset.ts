@@ -9,7 +9,8 @@ import { writeAudit } from "@/modules/auditoria/write";
 import { lockMaintenance } from "./lock";
 
 // Contrato de dados (issue #62; ScheduleBlock e ClinicSettings decididos em 27/09/2026). Charge
-// (FIN-01, #86) depende de Patient e sai junto: só nesta reinicialização manual, nunca em expurgo.
+// (FIN-01, #86), Payment e PaymentReversal (FIN-02, #87) dependem de Patient e saem juntos:
+// só nesta reinicialização manual, nunca em expurgo.
 export const PRESERVED_TABLES = ["User", "ClinicSettings", "_prisma_migrations"] as const;
 export const CLEARED_TABLES = [
   "Session",
@@ -28,6 +29,8 @@ export const CLEARED_TABLES = [
   "Reassessment",
   "ReassessmentChange",
   "Charge",
+  "Payment",
+  "PaymentReversal",
 ] as const;
 export const AUDIT_TABLE = "AuditLog";
 // Palavra de confirmação (CLI e web).

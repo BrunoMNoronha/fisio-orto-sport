@@ -41,10 +41,10 @@ export type ChargeResult = { id: string; created: boolean };
 type PaymentsCheck = (tx: Tx, chargeId: string) => Promise<boolean>;
 export type ChargeHooks = { hasValidPayments?: PaymentsCheck };
 
-// Contrato para a FIN-02 (#87): cancelar exige ausência de pagamento válido (não estornado),
-// conferida dentro da transação e sob a trava da cobrança. Nesta fatia não existem pagamentos;
-// a FIN-02 troca este corpo pela consulta dos pagamentos não estornados, sem mudar os chamadores.
-export const hasValidPayments: PaymentsCheck = async () => false;
+// FIN-02 (#87): consulta posterior à trava da cobrança, na mesma transação. Um estorno
+// preserva o pagamento original e o retira da soma válida; nenhum histórico é apagado.
+export const hasValidPayments: PaymentsCheck = async (tx, chargeId) =>
+  (await tx.payment.count({ where: { chargeId, reversal: null } })) > 0;
 
 type Existing = {
   id: string;
@@ -146,7 +146,7 @@ export async function cancelCharge(
       select: { id: true },
     });
     return { alreadyCancelled: false };
-  });
+  }, { isolationLevel: "ReadCommitted" });
 }
 
 export async function replaceCharge(
@@ -176,7 +176,7 @@ export async function replaceCharge(
         select: { id: true },
       });
       return { id: created.id, created: true };
-    });
+    }, { isolationLevel: "ReadCommitted" });
   } catch (error) {
     if (isUniqueViolation(error, "idempotencyKey")) return afterKeyConflict(db, requestId, data, chargeId);
     // Última barreira (a trava já serializa): outra substituição confirmada para a mesma original.

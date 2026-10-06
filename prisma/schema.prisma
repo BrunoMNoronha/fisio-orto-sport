@@ -58,6 +58,8 @@ model User {
   clinicSettingsUpdated           ClinicSettings[]
   chargesCreated                  Charge[]                  @relation("ChargeCreatedBy")
   chargesCancelled                Charge[]                  @relation("ChargeCancelledBy")
+  paymentsCreated                 Payment[]                 @relation("PaymentCreatedBy")
+  paymentReversalsCreated          PaymentReversal[]         @relation("PaymentReversalCreatedBy")
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -724,10 +726,51 @@ model Charge {
   cancelledBy      User?        @relation("ChargeCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
   replaces         Charge?      @relation("ChargeReplacement", fields: [replacesChargeId], references: [id], onDelete: Restrict)
   replacedBy       Charge?      @relation("ChargeReplacement")
+  payments         Payment[]
 
   @@index([dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([patientId, dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([status, dueDate(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([createdById])
   @@index([cancelledById])
+}
+
+// Recebimento manual (FIN-02, #87). Original imutável; uma correção estorna e registra
+// a substituta na mesma cobrança. receivedOn é data civil, separada do instante técnico.
+// O banco serializa as escritas pela Charge e garante saldo não negativo.
+model Payment {
+  id                String           @id @default(cuid())
+  chargeId          String
+  amountCents       Int
+  receivedOn        DateTime         @db.Date
+  createdById       String
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  idempotencyKey    String           @unique @db.VarChar(96)
+  fingerprint       String           @db.VarChar(67)
+  replacesPaymentId String?          @unique
+  charge            Charge           @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+  createdBy         User             @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  reversal          PaymentReversal?
+  replaces          Payment?         @relation("PaymentReplacement", fields: [replacesPaymentId], references: [id], onDelete: Restrict)
+  replacedBy        Payment?         @relation("PaymentReplacement")
+
+  @@index([chargeId, receivedOn(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  @@index([createdById])
+}
+
+// Estorno interno, sem devolução bancária. Guarda motivo, data efetiva e autor próprios;
+// UNIQUE(paymentId) impede recompor saldo duas vezes. Sem UPDATE/DELETE.
+model PaymentReversal {
+  id             String   @id @default(cuid())
+  paymentId      String   @unique
+  reason         String   @db.VarChar(500)
+  reversedOn     DateTime @db.Date
+  createdById    String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  idempotencyKey String   @unique @db.VarChar(96)
+  fingerprint    String   @db.VarChar(67)
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdBy      User     @relation("PaymentReversalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([createdById])
 }

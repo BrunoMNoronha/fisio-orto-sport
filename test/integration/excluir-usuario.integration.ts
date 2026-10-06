@@ -127,7 +127,23 @@ describe("exclusão de usuário desativado no PostgreSQL", { skip: !url && "INTE
   });
 
   it("cada categoria de vínculo bloqueia a exclusão e preserva o vínculo", async () => {
+    const financialLink = async (userId: string, reversal: boolean) => {
+      const patient = await prisma.patient.create({
+        data: { fullName: "Paciente Financeiro", birthDate: new Date("1990-01-01"), phone: "11999999999", createdById: adminId, updatedById: adminId },
+      });
+      const charge = await prisma.charge.create({
+        data: { patientId: patient.id, description: "Recebimento fictício", amountCents: 1000, dueDate: new Date("2026-10-10"), createdById: adminId, idempotencyKey: `author-charge-${suffix}-${++seq}` },
+      });
+      const payment = await prisma.payment.create({
+        data: { chargeId: charge.id, amountCents: 100, receivedOn: new Date("2026-09-01"), createdById: reversal ? adminId : userId, idempotencyKey: `RECEBIMENTO:author-pay-${suffix}-${++seq}`, fingerprint: `v1:${"0".repeat(64)}` },
+      });
+      if (reversal) await prisma.paymentReversal.create({
+        data: { paymentId: payment.id, reason: "Estorno fictício", reversedOn: new Date("2026-09-02"), createdById: userId, idempotencyKey: `ESTORNO:author-rev-${suffix}-${++seq}`, fingerprint: `v1:${"1".repeat(64)}` },
+      });
+    };
     const cases: [string, (userId: string) => Promise<unknown>][] = [
+      ["financeiro", (userId) => financialLink(userId, false)],
+      ["financeiro", (userId) => financialLink(userId, true)],
       [
         "pacientes",
         (userId) =>

@@ -47,6 +47,8 @@ export const USER_LINKS = [
   { table: "ClinicSettings", column: "updatedById", category: "configuracoes" },
   { table: "Charge", column: "createdById", category: "financeiro" },
   { table: "Charge", column: "cancelledById", category: "financeiro" },
+  { table: "Payment", column: "createdById", category: "financeiro" },
+  { table: "PaymentReversal", column: "createdById", category: "financeiro" },
 ] as const;
 
 export type LinkCategory = (typeof USER_LINKS)[number]["category"];
@@ -57,7 +59,7 @@ export const LINK_CATEGORY_LABELS: Record<LinkCategory, string> = {
   bloqueios: "bloqueios de agenda",
   prontuario: "registros de prontuário (anamneses, avaliações, planos, atendimentos ou reavaliações)",
   configuracoes: "configurações da clínica",
-  financeiro: "lançamentos financeiros (cobranças)",
+  financeiro: "lançamentos financeiros (cobranças, pagamentos ou estornos)",
 };
 
 export class UserDeleteError extends Error {}

@@ -755,6 +755,8 @@ model Payment {
   replacedBy        Payment?         @relation("PaymentReplacement")
 
   @@index([chargeId, receivedOn(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
+  // FIN-03: período e ordem do relatório global de recebimentos, sem prefixo de cobrança.
+  @@index([receivedOn(sort: Desc), createdAt(sort: Desc), id(sort: Desc)])
   @@index([createdById])
 }
 

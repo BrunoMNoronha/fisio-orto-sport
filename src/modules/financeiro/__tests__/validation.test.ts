@@ -83,6 +83,12 @@ describe("formatação", () => {
     }
   });
 
+  it("preserva centavos de totais acima do limite seguro de number", () => {
+    expect(formatBRL(BigInt("9007199254740993"))).toBe("R$ 90.071.992.547.409,93");
+    expect(formatBRL(BigInt(0))).toBe("R$ 0,00");
+    expect(formatBRL(BigInt(-1))).toBe("R$ -0,01");
+  });
+
   it("data civil em UTC não desloca o dia", () => {
     expect(formatCivilDate(new Date("2026-01-01T00:00:00.000Z"))).toBe("01/01/2026");
   });

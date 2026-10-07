@@ -54,14 +54,16 @@ function groupThousands(digits: string) {
 }
 
 // Centavos → "1.234,56" (campo do formulário). Só aritmética inteira.
-export function formatAmountInput(cents: number) {
-  const reais = Math.trunc(cents / 100);
-  const rest = cents % 100;
-  return `${groupThousands(String(reais))},${String(rest).padStart(2, "0")}`;
+export function formatAmountInput(cents: number | bigint) {
+  const exactCents = BigInt(cents);
+  const absolute = exactCents < BigInt(0) ? -exactCents : exactCents;
+  const reais = absolute / BigInt(100);
+  const rest = absolute % BigInt(100);
+  return `${exactCents < BigInt(0) ? "-" : ""}${groupThousands(String(reais))},${String(rest).padStart(2, "0")}`;
 }
 
 // Centavos → "R$ 1.234,56" (exibição).
-export function formatBRL(cents: number) {
+export function formatBRL(cents: number | bigint) {
   return `R$ ${formatAmountInput(cents)}`;
 }
 

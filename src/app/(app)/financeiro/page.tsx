@@ -58,14 +58,19 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
           <h1 className="text-2xl font-semibold tracking-tight">Financeiro</h1>
           <p className="text-sm text-muted-foreground">Cobranças manuais lançadas para os pacientes.</p>
         </div>
-        {canManage && (
-          <Link
-            href={params.patientId ? `/financeiro/novo?patientId=${params.patientId}` : "/financeiro/novo"}
-            className={buttonVariants()}
-          >
-            Nova cobrança
+        <div className="flex flex-wrap gap-2">
+          <Link href="/financeiro/relatorios/contas-a-receber" className={buttonVariants({ variant: "outline" })}>
+            Relatórios
           </Link>
-        )}
+          {canManage && (
+            <Link
+              href={params.patientId ? `/financeiro/novo?patientId=${params.patientId}` : "/financeiro/novo"}
+              className={buttonVariants()}
+            >
+              Nova cobrança
+            </Link>
+          )}
+        </div>
       </div>
 
       <form role="search" method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">

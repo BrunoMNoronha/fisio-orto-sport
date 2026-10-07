@@ -12,12 +12,16 @@ Nesse baseline, o schema não continha entidades financeiras e a matriz de permi
 não continha `financeiro:*`; as interfaces deste briefing ainda eram planejadas. O domínio
 clínico já distingue quantidade prevista de sessões de saldo, pacote ou cobrança.
 
-**Atualização em 05/10/2026:** FIN-01 integrada à `main` pela
-[PR #92](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/92). A FIN-02 está
-implementada e validada localmente no candidato `codex/fin-02-pagamentos-estornos`,
-com pagamentos, estornos, saldo derivado e correções vinculadas; PR e integração à
-`main` pendentes. Os resultados e limites estão nas
-[evidências da FIN-02](evidencias/87-fin-02-pagamentos.md). Esse
+**Atualização em 07/10/2026:** FIN-01 integrada à `main` pela
+[PR #92](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/92). A FIN-02 foi
+integrada pela [PR #93](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/93),
+no SHA `056517079ce778fed98645b8c545edd941cc2eb7`, com pagamentos, estornos,
+saldo derivado e correções vinculadas. A FIN-03 está implementada e validada localmente
+no candidato isolado da #88, com contas a receber, recebimentos, filtros e totais
+conciliáveis; integração à `main` e CI desse candidato ainda pendentes.
+Os resultados e limites estão nas
+[evidências da FIN-02](evidencias/87-fin-02-pagamentos.md) e
+[da FIN-03](evidencias/88-fin-03-relatorios.md). Esse
 estado do código não comprova publicação nem aplicação da migração em Preview/Production.
 O [módulo financeiro](../../src/modules/financeiro/README.md) descreve os contratos implementados.
 
@@ -32,7 +36,9 @@ O [módulo financeiro](../../src/modules/financeiro/README.md) descreve os contr
 
 Fonte da autorização: decisões expressas de Bruno na rodada de planejamento da #48 e aprovação
 do plano de briefing e três issues. A execução da FIN-02 foi autorizada em 05/10/2026,
-com as decisões de datas e destino da correção incorporadas abaixo. Não se trata de
+com as decisões de datas e destino da correção incorporadas abaixo. A FIN-03 foi
+autorizada pela execução da #88 em 07/10/2026, após confirmar suas dependências.
+Não se trata de
 autorização para cobrar pacientes, contratar serviços ou alterar dados reais.
 
 ## Escopo e contratos da primeira versão
@@ -78,7 +84,7 @@ autorização para cobrar pacientes, contratar serviços ou alterar dados reais.
   A correção composta usa a mesma chave/fingerprint nos dois registros, sem alterar a autoria original.
 - Serializar pagamentos, estornos e cancelamentos da mesma cobrança. Para uma disputa,
   reler o estado confirmado e aceitar só a operação compatível, com mensagem clara em pt-BR.
-- O candidato FIN-02 usa a trava da cobrança em `READ COMMITTED` e consulta o saldo em
+- A FIN-02 integrada usa a trava da cobrança em `READ COMMITTED` e consulta o saldo em
   comando posterior à trava. Constraints e guards de inserção também protegem as invariantes
   no banco; `Payment`/`PaymentReversal` são imutáveis e não herdam o expurgo de `AuditLog`.
 
@@ -94,6 +100,23 @@ autorização para cobrar pacientes, contratar serviços ou alterar dados reais.
   contribui somente com o saldo em contas a receber. Não duplicar cobranças por joins.
 - Totais abrangem todo o filtro, independentemente da página exibida. Listas paginadas,
   estados vazios e filtros inválidos têm comportamento explícito e mensagens em pt-BR.
+- Implementação FIN-03: `/financeiro/relatorios/contas-a-receber` e
+  `/financeiro/relatorios/recebimentos`, com GET `patientId`, `start`, `end` e `page`.
+  Datas civis são inclusivas entre 2000 e 2100; uma extremidade vazia deixa somente
+  aquele lado sem limite. Paciente é selecionado pela busca administrativa, incluindo
+  inativos, sem CPF em URL/filtro. Parâmetros inválidos ou repetidos e paciente inexistente
+  recusam a consulta sem remover silenciosamente o filtro. A página é normalizada e limitada.
+- Paginação de 20 itens, ordenação estável e links para o histórico da cobrança; totais
+  de contas exibem cobrado, recebido válido, saldo e saldo vencido. Somente o saldo
+  positivo integra contas a receber. Vazio exibe totais zero.
+- Agregação por cobrança evita duplicação por pagamentos; somas PostgreSQL e DTOs usam
+  `bigint`, com formatação BRL exata. Totais e itens compartilham snapshot
+  `REPEATABLE READ`, inclusive diante de pagamentos/estornos concorrentes. Não é
+  persistido saldo nem criada segunda fonte de lançamentos.
+- Migração aditiva `20261007010000_financeiro_relatorios` cria o índice de
+  `Payment(receivedOn DESC, createdAt DESC, id DESC)` para a consulta global por
+  data efetiva; nenhum dado existente é modificado. Leituras autenticadas exigem
+  `financeiro:ler` antes de validar/consultar e selecionam apenas dados administrativos.
 - Não incluir exportação, impressão, indicadores clínicos ou análises contábeis nesta versão.
 
 ### Autorização, separação e preservação
@@ -117,8 +140,8 @@ autorização para cobrar pacientes, contratar serviços ou alterar dados reais.
 | Fatia | Resultado | Dependência | Esforço relativo |
 |---|---|---|---|
 | [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) | Cobranças manuais, consulta, cancelamento, histórico e permissões — **implementada em 05/10/2026** ([evidências](evidencias/86-fin-01-cobrancas.md); publicação pendente) | Gate de conclusão do MVP abaixo | Médio |
-| [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) | Pagamentos parciais/integral, saldo derivado, estornos, correção vinculada, idempotência e concorrência — **implementada e validada localmente em 05/10/2026** ([evidências](evidencias/87-fin-02-pagamentos.md)); integração à `main` pendente | FIN-01 integrada e gate do MVP satisfeito; publicação/migrações do release ainda não comprovadas | Grande |
-| [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) | Contas a receber e recebimentos com filtros e totais conciliáveis | FIN-02 entregue e gate do MVP | Médio |
+| [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) | Pagamentos parciais/integral, saldo derivado, estornos, correção vinculada, idempotência e concorrência — **integrada à main pela PR #93, SHA `0565170`** ([evidências](evidencias/87-fin-02-pagamentos.md)) | FIN-01 integrada e gate do MVP satisfeito; publicação/migrações do release ainda não comprovadas | Grande |
+| [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) | Contas a receber e recebimentos com filtros e totais conciliáveis — **implementada e validada localmente em 07/10/2026**, com integração e CI própria pendentes ([evidências](evidencias/88-fin-03-relatorios.md)) | FIN-02 integrada (`0565170`) e gate do MVP comprovados antes do início; publicação/migração do release não comprovadas | Médio |
 
 As três issues foram publicadas como backlog P3, com aceite e validação próprios.
 Esforço relativo não é prazo, orçamento ou compromisso de entrega. A expansão
@@ -181,15 +204,28 @@ contábeis ou prazo legal de guarda.
 - A FIN-02 está implementada e validada localmente: lint, tipos, 88 suítes/1.068 testes
   Jest, nove testes da pipeline e fluxo dos três perfis com dados fictícios. Foram
   conferidos anônimo/inativo, negação clínica à Recepção e tela de 375 px sem overflow.
-  A consolidação dos resultados, incluindo a suíte PostgreSQL e o build finais, está nas
-  [evidências](evidencias/87-fin-02-pagamentos.md); integração à `main` ainda pendente.
-  Validação local não comprova PR/CI nem publicação ou operação autenticada em produção.
+  Os resultados completos, incluindo a suíte PostgreSQL e o build finais, estão nas
+  [evidências](evidencias/87-fin-02-pagamentos.md). A PR #93 integrou a FIN-02 no SHA
+  `0565170`, com CI da `main` aprovada; essa entrega não comprova publicação ou
+  operação autenticada em produção.
+- FIN-03 no fonte final: lint, tipos, 92 suítes/1.139 testes Jest, nove testes da
+  pipeline e build aprovados. Integração completa em PostgreSQL 18 descartável:
+  31 suítes/188 testes, zero falhas/ignorados; 28 migrações aplicadas e comparação
+  Prisma sem diferença. Os 11 testes focados incluem quatro corridas com controles
+  `READ COMMITTED`. Chromium headless no build de produção local comprovou os três
+  perfis autenticados, negação de anônimo/inativo e do acesso clínico da Recepção,
+  filtros por teclado, paginação e conciliação do histórico de correções/estornos.
+  Viewport de 375 px sem rolagem horizontal; zero erros JavaScript de página.
+  Resultados e limites nas [evidências](evidencias/88-fin-03-relatorios.md).
+  Merge, CI própria e publicação da FIN-03 permanecem pendentes.
 - A atualização documental confere contratos e links locais; não executa operações em
   dados reais, contratação nem publicação em Production.
 
 Issue de origem: [#48](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/48).
 O planejamento foi antecipado por autorização expressa. Com o fechamento do MVP
 comprovado em 04/10/2026 ([VAL-03](evidencias/val-03-revalidacao-perfis.md)), a fase
-financeira está aberta: FIN-01 integrada, FIN-02 implementada e validada localmente com
-integração à `main` pendente e FIN-03 ainda no backlog, dependente da FIN-02. Permanecem as exclusões de
+financeira está aberta: FIN-01 e FIN-02 integradas; FIN-03 implementada e validada
+localmente no candidato isolado após confirmar as dependências da #88, com integração
+e CI própria pendentes.
+Permanecem as exclusões de
 escopo, as permissões atuais e a liberação manual da pipeline produtiva.

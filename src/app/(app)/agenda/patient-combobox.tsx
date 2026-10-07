@@ -27,6 +27,7 @@ export function PatientCombobox({
   value,
   onChange,
   errors,
+  label = "Paciente *",
   search = searchActivePatients,
   texts = ACTIVE_PATIENT_TEXTS,
 }: {
@@ -34,6 +35,7 @@ export function PatientCombobox({
   value: PatientOption | null;
   onChange: (option: PatientOption) => void;
   errors?: string[];
+  label?: string;
   search?: (query: string) => Promise<PatientSearchResult>;
   texts?: Texts;
 }) {
@@ -118,7 +120,7 @@ export function PatientCombobox({
 
   return (
     <div className="flex flex-col gap-2 sm:col-span-3">
-      <Label htmlFor={inputId}>Paciente *</Label>
+      <Label htmlFor={inputId}>{label}</Label>
       <input type="hidden" name={name} value={value?.id ?? ""} />
       <p id={`${id}-ajuda`} className="text-sm">
         {value ? (

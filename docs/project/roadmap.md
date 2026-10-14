@@ -1,5 +1,107 @@
 # Roadmap — Fisio OrtoSport
 
+## Módulo administrativo — planejamento de 14/10/2026
+
+**Estado: planejado; issues abertas, sem implementação funcional iniciada.** M0 (#96) tem
+[levantamento de contratos](17-administrativo-contratos.md) com 14 decisões pendentes
+(D-01–D-14); operadora piloto, matriz de acesso e persistência do XML ainda bloqueiam. Issue central:
+[#95 — Roadmap administrativo](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/95).
+O usuário solicitou roadmap, criação de issues e análise individual; o XML anexado é apenas
+referência de formato, sem definição de operadora ou processo. Não publicar o anexo real.
+
+Baseline local `4f35fdb`: FIN-03 integrada pela PR #94. Consulta ao GitHub em 14/10/2026
+confirmou #85–#88 encerradas. As menções abaixo a integração pendente da FIN-03 são
+registros históricos de 07/10/2026, superados quanto ao merge; publicação e migração
+em Production não foram verificadas nesta rodada.
+
+### Entrega por marcos
+
+| Marco | Entregas | Resultado verificável |
+|---|---|---|
+| M0 — Contratos | #96 | Perfil de operadora, estados, campos, permissões e armazenamento definidos; pendências explícitas |
+| M1 — Base e produção | #97 → #98 → #99 → #100 | Contratos e preços, cobertura/autorização, produção conferida e relatórios CSV/impressão |
+| M2 — Guias e XML | #101 → #102 → #103 | Guias SP/SADT, lote fechado, conferência e arquivo XML validado/preservado |
+| M3 — Conciliação | #104 → #105 | Recebimentos de operadoras, glosas e relatórios conciliáveis |
+| M4 — Validação | #106 | Ciclo completo, recuperação e homologação externa com evidência; liberação manual |
+
+M2 começa após #99; não precisa esperar #100. #105 depende também da infraestrutura de
+exportação de #100. Testes e documentação acompanham cada entrega; M4 reúne a evidência,
+não concentra toda a verificação no final. A sequência representa dependências técnicas,
+sem autorizar delegação, implementação, envio externo ou publicação.
+
+### Issues e dependências
+
+| Issue | Escopo | Depende de | Esforço relativo |
+|---|---|---|---|
+| [#96](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/96) — ADM-00 | Definir contratos, permissões e perfil de homologação do administrativo | Baseline #85–#88 | Médio |
+| [#97](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/97) — ADM-01 | Cadastrar operadoras, contratos e procedimentos com preços por vigência | #96 | Grande |
+| [#98](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/98) — ADM-02 | Controlar cobertura do beneficiário e autorizações por procedimento | #97 | Grande |
+| [#99](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/99) — ADM-03 | Conferir produção faturável vinculada às sessões sem cobrança automática | #98 | Grande |
+| [#100](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/100) — ADM-04 | Entregar relatórios de produção, pendências e autorizações com CSV e impressão | #99 | Médio |
+| [#101](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/101) — ADM-05 | Montar e validar guias SP/SADT com histórico dos dados faturados | #99 | Grande |
+| [#102](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/102) — ADM-06 | Fechar lotes por operadora e registrar envio manual com protocolo | #101 | Grande |
+| [#103](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/103) — ADM-07 | Gerar XML TISS validado e preservar o arquivo exato de cada lote | #96, #102 | Grande |
+| [#104](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/104) — ADM-08 | Conciliar recebimentos de operadoras e registrar glosas por item | #102, #103 | Grande |
+| [#105](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/105) — ADM-09 | Exportar relatórios de faturamento, recebimentos e glosas por operadora | #100, #104 | Médio |
+| [#106](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/106) — ADM-10 | Validar o ciclo administrativo e homologar XML antes da liberação | #97, #98, #99, #100, #101, #102, #103, #104, #105 | Grande |
+
+Cada issue contém problema, 6–7 etapas, critérios de aceite, validação, riscos, exclusões
+e uma seção de análise individual com divisão de PRs e áreas afetadas.
+O [backlog estruturado](administrativo-backlog.json) preserva o texto publicado, URLs,
+dependências, esforço e análise de cada entrega.
+
+### Análise do desenvolvimento
+
+- **#96:** resolver contratos antes da migração. Operadora e versão TISS são decisões de domínio; não reproduzir a versão do exemplo automaticamente.
+- **#97:** duas fatias verticais, operadoras/contratos e procedimentos/tarifas. Proteger vigências concorrentes e manter preços históricos.
+- **#98:** cobertura histórica separada do cadastro atual; autorização e saldo por procedimento, com alterações justificadas.
+- **#99:** projeção administrativa mínima, depois conferência e consumo transacional. Invalidação clínica e fechamento precisam da mesma ordem de travas; consumir autorização uma única vez.
+- **#100:** consultas operacionais primeiro, depois CSV e impressão; exportar todo o filtro com limite explícito e neutralização de fórmulas.
+- **#101:** associação rastreável de produção à guia, depois validação condicional e snapshots. Revalidar no fechamento.
+- **#102:** composição, fechamento atômico e eventos de envio separados. Repetir geração/envio não cria nova obrigação financeira.
+- **#103:** prova técnica de XSD no runtime; serialização, hash, persistência e download em fatias. Guardar bytes originais, distinguindo hash TISS de checksum.
+- **#104:** razão própria de operadora, alocações parciais e glosas, depois estornos/correções. Não adaptar Charge como dívida fictícia do paciente.
+- **#105:** reusar exportação e razão anteriores; separar data de produção/faturamento/recebimento e posição atual de histórico.
+- **#106:** ensaiar ciclo e recuperação, consolidar CI/Preview e homologação da operadora com SHA, versão e protocolo.
+
+### Contratos comuns e limites
+
+Manter regras de #85–#88 e acesso financeiro atual. A proposta de permissões do novo domínio
+é ratificada em #96, inclusive alcance da relação Recepção ⊆ Fisioterapeuta.
+Recepção não recebe evolução/prontuário; presença não gera cobrança e plano terapêutico
+não equivale a autorização. Inadimplência/autorização não bloqueia registro clínico.
+
+Histórico fechado não muda por edição cadastral. Valores exatos, datas civis separadas do
+instante técnico, idempotência e proteção de concorrência no banco. Novos vínculos
+participam de manutenção, exclusão de usuários e recuperação; histórico não herda expurgo
+de sete dias do AuditLog. Código Next só após ler guias da versão instalada; node_modules
+estava ausente nesta rodada documental.
+
+Conciliação proposta: faturado líquido = recebido válido + aberto + glosa em análise +
+baixa definitiva por glosa, com ajustes rastreados. Um valor não pode ocupar duas
+classificações simultaneamente; estornos/revisões recompõem somente o valor afetado.
+
+CSV e impressão/PDF pelo navegador na V1. Fora: integração automática, recurso eletrônico
+de glosa, emissão fiscal, DRE, despesas, repasses, pacotes, XLSX nativo e IA.
+O plugin OpenAI Developers mencionado não é dependência técnica deste escopo.
+
+### Pendências e critério de conclusão
+
+#96 deve registrar operadoras piloto, manual/versão aceita, procedimentos/preços,
+agrupamento, validade/consumo, permissões, volumes e persistência/backup do XML.
+Esses itens estão catalogados como D-01–D-14 nos [contratos do administrativo](17-administrativo-contratos.md),
+com responsável, impacto, issue bloqueada e recomendação; nenhum foi decidido em 14/10/2026.
+Sem decisão aplicável, a issue dependente não assume valor padrão silencioso.
+
+Sem prazo de calendário prometido: capacidade, custos adicionais e disponibilidade do
+canal de homologação continuam indefinidos. Usar esforços relativos da tabela e reestimar
+após M0. Responsáveis não foram atribuídos automaticamente.
+
+Conclusão: todas as issues aceitas, quantidades/valores conciliados, XML validado no XSD e
+homologado pela operadora piloto, artefatos recuperáveis, matriz de acesso/concorrência
+verificada e evidências por SHA/ambiente. Separar implementado, validado, homologado e
+publicado. Seguir [pipeline vigente](pipeline-deploy.md); Production requer liberação manual.
+
 Revisão base em **26/09/2026** com código, testes locais, histórico e evidências do GitHub;
 os limites e SHAs dessa revisão são históricos. Atualização financeira em **07/10/2026**:
 FIN-01 e FIN-02 integradas à `main`; FIN-03 implementada e validada localmente no

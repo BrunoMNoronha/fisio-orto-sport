@@ -293,3 +293,46 @@ Migração aditiva `20261015150000_administrativo_guias`: BillingGuide, BillingG
 GuideChange, GuideProfile e GuideSequence, com FKs/índices/guards/histórico. As três primeiras
 entram na limpeza manual; as duas últimas são preservadas. Exclusão de usuário respeita
 GuideChange/GuideProfile. Evidências em docs/project/evidencias/101-guias.md.
+## Conciliação de operadoras — ADM-08 (#104)
+
+`/administrativo/conciliacao` lê somente obrigações constituídas no primeiro envio manual.
+O PostgreSQL cria `OperatorReceivable` por produção congelada, com lote, guia, contrato,
+envio original, valor e data civil. A migração também preenche obrigações de envios
+anteriores. Correção de envio, regeneração de XML e reenvio não duplicam a obrigação.
+
+`OperatorSettlement` e `OperatorSettlementLine` são a razão própria, append-only,
+com autor autenticado, demonstrativo/protocolo, motivo, data efetiva, instante técnico,
+requestId/fingerprint e deltas em centavos bigint. Não criam nem alteram Charge/Payment.
+Recebimento exige 100% de alocação explícita em um contrato, admitindo vários lotes.
+Sem crédito não alocado/excedente. Limite por registro: menor entre maxItems do contrato
+e 1.000 alocações novas; dividir é explícito, sem truncamento. Substituição pode ainda
+incluir as inversões correspondentes ao recebimento original.
+
+Cada centavo pertence a uma classe: `faturado original + ajustes = recebido válido +
+aberto + glosa em análise + baixa definitiva`. Glosa tem linha original/código do
+demonstrativo; revisões apontam para essa origem. Receber da glosa reduz análise e
+acrescenta recebido na mesma transação. Baixa exige decisão/motivo; reabrir transfere
+baixa para análise; liberar transfere análise para aberto. O estado exibido é derivado:
+EM_ANALISE se ainda houver análise, DEFINITIVA se restar só baixa e REVERTIDA se nenhuma
+das duas parcelas restar. Parciais mostram os dois valores além do estado.
+
+Estorno integral inverte somente as alocações novas do recebimento referenciado,
+restaurando inclusive a origem de glosa quando aplicável. Substituição grava inversão
+e novas alocações atomicamente, preservando originais; estornar o substituto não reativa
+o anterior. Revisões posteriores incompatíveis precisam ser revistas antes de estornar.
+Data efetiva não é futura nem anterior ao envio/origem; estorno/substituição não antecede
+o recebimento original. A posição é atual, não uma reconstrução histórica de corte.
+
+Ajuste explícito altera somente faturado líquido e exige referência/motivo. Não altera
+lote, snapshot, XML ou envio, nem representa pagamento ou nova cobrança de paciente.
+Redução não pode consumir valores já classificados; acréscimo fica aberto. Sem integração
+bancária, devolução bancária, importação de demonstrativo ou recurso eletrônico.
+
+Operações serializam por contrato (unidade que contém os saldos de recebimento/item/glosa).
+Triggers validam formas, origens, inversões exatas, integralidade e saldos no commit,
+inclusive em SQL direto. Linhas entram somente na transação do cabeçalho; nenhuma linha
+posterior pode reescrever um evento confirmado. O gate diferido executa uma vez por evento.
+Leitura exige administrativo:ler; somente ADMIN com administrativo:conciliar escreve.
+Consultas projetam identificação operacional e valores, sem prontuário/indicação clínica.
+Itens, glosas e histórico têm páginas próprias; totais usam todos os itens do filtro.
+O histórico abrange o contrato e explica essa abrangência quando há filtro por lote.

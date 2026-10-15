@@ -59,6 +59,7 @@ export default async function FinanceiroPage({ searchParams }: PageProps<"/finan
           <p className="text-sm text-muted-foreground">Cobranças manuais lançadas para os pacientes.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/administrativo/conciliacao" className={buttonVariants({ variant: "outline" })}>Conciliação de operadoras</Link>
           <Link href="/financeiro/relatorios/contas-a-receber" className={buttonVariants({ variant: "outline" })}>
             Relatórios
           </Link>

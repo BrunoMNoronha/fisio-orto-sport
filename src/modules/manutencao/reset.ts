@@ -14,6 +14,9 @@ import { lockMaintenance } from "./lock";
 // Operadoras/contratos são configuração: preservar também seu histórico independente de pacientes.
 export const PRESERVED_TABLES = ["User", "ClinicSettings", "HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule", "GuideProfile", "GuideSequence", "BatchSequence", "TissProfile", "_prisma_migrations"] as const;
 export const CLEARED_TABLES = [
+  "OperatorReceivable",
+  "OperatorSettlement",
+  "OperatorSettlementLine",
   "Session",
   "AuthRateLimit",
   "Patient",

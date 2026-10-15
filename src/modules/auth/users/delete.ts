@@ -26,6 +26,7 @@ export const USER_LINKS = [
   { table: "BatchChange", column: "actorId", category: "administrativo" },
   { table: "BatchArtifact", column: "actorId", category: "administrativo" },
   { table: "BatchSend", column: "actorId", category: "administrativo" },
+  { table: "OperatorSettlement", column: "actorId", category: "administrativo" },
   { table: "GuideChange", column: "actorId", category: "administrativo" },
   { table: "GuideProfile", column: "actorId", category: "administrativo" },
   { table: "ProductionChange", column: "actorId", category: "administrativo" },
@@ -88,7 +89,7 @@ export const LINK_CATEGORY_LABELS: Record<LinkCategory, string> = {
   prontuario: "registros de prontuário (anamneses, avaliações, planos, atendimentos ou reavaliações)",
   configuracoes: "configurações da clínica",
   financeiro: "lançamentos financeiros (cobranças, pagamentos ou estornos)",
-  administrativo: "coberturas, autorizações e consumo autorizado",
+  administrativo: "registros administrativos (coberturas, autorizações, produção, lotes e conciliação de operadoras)",
 };
 
 export class UserDeleteError extends Error {}

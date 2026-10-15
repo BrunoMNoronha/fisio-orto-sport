@@ -29,3 +29,5 @@ Recepção não acessa dados clínicos; Fisioterapeuta acessa os pacientes confo
 A clínica ainda precisa validar formalmente o eventual acesso da Recepção a dados clínicos (hoje vedado). O escopo cadastral e de agenda do Fisioterapeuta foi decidido na #31; o escopo clínico continua sendo todos os pacientes.
 
 Impacto: autorização, prontuário e telas das próximas fases.
+
+**Proposta não ratificada (#96, 14/10/2026):** permissões `administrativo:*` para o módulo de convênios/TISS, incluindo a decisão de manter ou não RECEPCAO ⊆ FISIOTERAPEUTA nesse domínio. A matriz atual não muda até a ratificação. Ver D-10 em [17-administrativo-contratos](17-administrativo-contratos.md).

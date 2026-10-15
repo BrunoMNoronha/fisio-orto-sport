@@ -494,3 +494,16 @@ A licença do projeto deverá ser definida antes da distribuição ou disponibil
 # TechLab+  Fisio OrtoSport
 
 **Gestão clínica organizada. Atendimento com continuidade. Evolução acompanhada.**
+
+### Lotes administrativos (#102)
+
+Em `/administrativo/lotes`, prepare guias aptas do mesmo contrato/TISS/perfil e salve a
+composição. ADMIN fecha atomicamente, cancela antes do envio ou registra envio manual com
+arquivo validado, data civil, protocolo, canal e motivo. Fechamento/geração não constituem
+recebimento. Envio constitui faturamento administrativo; correção acrescenta evento ligado.
+A geração/validação XML será implementada na #103: sem artefato válido, envio fica bloqueado.
+CSV e impressão conferem o lote inteiro; limites recusam excesso sem truncar.
+
+Migração `20261015160000_administrativo_lotes`, validada apenas em banco local descartável
+nesta entrega. Integração e publicação #102 pendentes. Contratos, recuperação e evidências
+em [102-lotes](docs/project/evidencias/102-lotes.md).

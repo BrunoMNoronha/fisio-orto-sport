@@ -337,3 +337,11 @@ Montagem e conferência de guias SP/SADT, associação única à produção, agr
 perfil condicional configurável, snapshots/versionamento e revalidação para #102.
 Não gera lote/XML nem recebível. Migração aditiva validada em PostgreSQL descartável;
 integração/publicação ainda pendentes. Evidências em [101-guias](evidencias/101-guias.md).
+
+### ADM-06 (#102) — implementada e validada localmente em 15/10/2026
+
+Lotes por contrato/TISS/perfil, fechamento atômico com snapshots da #101 e produção #99,
+numeração, cancelamento preservado, envio manual com protocolo/data/arquivo validado e
+correções vinculadas. Conferência, CSV e impressão integrais conforme contratos da #96.
+#99–#101 já integradas; #102 aguarda integração/publicação. Geração/validação XML permanece
+na #103. Evidências em [102-lotes](evidencias/102-lotes.md).

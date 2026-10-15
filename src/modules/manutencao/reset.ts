@@ -12,7 +12,7 @@ import { lockMaintenance } from "./lock";
 // (FIN-01, #86), Payment e PaymentReversal (FIN-02, #87) dependem de Patient e saem juntos:
 // só nesta reinicialização manual, nunca em expurgo.
 // Operadoras/contratos são configuração: preservar também seu histórico independente de pacientes.
-export const PRESERVED_TABLES = ["User", "ClinicSettings", "HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule", "GuideProfile", "GuideSequence", "_prisma_migrations"] as const;
+export const PRESERVED_TABLES = ["User", "ClinicSettings", "HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule", "GuideProfile", "GuideSequence", "BatchSequence", "_prisma_migrations"] as const;
 export const CLEARED_TABLES = [
   "Session",
   "AuthRateLimit",
@@ -42,6 +42,11 @@ export const CLEARED_TABLES = [
   "BillingGuide",
   "BillingGuideItem",
   "GuideChange",
+  "BillingBatch",
+  "BatchGuide",
+  "BatchChange",
+  "BatchArtifact",
+  "BatchSend",
 ] as const;
 export const AUDIT_TABLE = "AuditLog";
 // Palavra de confirmação (CLI e web).

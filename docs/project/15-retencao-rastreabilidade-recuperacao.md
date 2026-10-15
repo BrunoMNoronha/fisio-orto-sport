@@ -311,3 +311,16 @@ As novas tabelas entram juntas no reset manual autorizado; catálogo/numeraçõe
 usuários continuam preservados. Autoria de OperatorSettlement impede excluir o usuário.
 Aplicação em Preview/Production e ensaio remoto de recuperação são etapas de publicação
 separadas; os testes desta issue usam somente PostgreSQL local sintético.
+
+## Ensaio integrado local — ADM-10 (#106)
+
+`node scripts/administrativo/validate-local.mjs 1` (ou `100`) cria banco novo no container
+local de testes, aplica migrações, gera massa fictícia com XML/XSD real e razão financeira,
+faz pg_dump/pg_restore transacional em outro banco novo e confere todas as linhas das
+51 tabelas, arquivos, vínculos, autoria, sequências, triggers e funções. Artefatos são
+comparados pelos bytes/digest persistidos; não há regeneração para substituir o original.
+Checks restaurados mantêm identidade/tipo/colunas/validação; casts equivalentes podem
+ser reescritos pelo PostgreSQL. Uma tentativa de UPDATE de bytes deve ser recusada pelo
+guard restaurado. Manifestos ficam em release/, com SHA e indicação de árvore modificada.
+Não altera a política de cópia externa/PITR/RPO/RTO, não usa Neon e não comprova recuperação
+do ambiente remoto. Roteiro em [operação e validação](18-administrativo-operacao-validacao.md).

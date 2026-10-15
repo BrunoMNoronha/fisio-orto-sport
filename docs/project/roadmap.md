@@ -369,5 +369,16 @@ no commit 030fe48, com migração confirmada e workflow 38809512331 aprovado.
 Faturamento por lote e recebimentos/glosas por guia/item, com eixos temporais explícitos,
 posição atual do mesmo recorte, agregados sem duplicação, CSV/impressão completos e
 drill-down autorizado. Sem migração ou alteração da razão financeira. Implementação
-local e evidências em [105-relatorios](evidencias/105-relatorios.md); integração/publicação
-da #105 são etapas separadas.
+local e evidências em [105-relatorios](evidencias/105-relatorios.md). Integrada pelos PRs
+#127/#128 e publicada em Preview no commit 17f9c47, workflow 38814245719 aprovado.
+
+### ADM-10 (#106) — validação integrada e operação
+
+Ciclo sintético reproduzível com geração XML/XSD real, envio apenas simulado no banco
+local, recebimento parcial/glosa, relatórios, concorrência e rollback. Ensaio automatizado
+pg_dump/pg_restore em bancos descartáveis compara todas as tabelas, bytes, hashes,
+histórico, vínculos e autoria; benchmark local com os defaults de 100 guias por lote.
+Roteiro de treinamento/correção e gates em [operação e validação](18-administrativo-operacao-validacao.md).
+Homologação externa permanece **pendente por orientação de Bruno em 15/10/2026**.
+Código/validação local, publicação e aceite externo são estados separados; não encerrar
+#106/#95 como homologados nem liberar Production apenas com evidência local.

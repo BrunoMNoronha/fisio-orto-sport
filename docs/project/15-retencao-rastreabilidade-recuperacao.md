@@ -267,3 +267,19 @@ Snapshots incluem valores em centavos e identificação faturada; texto clínico
 faturamento fica restrito ao perfil clínico e não é projetado para a Recepção. Históricos
 próprios não são expurgados com AuditLog. Reinicialização manual limpa guia/vínculos/histórico
 junto a Patient e preserva perfil/contador de contrato; exclusão de usuário respeita autoria.
+
+### Lotes e envio manual (#102)
+
+Restaurar BillingBatch, BatchGuide, BatchChange, BatchArtifact, BatchSend e BatchSequence
+junto às guias, produções, contratos e autores. Preservar bytes originais de cada arquivo,
+SHA-256, contentDigest/contentVersion, relações de correção do envio e datas civis. Repor
+índices parciais de guia ativa/envio original, guards e históricos diferidos. As expansões
+de production_guard e guide_history_required permitem apenas cancelamento/envio coerentes
+com os vínculos de lote; restaurar as funções na versão da migração #102.
+
+Históricos, envios e arquivos são append-only e não participam do expurgo de AuditLog.
+Reset manual autorizado limpa lote/vínculos/histórico/arquivos/envios junto a Patient e
+preserva BatchSequence para não reutilizar números. Exclusão de usuário respeita os três
+novos vínculos de autoria. Snapshots restritos podem conter indicação clínica confirmada;
+relatórios operacionais usam projeção explícita sem esse texto. Snapshot não deve ser
+recalculado com cadastros atuais em restauração ou regeneração de arquivo.

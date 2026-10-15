@@ -517,3 +517,17 @@ Perfil genérico de campos/códigos configurável por ADMIN, sem códigos fictí
 Obrigatoriedade de CNES, hora final e indicação clínica é explícita. Indicação de faturamento
 é confirmação separada sob clinico:gerir e não é entregue à Recepção. Não há leitura de
 prontuário, XML ou homologação nesta entrega. Detalhes em evidencias/101-guias.md.
+
+## Implementação ADM-06 (#102) — 15/10/2026
+
+ABERTO/FECHADO/ENVIADO/CANCELADO implementados. Fechamento chama revalidateGuideTx para
+todas as guias e congela lote/itens/preços; guia EM_LOTE e produção FECHADO, sem novo consumo.
+Cancelamento pré-envio preserva conteúdo e libera guias para conferência. Número não é
+reutilizado. Geração de arquivo é eixo separado e permanece na #103; porta interna aceita
+somente bytes já validados e vincula versão/hash ao conteúdo congelado, sem enviar.
+
+Envio manual ADMIN exige artefato correspondente, protocolo, canal, motivo e data civil
+compatível. Marca produção ENVIADO e constitui faturamento administrativo; não é recebimento.
+Correções acrescentam eventos encadeados sem sobrescrever o envio nem duplicar valores.
+Relatório/CSV/impressão reconciliam o lote inteiro, com limites sem truncamento e projeção
+operacional sem indicação clínica. Detalhes e evidências em evidencias/102-lotes.md.

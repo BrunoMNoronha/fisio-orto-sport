@@ -18,6 +18,9 @@ enum Role {
 }
 
 model User {
+  batchChanges BatchChange[]
+  batchArtifacts BatchArtifact[]
+  batchSends BatchSend[]
   guideChanges GuideChange[]
   guideProfiles GuideProfile[]
   productionChanges ProductionChange[]
@@ -829,6 +832,8 @@ model HealthOperator {
 // Nome/código do contrato distinguem vários vínculos da clínica com a mesma operadora.
 // tissVersion é versão informada, não prova de validação/homologação.
 model OperatorContract {
+  batches BillingBatch[]
+  batchSequence BatchSequence?
   guides BillingGuide[]
   guideProfiles GuideProfile[]
   guideSequence GuideSequence?
@@ -1173,6 +1178,7 @@ model GuideSequence {
  contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
 }
 model BillingGuide {
+  batches BatchGuide[]
  id String @id @default(uuid())
  contractId String
  coverageId String
@@ -1227,5 +1233,97 @@ model GuideChange {
  guide BillingGuide @relation(fields:[guideId],references:[id],onDelete:Restrict)
  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
  @@unique([guideId,version])
+ @@index([actorId])
+}
+
+model BatchSequence {
+ contractId String @id
+ lastNumber BigInt
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+}
+model BillingBatch {
+ id String @id @default(uuid())
+ contractId String
+ number BigInt
+ tissVersion String @db.VarChar(8)
+ state String @default("ABERTO") @db.VarChar(12)
+ version Int @default(1)
+ contentVersion Int @default(0)
+ closedAt DateTime? @db.Timestamptz(3)
+ contentDigest String @default("") @db.VarChar(64)
+ snapshot Json
+ totalCents BigInt @default(0)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ guides BatchGuide[]
+ changes BatchChange[]
+ artifacts BatchArtifact[]
+ sends BatchSend[]
+ @@unique([contractId,number])
+ @@index([state,createdAt,id])
+}
+model BatchGuide {
+ id String @id @default(uuid())
+ batchId String
+ guideId String
+ active Boolean @default(true)
+ closedGuideVersion Int?
+ batch BillingBatch @relation(fields:[batchId],references:[id],onDelete:Restrict)
+ guide BillingGuide @relation(fields:[guideId],references:[id],onDelete:Restrict)
+ @@index([batchId])
+ @@index([guideId])
+}
+model BatchChange {
+ id String @id @default(uuid())
+ batchId String
+ version Int
+ snapshot Json
+ actorId String
+ reason String @db.VarChar(300)
+ requestId String @unique @db.VarChar(36)
+ fingerprint String @db.VarChar(64)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ batch BillingBatch @relation(fields:[batchId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([batchId,version])
+ @@index([actorId])
+}
+// Somente o validador futuro (#103) registra artefato validado; nenhuma action pública de criação.
+model BatchArtifact {
+ id String @id @default(uuid())
+ batchId String
+ version Int
+ contentVersion Int
+ contentDigest String @db.VarChar(64)
+ bytes Bytes
+ fileHash String @db.VarChar(64)
+ validationReference String @db.VarChar(300)
+ actorId String
+ requestId String @unique @db.VarChar(36)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ batch BillingBatch @relation(fields:[batchId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ sends BatchSend[]
+ @@unique([batchId,version])
+ @@index([actorId])
+}
+model BatchSend {
+ id String @id @default(uuid())
+ batchId String
+ artifactId String
+ correctsId String? @unique
+ sentOn DateTime @db.Date
+ protocol String @db.VarChar(120)
+ channel String @db.VarChar(120)
+ reason String @db.VarChar(300)
+ actorId String
+ requestId String @unique @db.VarChar(36)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ batch BillingBatch @relation(fields:[batchId],references:[id],onDelete:Restrict)
+ artifact BatchArtifact @relation(fields:[artifactId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ corrects BatchSend? @relation("BatchSendCorrection",fields:[correctsId],references:[id],onDelete:Restrict)
+ correctedBy BatchSend? @relation("BatchSendCorrection")
+ @@index([batchId,createdAt,id])
  @@index([actorId])
 }

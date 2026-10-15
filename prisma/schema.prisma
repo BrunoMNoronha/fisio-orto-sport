@@ -18,6 +18,8 @@ enum Role {
 }
 
 model User {
+  productionChanges ProductionChange[]
+
   id                              String                    @id @default(cuid())
   name                            String
   // Sempre gravado normalizado (trim + minúsculas).
@@ -468,6 +470,8 @@ enum TreatmentSessionStatus {
 // idempotencyKey (gerada pelo formulário) impede que um reenvio crie o mesmo atendimento duas vezes.
 // CHECKs manuais: evolução e nomes não vazios, version >= 1, invalidação coerente com o status.
 model TreatmentSession {
+  productionItems ProductionItem[]
+
   id                          String                   @id @default(cuid())
   patientId                   String
   planId                      String
@@ -891,6 +895,8 @@ model AdministrativeConfigChange {
 
 // Catálogo por contrato: códigos próprios podem coincidir entre operadoras.
 model BillingProcedure {
+  productionItems ProductionItem[]
+
   id String @id @default(uuid())
   contractId String
   tableCode String @db.VarChar(10)
@@ -960,6 +966,8 @@ model BillingProfessional {
   @@index([name, id])
 }
 model BeneficiaryCoverage {
+  productionItems ProductionItem[]
+
   id String @id @default(uuid())
   patientId String
   contractId String
@@ -1031,6 +1039,8 @@ model AuthorizationItem {
 }
 // Livro interno de consumo/devolução para ADM-03; nenhuma sessão gera consumo automático.
 model AuthorizationUse {
+  productionItems ProductionItem[]
+
   id String @id @default(uuid())
   itemId String
   quantity Int
@@ -1085,5 +1095,48 @@ model ProcedureAuthorizationRule {
   procedure BillingProcedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
   actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
   @@unique([procedureId, version])
+  @@index([actorId])
+}
+
+model ProductionItem {
+  id String @id @default(uuid())
+  sessionId String
+  coverageId String
+  procedureId String
+  quantity Int
+  endTime String? @db.VarChar(5)
+  state String @default("PENDENTE") @db.VarChar(12)
+  pendingReason String @db.VarChar(300)
+  sessionVersion Int
+  executionOn DateTime @db.Date
+  useId String? @unique
+  snapshot Json
+  amountCents BigInt?
+  adjustmentPending Boolean @default(false)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  session TreatmentSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  coverage BeneficiaryCoverage @relation(fields: [coverageId], references: [id], onDelete: Restrict)
+  procedure BillingProcedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+  use AuthorizationUse? @relation(fields: [useId], references: [id], onDelete: Restrict)
+  changes ProductionChange[]
+  @@index([state, executionOn, id])
+  @@index([sessionId])
+  @@index([coverageId])
+  @@index([procedureId])
+}
+model ProductionChange {
+  id String @id @default(uuid())
+  itemId String
+  version Int
+  actorId String
+  reason String @db.VarChar(300)
+  requestId String @unique @db.VarChar(36)
+  fingerprint String @db.VarChar(64)
+  snapshot Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  item ProductionItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@unique([itemId, version])
   @@index([actorId])
 }

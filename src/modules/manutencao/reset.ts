@@ -37,6 +37,8 @@ export const CLEARED_TABLES = [
   "AuthorizationItem",
   "AuthorizationUse",
   "BeneficiaryChange",
+  "ProductionItem",
+  "ProductionChange",
 ] as const;
 export const AUDIT_TABLE = "AuditLog";
 // Palavra de confirmação (CLI e web).

@@ -1,12 +1,15 @@
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { parseCivilDate } from "./catalog-validation";
 
 // Uso interno após autorização. Retorna cópia versionada, nunca uma referência a preço corrente.
 // ADM-03/ADM-05 deverão persistir estes valores na conferência/fechamento, sem resolvê-los novamente.
 export async function readTariffSnapshot(db: Pick<PrismaClient, "$transaction">, contractId: string, procedureId: string, civilDate: string) {
+  return db.$transaction(tx => readTariffSnapshotTx(tx, contractId, procedureId, civilDate), { isolationLevel: "RepeatableRead" });
+}
+export async function readTariffSnapshotTx(tx: Prisma.TransactionClient, contractId: string, procedureId: string, civilDate: string) {
   const date = parseCivilDate(civilDate);
   if (!date) return { status: "DATA_INVALIDA" as const };
-  return db.$transaction(async (tx) => {
+
     const procedure = await tx.billingProcedure.findUnique({ where: { id: procedureId }, select: {
       id: true, contractId: true, tableCode: true, code: true, name: true, version: true, active: true,
       contract: { select: { active: true, operator: { select: { active: true } } } },
@@ -23,5 +26,4 @@ export async function readTariffSnapshot(db: Pick<PrismaClient, "$transaction">,
       tariffId: tariff.id, tariffVersion: tariff.version, amountCents: tariff.amountCents,
       executionDate: civilDate, startsOn: tariff.startsOn.toISOString().slice(0, 10), endsOn: tariff.endsOn?.toISOString().slice(0, 10) ?? null,
     } };
-  }, { isolationLevel: "RepeatableRead" });
 }

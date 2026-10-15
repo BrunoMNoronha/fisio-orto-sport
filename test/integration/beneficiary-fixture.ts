@@ -5,7 +5,7 @@ import { saveAdministrativeConfig } from "@/modules/administrativo/service";
 import { saveBeneficiary, saveAuthorizationRule } from "@/modules/administrativo/beneficiary-service";
 import { coverageSchema, authorizationSchema, authorizationItemSchema, authorizationRuleSchema } from "@/modules/administrativo/beneficiary-validation";
 export const beneficiaryMeta = () => ({ id: randomUUID(), requestId: randomUUID(), expectedVersion: 0, reason: "Teste fictício", active: "true" });
-export async function seedBeneficiary(db: PrismaClient, actorId: string, existing?: { patientId: string; contractId: string; procedureId: string }) {
+export async function seedBeneficiary(db: PrismaClient, actorId: string, existing?: { patientId: string; contractId: string; procedureId: string }, procedureIdentity?:{tableCode:string;code:string}) {
   let patientId: string, contractId: string, procedureId: string;
   if (existing) ({patientId,contractId,procedureId}=existing);
   else {
@@ -15,7 +15,7 @@ export async function seedBeneficiary(db: PrismaClient, actorId: string, existin
     await saveAdministrativeConfig(db,actorId,{kind:"operator",values:{...beneficiaryMeta(),id:operatorId,active:true,name:"OPERADORA SINTETICA ADM02",registrationAns:null}});
     await saveAdministrativeConfig(db,actorId,{kind:"contract",values:{...beneficiaryMeta(),id:contractId,active:true,operatorId,name:"CONTRATO SINTETICO ADM02",
       providerCode:null,cnes:null,tissVersion:null,manualReference:null,homologationChannel:null,...CONTRACT_DEFAULTS}});
-    await saveAdministrativeConfig(db,actorId,{kind:"procedure",values:{...beneficiaryMeta(),id:procedureId,active:true,contractId,tableCode:"00",code:"00001",name:"PROCEDIMENTO SINTETICO ADM02"}});
+    await saveAdministrativeConfig(db,actorId,{kind:"procedure",values:{...beneficiaryMeta(),id:procedureId,active:true,contractId,tableCode:procedureIdentity?.tableCode??"00",code:procedureIdentity?.code??"00001",name:"PROCEDIMENTO SINTETICO ADM02"}});
   }
   const rule=authorizationRuleSchema.parse({...beneficiaryMeta(),procedureId,mode:"EXIGIDA",reference:"Manual sintético para teste"});
   await saveAuthorizationRule(db,actorId,rule);

@@ -507,3 +507,19 @@ CSV e impressão conferem o lote inteiro; limites recusam excesso sem truncar.
 Migração `20261015160000_administrativo_lotes`, validada apenas em banco local descartável
 nesta entrega. Integração e publicação #102 pendentes. Contratos, recuperação e evidências
 em [102-lotes](docs/project/evidencias/102-lotes.md).
+
+### XML TISS por lote (#103)
+
+No contrato, configure o **Perfil XML TISS**. Defaults: ANS 4.03.00, homologação/teste,
+aceite da versão não confirmado, equipe opcional omitida. Para produção, ADMIN informa
+piloto/manual/canal e confirma a versão aceita. Guia coleta RN e contratado solicitante;
+campos ausentes ou códigos incompatíveis impedem gerar XML, sem inventar valores.
+
+ADMIN gera/valida no detalhe do lote fechado e baixa os bytes originais versionados.
+Regeneração não sobrescreve arquivos nem registra envio. Arquivo de homologação não pode
+constituir envio de produção. XML usa ISO-8859-1 e MD5 TISS; checksum SHA-256 protege o
+arquivo armazenado. Não há transmissão automática nem homologação externa presumida.
+
+Migração `20261015170000_administrativo_xml`, validada apenas em banco descartável nesta
+entrega. Worker/schemas/dependência WASM incluídos no tracing Node do Next. Detalhes em
+[103-xml](docs/project/evidencias/103-xml.md). Integração/Preview #103 ainda pendentes.

@@ -20,6 +20,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
       initial={{ name: contract.name, providerCode: contract.providerCode ?? "", cnes: contract.cnes ?? "", tissVersion: contract.tissVersion ?? "", manualReference: contract.manualReference ?? "", homologationChannel: contract.homologationChannel ?? "", monthlySessions: String(contract.monthlySessions), closingIntervalDays: String(contract.closingIntervalDays), maxGuides: String(contract.maxGuides), maxItems: String(contract.maxItems), maxXmlBytes: String(contract.maxXmlBytes), maxExportRows: String(contract.maxExportRows), active: String(contract.active), reason: "" }}
       cancelHref={`/configuracoes/operadoras/${id}`} />
     <Link href={`/configuracoes/procedimentos?contrato=${contract.id}`} className="rounded border p-3 underline">Catálogo de procedimentos e tarifas</Link>
+    <Link href={`/configuracoes/perfis-xml/${contract.id}`} className="rounded border p-3 underline">Perfil XML TISS e homologação</Link>
     <Link href={`/configuracoes/perfis-guia/${contract.id}`} className="rounded border p-3 underline">Perfil de campos da guia SP/SADT</Link>
     <ConfigHistory changes={contract.changes} />
   </div>;

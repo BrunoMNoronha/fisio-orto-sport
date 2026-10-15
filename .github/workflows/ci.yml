@@ -53,3 +53,5 @@ jobs:
       - run: pnpm exec prisma migrate deploy
       - run: pnpm test:integration
       - run: pnpm build
+      - name: Verificar runtime XML empacotado
+        run: node scripts/pipeline/verify-tiss-package.mjs

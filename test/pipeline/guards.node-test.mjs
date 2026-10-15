@@ -3,6 +3,17 @@ import assert from "node:assert/strict";
 import { assertCandidate, assertCompatibleMigrations, assertDeployment, databaseTarget, migrationState, releaseContext, repositoryMigrations, targets } from "../../scripts/pipeline/release.mjs";
 
 const sha = "a".repeat(40);
+test("migração administrativa permanece compatível com o gate aditivo (#97)", () => {
+  const administrative = repositoryMigrations().filter((migration) => migration.name === "20261014170000_administrativo_operadoras");
+  assert.equal(administrative.length, 1);
+  assertCompatibleMigrations(administrative);
+  const beneficiaries = repositoryMigrations().filter((migration) => migration.name === "20261014190000_administrativo_coberturas");
+  assert.equal(beneficiaries.length, 1);
+  assertCompatibleMigrations(beneficiaries);
+  const parameters = repositoryMigrations().filter((migration) => migration.name === "20261015120000_administrativo_parametros");
+  assert.equal(parameters.length, 1);
+  assertCompatibleMigrations(parameters);
+});
 function env(environment = "Preview") {
   const target = targets.environments[environment];
   return { RELEASE_ENV:environment, GITHUB_REPOSITORY:targets.repository, GITHUB_REF:"refs/heads/production", GITHUB_SHA:sha,

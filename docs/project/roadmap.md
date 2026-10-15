@@ -2,9 +2,13 @@
 
 ## Módulo administrativo — planejamento de 14/10/2026
 
-**Estado: planejado; issues abertas, sem implementação funcional iniciada.** M0 (#96) tem
-[levantamento de contratos](17-administrativo-contratos.md) com 14 decisões pendentes
-(D-01–D-14); operadora piloto, matriz de acesso e persistência do XML ainda bloqueiam. Issue central:
+**Estado: recorte e permissões aprovados; #97 e #98 implementadas e validadas localmente.**
+Catálogo/tarifas/identificação na #97; cobertura histórica, autorizações e saldo na #98.
+O [levantamento de contratos](17-administrativo-contratos.md) registra 14 decisões
+(D-01–D-14), com aprovação do recorte e refinamentos em 14/10/2026.
+Operadora piloto e volume permanecem pendentes e bloqueiam somente o trabalho dependente.
+Dados da operadora/contrato são parametrizados em Configurações → Operadoras e contratos;
+nenhum valor real ou estado de homologação foi presumido. Issue central:
 [#95 — Roadmap administrativo](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/95).
 O usuário solicitou roadmap, criação de issues e análise individual; o XML anexado é apenas
 referência de formato, sem definição de operadora ou processo. Não publicar o anexo real.
@@ -54,7 +58,7 @@ dependências, esforço e análise de cada entrega.
 
 - **#96:** resolver contratos antes da migração. Operadora e versão TISS são decisões de domínio; não reproduzir a versão do exemplo automaticamente.
 - **#97:** duas fatias verticais, operadoras/contratos e procedimentos/tarifas. Proteger vigências concorrentes e manter preços históricos.
-- **#98:** cobertura histórica separada do cadastro atual; autorização e saldo por procedimento, com alterações justificadas.
+- **#98:** implementada localmente: cobertura histórica, autorização e saldo por procedimento, correção/cancelamento justificados e primitivas transacionais de consumo/devolução para #99. Evidências em [98-coberturas](evidencias/98-coberturas.md); integração/publicação pendentes.
 - **#99:** projeção administrativa mínima, depois conferência e consumo transacional. Invalidação clínica e fechamento precisam da mesma ordem de travas; consumir autorização uma única vez.
 - **#100:** consultas operacionais primeiro, depois CSV e impressão; exportar todo o filtro com limite explícito e neutralização de fórmulas.
 - **#101:** associação rastreável de produção à guia, depois validação condicional e snapshots. Revalidar no fechamento.
@@ -280,3 +284,35 @@ o encerramento do MVP e a prontidão do ambiente publicado ainda não tinham sid
 naquela revisão. O fechamento posterior do gate está na VAL-03; os estados das fatias
 financeiras acima distinguem código, validação e entrega. Este roadmap não é uma auditoria
 exaustiva de segurança ou conformidade.
+
+### Atualização de 15/10/2026 — ADM-00 concluída
+
+Bruno determinou parametrizar os dados em Configurações, adotar padrões editáveis e
+concluir #96 para avançar. Esta decisão substitui o bloqueio anterior por falta de
+operadora piloto e dimensionamento. O aceite da #96 passa a ser o contrato genérico
+parametrizável; homologação real continua no aceite de #103/#106.
+
+Em **Configurações → Operadoras e contratos → contrato**, ADMIN configura identificação,
+ANS, CNES, versão TISS, manual, canal de homologação e parâmetros de planejamento:
+
+| Parâmetro | Padrão inicial |
+|---|---|
+| Versão TISS em novos contratos | 04.03.00 (confirmar com a operadora) |
+| Sessões estimadas/mês | 1.000 |
+| Intervalo de fechamento | 30 dias |
+| Guias por lote | 100 |
+| Itens por lote | 1.000 |
+| XML | 2.097.152 bytes (2 MiB) |
+| Linhas por exportação | 10.000 |
+
+Padrões numéricos são persistidos por contrato, inclusive nos contratos existentes pela
+migração aditiva 20261015120000_administrativo_parametros; não sobrescrevemos versão TISS
+anterior. Mudanças usam autorização ADMIN, motivo, versão otimista, idempotência e snapshot
+histórico na mesma transação. Identificadores reais, manual e canal ficam vazios até
+configuração; não inventamos ANS/CNES/códigos. Nenhum cadastro é declarado homologado.
+As próximas issues devem ler os limites do contrato e recusar excedentes sem truncamento;
+esta entrega não implementa lote, exportação ou geração XML, nem fechamento automático.
+O intervalo de 30 dias é planejamento, sem alterar competência civil já acordada.
+
+
+Próxima entrega funcional: #99; #97/#98 já implementadas localmente. Homologação real permanece em #103/#106.

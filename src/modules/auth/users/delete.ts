@@ -49,6 +49,27 @@ export const USER_LINKS = [
   { table: "Charge", column: "cancelledById", category: "financeiro" },
   { table: "Payment", column: "createdById", category: "financeiro" },
   { table: "PaymentReversal", column: "createdById", category: "financeiro" },
+  { table: "HealthOperator", column: "createdById", category: "configuracoes" },
+  { table: "HealthOperator", column: "updatedById", category: "configuracoes" },
+  { table: "OperatorContract", column: "createdById", category: "configuracoes" },
+  { table: "OperatorContract", column: "updatedById", category: "configuracoes" },
+  { table: "AdministrativeConfigChange", column: "actorId", category: "configuracoes" },
+  { table: "BillingProcedure", column: "createdById", category: "configuracoes" },
+  { table: "BillingProcedure", column: "updatedById", category: "configuracoes" },
+  { table: "ProcedureTariff", column: "createdById", category: "configuracoes" },
+  { table: "ProcedureTariff", column: "updatedById", category: "configuracoes" },
+  { table: "BillingProfessional", column: "createdById", category: "configuracoes" },
+  { table: "BillingProfessional", column: "updatedById", category: "configuracoes" },
+  { table: "BillingProfessional", column: "userId", category: "configuracoes" },
+  { table: "BeneficiaryCoverage", column: "createdById", category: "administrativo" },
+  { table: "BeneficiaryCoverage", column: "updatedById", category: "administrativo" },
+  { table: "BenefitAuthorization", column: "createdById", category: "administrativo" },
+  { table: "BenefitAuthorization", column: "updatedById", category: "administrativo" },
+  { table: "AuthorizationItem", column: "createdById", category: "administrativo" },
+  { table: "AuthorizationItem", column: "updatedById", category: "administrativo" },
+  { table: "AuthorizationUse", column: "actorId", category: "administrativo" },
+  { table: "BeneficiaryChange", column: "actorId", category: "administrativo" },
+  { table: "ProcedureAuthorizationRule", column: "actorId", category: "configuracoes" },
 ] as const;
 
 export type LinkCategory = (typeof USER_LINKS)[number]["category"];
@@ -60,6 +81,7 @@ export const LINK_CATEGORY_LABELS: Record<LinkCategory, string> = {
   prontuario: "registros de prontuário (anamneses, avaliações, planos, atendimentos ou reavaliações)",
   configuracoes: "configurações da clínica",
   financeiro: "lançamentos financeiros (cobranças, pagamentos ou estornos)",
+  administrativo: "coberturas, autorizações e consumo autorizado",
 };
 
 export class UserDeleteError extends Error {}

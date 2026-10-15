@@ -1,14 +1,100 @@
 # Módulo administrativo — contratos, permissões e decisões (ADM-00, #96)
 
+## Encerramento da ADM-00 — 15/10/2026
+
+Bruno determinou parametrizar os dados em Configurações, adotar padrões editáveis e
+concluir #96 para avançar. Esta decisão substitui o bloqueio anterior por falta de
+operadora piloto e dimensionamento. O aceite da #96 passa a ser o contrato genérico
+parametrizável; homologação real continua no aceite de #103/#106.
+
+Em **Configurações → Operadoras e contratos → contrato**, ADMIN configura identificação,
+ANS, CNES, versão TISS, manual, canal de homologação e parâmetros de planejamento:
+
+| Parâmetro | Padrão inicial |
+|---|---|
+| Versão TISS em novos contratos | 04.03.00 (confirmar com a operadora) |
+| Sessões estimadas/mês | 1.000 |
+| Intervalo de fechamento | 30 dias |
+| Guias por lote | 100 |
+| Itens por lote | 1.000 |
+| XML | 2.097.152 bytes (2 MiB) |
+| Linhas por exportação | 10.000 |
+
+Padrões numéricos são persistidos por contrato, inclusive nos contratos existentes pela
+migração aditiva 20261015120000_administrativo_parametros; não sobrescrevemos versão TISS
+anterior. Mudanças usam autorização ADMIN, motivo, versão otimista, idempotência e snapshot
+histórico na mesma transação. Identificadores reais, manual e canal ficam vazios até
+configuração; não inventamos ANS/CNES/códigos. Nenhum cadastro é declarado homologado.
+As próximas issues devem ler os limites do contrato e recusar excedentes sem truncamento;
+esta entrega não implementa lote, exportação ou geração XML, nem fechamento automático.
+O intervalo de 30 dias é planejamento, sem alterar competência civil já acordada.
+
+Todos os critérios documentais estão satisfeitos no recorte ajustado pelo solicitante:
+matriz ratificada, estados/invariantes e revisão de mesa, persistência PostgreSQL e
+recuperação definidas, parâmetros editáveis com defaults. Escolha/validação do piloto,
+XSD, benchmark e ensaio de recuperação são gates de #103/#106, não bloqueio à #96.
+#97/#98 já têm implementação local; a próxima entrega funcional é #99 (ADM-03).
+
+## Aprovação do recorte e avanço autorizado em 14/10/2026
+
+Bruno aprovou expressamente o recorte e as permissões recomendadas neste chat e autorizou
+avançar no que independe da operadora piloto e do volume. Determinou que os dados da
+operadora sejam parametrizáveis em tela de configuração. Essa decisão prevalece sobre
+as marcações históricas de ratificação pendente nas seções de levantamento abaixo.
+
+- **Confirmado:** regras gerais de D-03–D-11 e D-13/D-14, incluindo quantidades inteiras,
+  centavos, conferência explícita, pagadores separados, classificação das glosas, histórico
+  imutável, XML original no banco e a matriz de acesso dos refinamentos.
+- **D-01/D-02 parcialmente definidos:** modelo multioperadora, um perfil piloto para a
+  primeira homologação e dados editáveis pelo ADMIN; operadora/contrato reais, manual,
+  canal e versão aceita permanecem pendentes. Nenhuma versão é preenchida por padrão.
+- **D-12 pendente:** volume e dimensionamento. Os tetos sugeridos não viraram requisitos
+  aprovados nem parâmetros de produção. Paginação de cadastro não é limite de faturamento.
+- **Dados contratuais pendentes de configuração:** procedimentos, preços, códigos do
+  prestador, CNES e dados profissionais. Os valores reais não são necessários para criar
+  cadastros genéricos e testar com dados fictícios; serão exigidos no fluxo aplicável.
+- **Escrita liberada no domínio aprovado:** #97 implementada e validada localmente com
+  operadoras, contratos, catálogo de procedimentos, tarifas por vigência, identificação
+  de solicitantes/executantes e histórico. Evidências em [97-catalogo](evidencias/97-catalogo.md).
+  Integração no repositório e publicação são etapas distintas, ainda pendentes.
+- **Avanço sequencial autorizado:** Bruno solicitou executar a próxima issue. A #98
+  acrescenta cobertura histórica, autorização recebida e itens por procedimento,
+  elegibilidade pela execução, regra de exigência/dispensa e saldo derivado.
+  Operadora piloto e volume continuam pendentes; [evidência local](evidencias/98-coberturas.md).
+
+### Matriz ratificada
+
+| Permissão | ADMIN | RECEPCAO | FISIOTERAPEUTA |
+|---|:-:|:-:|:-:|
+| `administrativo:ler` (inclusive relatórios/CSV) | ✓ | ✓ | ✓ |
+| `administrativo:preparar` | ✓ | ✓ | ✓ |
+| `administrativo:configurar` | ✓ | — | — |
+| `administrativo:fechar` | ✓ | — | — |
+| `administrativo:conciliar` (escrita) | ✓ | — | — |
+
+Permissões clínicas e financeiras anteriores permanecem iguais. Novos nomes de permissão
+não significam que guias, lotes, relatórios ou conciliação já estejam implementados.
+
+### Pendências que continuam bloqueando apenas o trabalho dependente
+
+| Pendência | Não bloqueia | Bloqueia |
+|---|---|---|
+| Operadora piloto/manual/versão | Configuração genérica, permissões, estrutura do catálogo/autorizações | Perfil final de campos, regras específicas de guia/XML e homologação externa |
+| Volume | Cadastro com paginação, validações e transações | Aceite de limites, benchmark de lotes/exportações e capacidade final |
+| Dados contratuais reais | Modelagem e testes fictícios | Uso real do contrato, seleção de tarifa e aptidão de guias reais |
+
+A #96 continua aberta para acompanhamento dessas pendências; sua abertura não é mais
+um bloqueio geral às filhas. Não houve autorização de deploy, envio real ou migração
+produtiva. A validação usa PostgreSQL 18 descartável em localhost.
+
 ## Estado e fontes
 
 **Levantamento documental de 14/10/2026, com pendências catalogadas.** Issue:
 [#96](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/96), filha do épico
 [#95](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/95). Este documento não
-cria migração, código, permissão ou integração. Nenhuma decisão de negócio foi tomada
-nesta rodada: Bruno informou em 14/10/2026 que **ainda não há decisões** a registrar
-como confirmadas. Por isso, tudo o que depende da clínica ou da operadora aparece como
-**DECISÃO PENDENTE** ou **RECOMENDAÇÃO**, nunca como valor padrão.
+criava migração, código, permissão ou integração. Naquele levantamento ainda não havia
+decisões confirmadas. A aprovação posterior e o avanço autorizado constam na abertura
+deste documento; pendências específicas continuam identificadas, sem valores inventados.
 
 Baseline: `main` em `4f35fdb` (FIN-03 integrada pela
 [PR #94](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/94)); #85–#88 encerradas
@@ -41,7 +127,7 @@ código, valor ou hash dele foi copiado para este documento ou para as fixtures.
 | Armazenamento | Somente PostgreSQL no Neon (PITR 6 h, sem snapshots, sem cópia externa — risco aceito B4/B5) e Vercel; nenhum object storage | Persistência do XML é decisão D-11 |
 | Exportação | Não há CSV nem impressão de relatórios financeiros | ADM-04 cria a infraestrutura comum |
 
-## Matriz de decisões pendentes
+## Matriz do levantamento inicial de decisões
 
 Responsável por todas: **Bruno M Noronha** (decisor de escopo e políticas de dados,
 ver [responsáveis](04-responsaveis.md)). Registradas em 14/10/2026; **data de decisão TBD**,
@@ -145,7 +231,7 @@ procedimento `PROC-SINT-01`, tarifa sintética de R$ 52,37 por unidade (centavos
 | Dois recebimentos alocam o mesmo aberto | Soma nunca supera o aberto; o segundo é recusado se exceder | Trava do item/guia + guard de saldo no banco |
 | Reenvio do mesmo formulário | Devolve o registro original; conteúdo divergente é recusado | `requestId` + fingerprint, como na FIN-02 |
 
-## Proposta de matriz de acesso (não ratificada)
+## Matriz de acesso do levantamento inicial (superada pela ratificação)
 
 **DECISÃO PENDENTE D-10.** `permissions.ts` não muda nesta issue. Proposta a partir das
 etapas da #96:
@@ -276,16 +362,124 @@ Regras para testes, seed e evidências de todas as filhas:
 
 Cada PR filha cita no corpo as decisões que usou e confirma que estão registradas aqui.
 
-## Aceite da #96 nesta rodada
+## Recomendações apresentadas em 14/10/2026
+
+O levantamento da #96 produziu as propostas abaixo. Posteriormente Bruno aprovou o
+recorte e as permissões, mantendo operadora piloto e volume como pendências e liberando
+o avanço independente; a seção de aprovação na abertura define o estado vigente.
+O levantamento anterior foi integrado em `27e58d7`; a base funcional era `4f35fdb`.
+
+### Pacote recomendado para a primeira versão
+
+| Decisão | Recomendação concreta | Evidência necessária para ratificar |
+|---|---|---|
+| D-01 | Uma clínica/CNPJ. Cadastro multioperadora, com **uma operadora piloto** homologada no primeiro XML; escolher por volume de fisioterapia e acesso a manual/canal de homologação | Bruno informa operadora, contrato e responsável de faturamento |
+| D-02 | Um único perfil/versão no primeiro gerador; **04.03.00 como candidata de estudo**, validada contra manual/XSD do piloto antes da escolha final | Manual datado e schema aplicável; não assumir versão do anexo |
+| D-03 | Cadastro faturável próprio de solicitante/executante e identificação contratual da clínica, com snapshot; coletar somente campos exigidos | CNES/códigos/conselho/UF/CBO conforme perfil; solicitante pode ser outro profissional |
+| D-04 | Só autorizações recebidas e dispensa explícita por contrato/procedimento; sem pedido eletrônico. Validade inclusiva pela execução, consumo único ao conferir produção, devolução antes de fechar; falta de regra gera pendência, sem bloquear sessão clínica | Bruno confirma fluxo e manual confirma obrigatoriedade/unidade |
+| D-05 | Quantidades inteiras positivas, vários procedimentos por sessão quando permitido; catálogo limitado aos procedimentos realmente contratados | Lista de procedimentos/unidades; não copiar procedimentos do laboratório |
+| D-06 | Guia por cobertura/beneficiário/contrato/autorização e mês de execução, permitindo várias sessões/itens. Lote por contrato/operadora/versão, com competência definida; sequência de guia/lote gerada no banco, sem reutilizar números cancelados | Manual confirma agrupamento, escopo/limites/formato de numeração e separação adicional |
+| D-07 | Recorte inicial: preço em BRL com duas casas, vigência pela execução, sem descontos, multiplicadores variáveis, pacotes ou rateio. Fator 1 somente se aceito pelo perfil; total exato = quantidade × centavos | Tabela contratual confirma duas casas e unidade inteira; exigência diferente reabre desenho antes de #97 |
+| D-08 | Produção pela execução; **faturamento/constituição do recebível pelo registro de envio**; recebimento pela data efetiva. Lote fechado é preparado, sem reconhecimento duplicado ao gerar XML. Relatórios mostram posição atual | Bruno ratifica semântica gerencial; sem posição histórica por data de corte na V1 |
+| D-09 | Glosa por item/valor, inicialmente em análise; revisão e baixa definitiva por ato do ADMIN, com motivo e histórico. Pagamento de valor glosado exige revisão/liberação correspondente na mesma transação. Sem recurso eletrônico ou reapresentação automática | Bruno confirma fluxo e motivos do demonstrativo; revisão não apaga original |
+| D-10 | Manter RECEPCAO ⊆ FISIOTERAPEUTA: ambos leem/preparam/conferem dados administrativos. ADMIN configura, fecha/cancela, gera/baixa XML, registra envio e concilia | Bruno ratifica matriz e alcance dos relatórios abaixo |
+| D-11 | Bytes originais no PostgreSQL em tabela de artefato separada de listagens, com checksum, versão e download autenticado; persistência e estado na mesma transação | Bruno ratifica; prova técnica de tamanho/custo e restauração em #103/#106 |
+| D-12 | Envelope inicial proposto: **100 guias/1.000 itens por lote, XML até 2 MiB e CSV/impressão até 10.000 linhas**; limite menor do schema/manual prevalece. Excedente pede divisão/filtro, sem truncar | Bruno informa volume mensal/frequência de fechamento; teste no runtime mede esses tetos |
+| D-13 | Cancelar lote fechado somente antes do envio, com motivo e preservação de bytes; liberar guias sob trava e devolver produção a apta sem liberar autorização ainda consumida. Enviado é imutável; correção vira pendência/ajuste manual vinculado. Reenvio do mesmo arquivo não gera novo faturado | Bruno ratifica; manual define tratamento de retificação quando aplicável |
+| D-14 | Operadora única pagadora do item administrativo; **sem divisão/coparticipação do mesmo item na V1**. Atendimento particular continua no financeiro manual; nenhuma dívida é criada automaticamente para paciente | Bruno ratifica recorte; cenário de pagadores divididos reabre escopo antes de #104 |
+
+A publicação [ANS julho/2026](https://www.gov.br/ans/pt-br/assuntos/prestadores/padrao-para-troca-de-informacao-de-saude-suplementar-2013-tiss/padrao-tiss-julho-2026),
+atualizada em 01/09/2026 e consultada em 14/10/2026, lista comunicação 04.03.00 e
+01.06.00. Essa fonte fundamenta a candidata de estudo, sem comprovar aceite da operadora.
+Não foi realizada validação XSD nem análise de todas as regras do schema nesta rodada.
+
+### Ajustes recomendados aos contratos anteriores
+
+Estes refinamentos só passam a contrato após ratificação e devem prevalecer sobre
+alternativas ainda abertas nas seções anteriores:
+
+1. **Acesso D-10:** resolver o `?` de `administrativo:preparar` para FISIOTERAPEUTA como
+   **Sim**. Leituras e CSV/impressão de todos os cinco relatórios administrativos ficam
+   acessíveis aos três perfis, coerentes com o alcance financeiro atual; escrita de
+   recebimentos/glosas continua restrita ao ADMIN. Isso ajusta a proposta anterior que
+   exigia `conciliar` também para leitura dos relatórios financeiros de operadora.
+2. **Obrigação financeira D-08:** nasce uma vez ao registrar envio, não no fechamento
+   ou geração do arquivo. No fechamento o item fica reservado no snapshot; a denominação
+   `FATURADO` anterior precisa ser refinada em #99/#102 para distinguir fechado e enviado.
+3. **Alocação D-09:** para reduzir escopo, recebimento só é confirmado quando 100% alocado
+   em itens da mesma operadora/contrato, admitindo vários lotes. **Sem saldo não alocado**
+   ou crédito excedente na V1. Ajusta a alternativa anterior de manter saldo não alocado.
+   Recebimentos parciais e estornos/correções continuam suportados.
+4. **Artefato D-11:** baixar novamente entrega exatamente os bytes originais. Reenvio usa
+   o mesmo artefato. Regenerar/corrigir após fechamento não substitui silenciosamente
+   bytes nem altera a identidade do que foi enviado; antes do envio, cancelar e fechar
+   novo lote quando houver mudança de conteúdo. Sem editor/versionador de XML na V1.
+5. **Glosa D-09:** recebido, aberto, glosa em análise e baixa definitiva são classificações
+   exclusivas por centavo. Pagar R$40 de uma glosa em análise de R$52,37 libera R$40 da
+   glosa e aloca o pagamento atomicamente, deixando R$12,37 em análise ou baixado por
+   ato justificado; não classificar R$40 simultaneamente como recebido e glosado.
+6. **Fixtures:** prefixos SINT/TESTE servem a testes de domínio; campos numéricos com formato
+   restrito no XSD exigem fixtures próprias compatíveis, usando dados fictícios e regras
+   de teste aceitas pelo canal. Não prometer que PROC-SINT/CPF inválido passa em XSD ou
+   homologação; nenhuma fixture XML validada foi produzida neste levantamento.
+7. **Recuperação:** PITR/backup citados acima são registros históricos, não uma inspeção
+   atual da infraestrutura. Ensaiar restauração de bytes e vínculos; armazenamento no
+   banco inclui o artefato no escopo, mas não prova recuperação executada nem dispensa
+   reavaliar o risco aceito antes do primeiro envio real.
+
+### Complemento do dicionário e origem dos horários
+
+| Campo/conceito | Origem e regra proposta | Bloqueia |
+|---|---|---|
+| Hora inicial | Momento real da execução confirmado; occurredAt pode ser origem se a semântica for validada | #99/#101/#103 |
+| Hora final | **Ausente em TreatmentSession**; coletar quando exigida pelo perfil. Não copiar hora inicial nem deduzir duração da agenda | #99/#101/#103 |
+| Profissional solicitante | Cadastro faturável explícito; não presumir que é o executante da sessão | #97/#101 |
+| Indicação clínica, caráter, tipo/regime de atendimento e acidente | Campos de guia conforme obrigatoriedade do perfil, confirmados por pessoa autorizada; não copiar ND/códigos do exemplo | #101/#103 |
+| Atendimento RN e campos condicionais de beneficiário | Regra explícita do perfil e valor confirmado quando necessário; não inferir N por ausência | #98/#101/#103 |
+| Hash TISS e checksum interno | Finalidades distintas; primeiro conforme especificação, segundo para integridade de bytes armazenados | #103 |
+| Linhas de recebimento/glosa | Razão própria de operadora; não fazem parte do XML ENVIO_LOTE_GUIAS | #104/#105 |
+
+### Dimensionamento e revisão de mesa adicional
+
+O anexo tem 107.696 bytes, medidos apenas como amostra do arquivo de referência.
+Esse tamanho não estima atendimentos/guias mensais da clínica nem comprova custo/performance.
+Os tetos D-12 são candidatos de projeto, **não regras ANS**, e precisam de medição.
+
+| Caso sintético | Invariante revisada |
+|---|---|
+| Autorização 10, consumo 8, conferências simultâneas de 2 e 1 | Não aceitar ambos; saldo nunca negativo; guia e lote não consomem de novo |
+| Faturado R$100, recebido R$60, glosa em análise R$20 | Aberto R$20; estorno do recebido leva aberto a R$80 e mantém glosa R$20 |
+| Execução no último dia válido, lançamento dois dias depois | Validade pela execução; retroatividade não é por si impedimento |
+| Invalidação clínica depois de lote fechado | Snapshot preservado e pendência de ajuste; sem refaturamento automático |
+| Cancelamento antes do envio | Preserva bytes e libera guias; não havia recebível; reserva de autorização só muda se a produção mudar |
+| Reenvio do mesmo XML | Nova tentativa, sem nova obrigação, consumo ou reconhecimento de faturado |
+
+Casos revisados conceitualmente, sem execução de código, PostgreSQL ou validador XSD.
+
+### O que falta para fechar a primeira versão
+
+O recorte e a matriz foram ratificados conforme a abertura. Informações externas ainda
+necessárias para uso real: **operadora piloto e manual/canal**, **procedimentos,
+preços e regras de autorização**, **volume aproximado de sessões/guias e frequência de
+fechamento**. Dados pessoais/credenciais não devem ser publicados na issue.
+
+D-10 e as regras genéricas D-05/D-07/D-04 estão aprovadas para desenvolvimento; os valores
+contratuais permanecem configuráveis. Perfil de guia/XML exige manual/campos D-02/D-03/D-06;
+D-12 exige dimensionamento. #97 iniciou configuração genérica; #96 permanece aberta para
+pendências, sem impedir trabalho independente.
+
+## Aceite da #96 após aprovação
 
 | Critério | Situação |
 |---|---|
 | Decisões pendentes com responsável, impacto e marco bloqueado; ao menos um perfil de operadora antes da homologação | **Parcial:** matriz D-01–D-14 completa; **nenhum perfil de operadora definido** |
-| Matriz de acesso ratificada antes de escrita; Recepção sem clínico | **Pendente:** proposta registrada, ratificação de Bruno pendente (D-10) |
+| Matriz de acesso ratificada antes de escrita; Recepção sem clínico | **Atendido:** Bruno aprovou a matriz refinada; permissões implementadas e testadas na fatia inicial de #97 |
 | Fluxo e invariantes com exemplos de parcial, correção e concorrência | **Atendido** neste documento (revisão de mesa do cenário S1) |
-| Persistência e recuperação do arquivo registradas; sem segredos/anexo no GitHub | **Parcial:** opções e recomendação registradas; decisão D-11 pendente; nenhum dado do anexo publicado |
+| Persistência e recuperação do arquivo registradas; sem segredos/anexo no GitHub | **Parcial:** PostgreSQL aprovado no recorte; prova técnica e recuperação do artefato pertencem a #103/#106; nenhum dado pessoal do anexo publicado |
 
-A #96 permanece aberta até D-01, D-10 e D-11 serem decididas e registradas aqui.
+Registro histórico anterior ao encerramento de 15/10/2026: a #96 permanecia aberta para perfil piloto e dimensionamento; D-10 e a escolha geral de
+D-11 estão ratificadas. As filhas podem avançar nos trechos independentes conforme
+autorização expressa de Bruno.
 Revisão de mesa: o cenário S1 foi percorrido contra os estados e invariantes acima,
 conferindo a soma de cada passo; comparação com schema, guards, financeiro, auditoria
 e pipeline está na seção de compatibilidade. Nenhum teste automatizado se aplica a esta

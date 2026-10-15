@@ -18,8 +18,8 @@ histórico financeiro, que não tem expurgo automático.
 
 | Destino | Tabelas |
 |---|---|
-| **Preservar integralmente** | `User`: todas as linhas e todos os campos (id, nome, e-mail, hash de senha, perfil, CREFITO, ativo, datas), inclusive inativos. `ClinicSettings`, que é configuração. `_prisma_migrations` |
-| **Limpar** | `Patient`, `Appointment`, `ScheduleBlock`, `Anamnesis`, `Assessment`, `AssessmentChange`, `TherapyPlan`, `TherapyPlanRevision`, `TherapyPlanStatusChange`, `TreatmentSession`, `TreatmentSessionChange`, `Reassessment`, `ReassessmentChange`, `Charge`, `Payment`, `PaymentReversal` (financeiro: dependem de `Patient`), `Session` (todos precisam entrar de novo) e `AuthRateLimit` |
+| **Preservar integralmente** | `User`: todas as linhas e todos os campos (id, nome, e-mail, hash de senha, perfil, CREFITO, ativo, datas), inclusive inativos. `ClinicSettings`, `HealthOperator`, `OperatorContract`, `BillingProcedure`, `ProcedureTariff`, `BillingProfessional`, `AdministrativeConfigChange` e `ProcedureAuthorizationRule`, que são configurações e seu histórico. `_prisma_migrations` |
+| **Limpar** | `Patient`, `Appointment`, `ScheduleBlock`, `Anamnesis`, `Assessment`, `AssessmentChange`, `TherapyPlan`, `TherapyPlanRevision`, `TherapyPlanStatusChange`, `TreatmentSession`, `TreatmentSessionChange`, `Reassessment`, `ReassessmentChange`, `Charge`, `Payment`, `PaymentReversal` (financeiro: dependem de `Patient`), `Session` (todos precisam entrar de novo) e `AuthRateLimit`, `BeneficiaryCoverage`, `BenefitAuthorization`, `AuthorizationItem`, `AuthorizationUse` e `BeneficiaryChange` (dependem de paciente) |
 | **Auditoria (`AuditLog`)** | Preservada por padrão. Com `--incluir-auditoria`, os eventos anteriores são apagados. Isso é uma **exceção** às regras A5 (retenção) e A7 (imutabilidade) da DEC-02 e exige autorização registrada para aquela execução. A política permanente não muda |
 | **Infraestrutura** | Schema, índices, constraints, funções, triggers, extensões e permissões ficam intactos |
 
@@ -33,7 +33,7 @@ histórico financeiro, que não tem expurgo automático.
   tabela não prevista, tabela prevista ausente, FK de fora apontando para uma tabela limpa, ou
   trigger da auditoria ausente ou desligada.
 - **Uma transação só:**
-  - trava `User` e `ClinicSettings` (e `AuditLog`, com a auditoria incluída) contra escritas
+  - trava `User`, `ClinicSettings`, `HealthOperator`, `OperatorContract`, `BillingProcedure`, `ProcedureTariff`, `BillingProfessional`, `AdministrativeConfigChange` e `ProcedureAuthorizationRule` (e `AuditLog`, com a auditoria incluída) contra escritas
     concorrentes;
   - roda `TRUNCATE ... RESTRICT` com lista fechada: sem CASCADE, e as FKs cíclicas entre revisões
     do plano e reavaliações se resolvem por estarem no mesmo comando;

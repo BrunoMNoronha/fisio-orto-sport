@@ -11,7 +11,8 @@ import { lockMaintenance } from "./lock";
 // Contrato de dados (issue #62; ScheduleBlock e ClinicSettings decididos em 27/09/2026). Charge
 // (FIN-01, #86), Payment e PaymentReversal (FIN-02, #87) dependem de Patient e saem juntos:
 // só nesta reinicialização manual, nunca em expurgo.
-export const PRESERVED_TABLES = ["User", "ClinicSettings", "_prisma_migrations"] as const;
+// Operadoras/contratos são configuração: preservar também seu histórico independente de pacientes.
+export const PRESERVED_TABLES = ["User", "ClinicSettings", "HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule", "_prisma_migrations"] as const;
 export const CLEARED_TABLES = [
   "Session",
   "AuthRateLimit",
@@ -31,6 +32,11 @@ export const CLEARED_TABLES = [
   "Charge",
   "Payment",
   "PaymentReversal",
+  "BeneficiaryCoverage",
+  "BenefitAuthorization",
+  "AuthorizationItem",
+  "AuthorizationUse",
+  "BeneficiaryChange",
 ] as const;
 export const AUDIT_TABLE = "AuditLog";
 // Palavra de confirmação (CLI e web).
@@ -147,13 +153,15 @@ export async function executeReset(
       }
       // Sem escritas concorrentes nas tabelas preservadas enquanto a operação roda. O TRUNCATE
       // já toma trava exclusiva nas tabelas limpas.
-      await tx.$executeRawUnsafe(`LOCK TABLE "User", "ClinicSettings" IN SHARE ROW EXCLUSIVE MODE`);
+      await tx.$executeRawUnsafe(`LOCK TABLE "User", "ClinicSettings", "HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule" IN SHARE ROW EXCLUSIVE MODE`);
       if (includeAudit) await tx.$executeRawUnsafe(`LOCK TABLE "${AUDIT_TABLE}" IN SHARE ROW EXCLUSIVE MODE`);
       const recheck = await inspectSchema(tx);
       if (recheck.length) throw new ResetAbort(`O banco mudou antes da execução: ${recheck.join(" ")}`);
 
       const before = await countTables(tx, clearList);
       const snapshot = { user: await fingerprint(tx, "User"), settings: await fingerprint(tx, "ClinicSettings") };
+      const administrative = new Map<string, Awaited<ReturnType<typeof fingerprint>>>();
+      for (const table of ["HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule"]) administrative.set(table, await fingerprint(tx, table));
 
       // Lista fechada, sem CASCADE: as FKs entre as tabelas limpas (inclusive as cíclicas entre
       // revisões do plano e reavaliações) são resolvidas por estarem no mesmo TRUNCATE; qualquer
@@ -179,6 +187,10 @@ export async function executeReset(
         throw new ResetAbort("Os usuários mudaram durante a operação.");
       }
       if (settingsAfter.h !== snapshot.settings.h) throw new ResetAbort("As configurações mudaram durante a operação.");
+      for (const [table, original] of administrative) {
+        const current = await fingerprint(tx, table);
+        if (current.n !== original.n || current.h !== original.h) throw new ResetAbort("As configurações administrativas mudaram durante a operação.");
+      }
       const protections = await inspectSchema(tx);
       if (protections.length) throw new ResetAbort(`Proteções alteradas: ${protections.join(" ")}`);
 

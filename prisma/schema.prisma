@@ -18,6 +18,8 @@ enum Role {
 }
 
 model User {
+  guideChanges GuideChange[]
+  guideProfiles GuideProfile[]
   productionChanges ProductionChange[]
 
   id                              String                    @id @default(cuid())
@@ -827,6 +829,9 @@ model HealthOperator {
 // Nome/código do contrato distinguem vários vínculos da clínica com a mesma operadora.
 // tissVersion é versão informada, não prova de validação/homologação.
 model OperatorContract {
+  guides BillingGuide[]
+  guideProfiles GuideProfile[]
+  guideSequence GuideSequence?
   id             String   @id @default(uuid())
   operatorId     String
   name           String   @db.VarChar(120)
@@ -944,6 +949,7 @@ model ProcedureTariff {
 
 // Dados faturáveis próprios, sem alterar User/CREFITO nem conceder acesso clínico.
 model BillingProfessional {
+  requestedGuides BillingGuide[]
   id String @id @default(uuid())
   userId String? @unique
   name String @db.VarChar(120)
@@ -966,6 +972,7 @@ model BillingProfessional {
   @@index([name, id])
 }
 model BeneficiaryCoverage {
+  guides BillingGuide[]
   productionItems ProductionItem[]
 
   id String @id @default(uuid())
@@ -993,6 +1000,7 @@ model BeneficiaryCoverage {
   @@index([contractId])
 }
 model BenefitAuthorization {
+  guides BillingGuide[]
   id String @id @default(uuid())
   coverageId String
   contractId String
@@ -1099,6 +1107,7 @@ model ProcedureAuthorizationRule {
 }
 
 model ProductionItem {
+  guideItems BillingGuideItem[]
   id String @id @default(uuid())
   sessionId String
   coverageId String
@@ -1139,4 +1148,84 @@ model ProductionChange {
   actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
   @@unique([itemId, version])
   @@index([actorId])
+}
+
+// Perfil administrativo explícito, versionado. Não representa homologação XML.
+model GuideProfile {
+ id String @id @default(uuid())
+ contractId String
+ version Int
+ rules Json
+ reference String @db.VarChar(300)
+ reason String @db.VarChar(300)
+ requestId String @unique @db.VarChar(36)
+ fingerprint String @db.VarChar(64)
+ actorId String
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([contractId,version])
+ @@index([actorId])
+}
+model GuideSequence {
+ contractId String @id
+ lastNumber BigInt
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+}
+model BillingGuide {
+ id String @id @default(uuid())
+ contractId String
+ coverageId String
+ authorizationId String?
+ number BigInt
+ month String @db.VarChar(7)
+ state String @default("RASCUNHO") @db.VarChar(12)
+ requesterId String?
+ requestedOn DateTime? @db.Date
+ characterCode String @default("") @db.VarChar(20)
+ attendanceCode String @default("") @db.VarChar(20)
+ regimeCode String @default("") @db.VarChar(20)
+ accidentCode String @default("") @db.VarChar(20)
+ clinicalIndication String @default("") @db.VarChar(1000)
+ clinicalConfirmed Boolean @default(false)
+ snapshot Json
+ sourceDigest String @db.VarChar(64)
+ pending Json
+ totalCents BigInt @default(0)
+ version Int @default(1)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ coverage BeneficiaryCoverage @relation(fields:[coverageId,contractId],references:[id,contractId],onDelete:Restrict)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ authorization BenefitAuthorization? @relation(fields:[authorizationId],references:[id],onDelete:Restrict)
+ requester BillingProfessional? @relation(fields:[requesterId],references:[id],onDelete:Restrict)
+ items BillingGuideItem[]
+ changes GuideChange[]
+ @@unique([contractId,number])
+ @@index([state,createdAt,id])
+}
+model BillingGuideItem {
+ id String @id @default(uuid())
+ guideId String
+ productionId String
+ active Boolean @default(true)
+ snapshot Json
+ guide BillingGuide @relation(fields:[guideId],references:[id],onDelete:Restrict)
+ production ProductionItem @relation(fields:[productionId],references:[id],onDelete:Restrict)
+ @@index([guideId])
+ @@index([productionId])
+}
+model GuideChange {
+ id String @id @default(uuid())
+ guideId String
+ version Int
+ snapshot Json
+ actorId String
+ reason String @db.VarChar(300)
+ requestId String @unique @db.VarChar(36)
+ fingerprint String @db.VarChar(64)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ guide BillingGuide @relation(fields:[guideId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([guideId,version])
+ @@index([actorId])
 }

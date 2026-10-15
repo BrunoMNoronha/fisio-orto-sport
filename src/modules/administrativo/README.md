@@ -240,3 +240,56 @@ paisagem, cabeçalho de tabela repetido, quebra de texto e linhas preservadas. P
 função nativa do navegador, sem biblioteca/XLSX. Saldo disponível é aritmético:
 autorização vencida/inativa não permite consumo, mesmo com saldo nominal positivo.
 Nenhuma migração é necessária. Evidências: `docs/project/evidencias/100-relatorios.md`.
+
+## Guias SP/SADT (#101)
+
+Administrativo → Guias permite montagem explícita, rascunho, conferência, devolução e
+cancelamento. Grupo imutável: cobertura/beneficiário + contrato + autorização (ou dispensa)
++ mês civil de execução em São Paulo. Não existe seleção automática de produção,
+solicitação eletrônica, lote ou XML nesta entrega. Não há nova cobrança ou consumo de saldo.
+
+`BillingGuideItem` referencia a produção original; não é uma segunda produção editável.
+Índice parcial reserva cada produção em uma única guia ativa. Remover/cancelar libera a
+associação, preservando o vínculo anterior inativo. Quantidade/preço vêm do snapshot da
+#99, fator 1 nesta V1, e total é bigint em centavos. Sem fatores/ajustes adicionais inferidos.
+`GuideSequence` gera número por contrato atomicamente no PostgreSQL; cancelamento não
+reutiliza número. Perfil/contador sobrevivem à reinicialização manual de pacientes.
+
+ADMIN configura perfil versionado em Configurações → contrato → Perfil de campos da guia:
+CNES, hora final real, indicação clínica, múltiplos itens/sessões e listas explícitas de
+códigos de caráter/tipo/regime/acidente. Sem códigos ou perfil, a conferência informa
+pendência por campo; não preenche ND nem presume código da operadora. Campos estruturais
+inválidos são recusados antes da transação; dados faltantes persistem como pendências no
+rascunho. Aptidão administrativa não declara homologação de manual/XSD (#103/#106).
+
+Leitura usa administrativo:ler; montagem/conferência/devolução/cancelamento, preparar.
+Perfil é exclusivo de configurar (ADMIN). Indicação clínica mínima é digitada e confirmada
+somente sob clinico:gerir (ADMIN/Fisioterapeuta); não deriva do prontuário. Recepção não
+recebe o campo nem histórico clínico. Snapshot administrativo contém somente o hash; a projeção do formulário cliente exclui
+snapshots e hashes individuais. O texto original fica na guia e no histórico próprio de versões, com acesso clínico explícito.
+
+Ordem: paciente → trava administrativa comum → sessões ordenadas → guia. Conferência
+reutiliza revalidateProductionTx, creditando apenas o consumo já existente. `sourceDigest`
+registra versões/valores administrativos e profissionais. `revalidateGuideTx` é o ponto de
+integração para #102: precisa rodar na mesma transação do fechamento, sob essas travas.
+Em lote, pré-travar todos os pacientes em ordem antes de chamar o helper para cada guia.
+A aptidão antiga não autoriza fechar: mudanças nas fontes ou pendências recusam o helper.
+Fonte alterada não reescreve snapshot: a tela apresenta pendências atuais e exige devolução
+para correção. Guia EM_LOTE é preservada; não há ação pública para entrar/sair de lote aqui.
+
+`GuideChange` guarda autoria, motivo, idempotência e snapshot de guia + todos os vínculos
+na mesma transação. O banco exige o histórico diferido, impede edição/remoção do histórico,
+mudança de grupo, associação incompatível, aptidão sem dados/totais e alteração de guia em
+lote. A preparação da versão dentro da transação pode terminar na mesma versão ainda sem
+histórico; uma versão já registrada nunca é sobrescrita. Erros desfazem tudo, inclusive
+reservas e contador. Os históricos não usam a retenção de sete dias do AuditLog.
+
+Listas paginam 20 guias; seleção de opções limita 100 com aviso explícito. Candidatos são
+filtrados pelo mês da montagem. Novas inclusões podem ser feitas em rascunho após salvar;
+cada ação aceita até 1.000 itens e respeita também maxItems do contrato, sem truncar.
+Após mais de 20 alterações, a UI mostra as últimas 20; todas permanecem no banco.
+
+Migração aditiva `20261015150000_administrativo_guias`: BillingGuide, BillingGuideItem,
+GuideChange, GuideProfile e GuideSequence, com FKs/índices/guards/histórico. As três primeiras
+entram na limpeza manual; as duas últimas são preservadas. Exclusão de usuário respeita
+GuideChange/GuideProfile. Evidências em docs/project/evidencias/101-guias.md.

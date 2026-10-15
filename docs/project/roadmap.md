@@ -330,3 +330,10 @@ Relatórios de produção, pendências e autorizações com filtros estritos, pa
 totais integrais, CSV protegido e impressão completa/PDF nativo. Reutiliza #96–#99;
 sem migração adicional. Evidências em [100-relatorios](evidencias/100-relatorios.md).
 Integração/publicação da #100 ainda pendentes.
+
+### ADM-05 (#101) — implementada e validada localmente em 15/10/2026
+
+Montagem e conferência de guias SP/SADT, associação única à produção, agrupamento mensal,
+perfil condicional configurável, snapshots/versionamento e revalidação para #102.
+Não gera lote/XML nem recebível. Migração aditiva validada em PostgreSQL descartável;
+integração/publicação ainda pendentes. Evidências em [101-guias](evidencias/101-guias.md).

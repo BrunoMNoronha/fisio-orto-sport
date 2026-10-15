@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "revision": "19b48e888c2d16de9f3408b32c8ca2e6e6c48530",
+  "workingTreeModified": false,
+  "environment": "LOCAL DESCARTAVEL SINTETICO",
+  "verifiedAt": "2026-10-15T22:25:36.146Z",
+  "externalHomologation": "PENDENTE",
+  "sourceDatabase": "fisio_adm106_1792103081205",
+  "restoredDatabase": "fisio_adm106_1792103081205_restore",
+  "fixture": {
+    "version": 1,
+    "guideCount": 100,
+    "itemCount": 100,
+    "units": 200,
+    "authorized": 200,
+    "available": 0,
+    "billedCents": "1000000",
+    "receivedCents": "6000",
+    "analysisCents": "2000",
+    "openCents": "992000",
+    "writtenOffCents": "0",
+    "xmlBytes": 249937,
+    "xmlSha256": "a6c7f20e5562d41fe1399abfdd32209d68880ebd4fc1d0502b880b7d052324d2",
+    "schemaDigest": "667f822947cdaacf47af4991566b64c07103d365171083a9b33aa1feb5388fe6"
+  },
+  "timings": {
+    "prepareMs": 25886.655,
+    "closeMs": 16489.0659,
+    "xmlMs": 503.3477999999959,
+    "reportsMs": 103.65409999999974,
+    "totalMs": 45339.2674,
+    "dumpMs": 545,
+    "restoreMs": 1262
+  },
+  "verification": {
+    "tableCount": 51,
+    "constraintCount": 792,
+    "triggerCount": 66,
+    "functionCount": 250,
+    "exactTableData": true,
+    "exactXmlBytes": true,
+    "restoredImmutableGuard": true,
+    "restoredLedgerTotals": true
+  },
+  "inventory": {
+    "AdministrativeConfigChange": {
+      "rows": 8,
+      "sha256": "edaccfd38a8120800317b3569191735ec882626db66e9ddce0ca26e5dda78e6a"
+    },
+    "Anamnesis": {
+      "rows": 1,
+      "sha256": "9bd80fbd5c58fc9e5012cdf3d401d9202efbd04eb4dc22197ffbd3ea43a12251"
+    },
+    "Appointment": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "Assessment": {
+      "rows": 1,
+      "sha256": "d44fe76066d85a6015eca1cf242e452ed3be057b35f6c4816ad8e6b89cb990c9"
+    },
+    "AssessmentChange": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "AuditLog": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "AuthRateLimit": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "AuthorizationItem": {
+      "rows": 1,
+      "sha256": "4c04493dc603374191edefd162c6f073f08fe16c8d791856324cde3a3319cbc2"
+    },
+    "AuthorizationUse": {
+      "rows": 100,
+      "sha256": "5001d7a4bf0d4fbe4660309fcbd1ad6708cdc232fa1ed3dd9da2c8ec0838272c"
+    },
+    "BatchArtifact": {
+      "rows": 1,
+      "sha256": "76bf8d5ccc4c87c9ec4b4551f42e89800a46540beb50cc664cd508f591b1a09b"
+    },
+    "BatchChange": {
+      "rows": 3,
+      "sha256": "c0513c3ad25b1880e3dbb59508653fcca4ea07223aaa3a1c5a944e105336c898"
+    },
+    "BatchGuide": {
+      "rows": 100,
+      "sha256": "230f544a64ab6c65ffac97470178a7d728ec79e5a2dd1282263c8cb1f6693895"
+    },
+    "BatchSend": {
+      "rows": 1,
+      "sha256": "afcfa66bccc61f97eaad6d6535532a0bca69d487be0a9220941a091323f6866c"
+    },
+    "BatchSequence": {
+      "rows": 1,
+      "sha256": "18cbdab6901b354654cf4ed9ccdac6e1e3f2f799191b64f3a2803bcf46ea352b"
+    },
+    "BeneficiaryChange": {
+      "rows": 4,
+      "sha256": "e9a23d2e55486387dcfcd52d74c8fc448b8953eb451b31a7c485513e92a20556"
+    },
+    "BeneficiaryCoverage": {
+      "rows": 1,
+      "sha256": "210037582649a76e90572d26c2af680b5486ff0c94d66544a36673df8c1fbd9d"
+    },
+    "BenefitAuthorization": {
+      "rows": 1,
+      "sha256": "0edd4388185ff29691c5e2269098e390d559b44a00352cc1e3003021dc94c3de"
+    },
+    "BillingBatch": {
+      "rows": 1,
+      "sha256": "9f6268b8c1e67d3572eea7e3696296b05e8b76ff52258eee27576b9f41a51cc7"
+    },
+    "BillingGuide": {
+      "rows": 100,
+      "sha256": "234275273a274fdc80c3b777fca25cce94578a1e3dfc3ffae45bcc328f8fb44c"
+    },
+    "BillingGuideItem": {
+      "rows": 100,
+      "sha256": "77f656c01a6c87ec8ee9f45fdc0668d8bdbb64e79147452b4c668405d434574d"
+    },
+    "BillingProcedure": {
+      "rows": 1,
+      "sha256": "7b73420cd4ed9ae9ddfbc3f9060c4ce3d3dfaeaed7c65e9d7263a008c4d9b0f6"
+    },
+    "BillingProfessional": {
+      "rows": 2,
+      "sha256": "03eb31a9f7854a2defd395800448cb00696febca459e1c92f567514aab598426"
+    },
+    "Charge": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ClinicSettings": {
+      "rows": 1,
+      "sha256": "293d9cc6f8abadee7d39f7b0886835e6398e360b58c841a65fba767278f966bd"
+    },
+    "GuideChange": {
+      "rows": 202,
+      "sha256": "20e6c0ed399b2b175cc911daff87f70abe89d7b9cd3788bc067a68abd5216e4a"
+    },
+    "GuideProfile": {
+      "rows": 1,
+      "sha256": "3f8e37cfd7c774765ea8daba20f55b49690749895ef694a69f00e592a0e19b72"
+    },
+    "GuideSequence": {
+      "rows": 1,
+      "sha256": "667364ee13dc0480e19998a774ecdff1fe14197092b0ab0158d421c6b1c2b94d"
+    },
+    "HealthOperator": {
+      "rows": 1,
+      "sha256": "9100ce8651abf1ffba70002e4e0918e67cef2d5b177923953d6e43c1c132bac0"
+    },
+    "OperatorContract": {
+      "rows": 1,
+      "sha256": "881256f036ed13ece3fe410679e3454a944c9d3154ab3920999a59de9a2c6f5d"
+    },
+    "OperatorReceivable": {
+      "rows": 100,
+      "sha256": "5df9be232aa9837660053a86f8fe2a2fadee736a76812cdc9bb4ae91d3a49520"
+    },
+    "OperatorSettlement": {
+      "rows": 2,
+      "sha256": "391afe00738fa79038c1caade0a9353160f026b944a04635bb6a18d119f991e2"
+    },
+    "OperatorSettlementLine": {
+      "rows": 2,
+      "sha256": "bf25e33c82feb8add0328395362d55a703311cff22e1fc879827d19ffa3b2879"
+    },
+    "Patient": {
+      "rows": 1,
+      "sha256": "a473d93a1acf5cd0a7f895e26539d035089de26e1428354d26085ff3476f011a"
+    },
+    "Payment": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaymentReversal": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ProcedureAuthorizationRule": {
+      "rows": 1,
+      "sha256": "1e44700a4a9aa842fdeb4e1a24ef884dae847805e1d727368120614197390d48"
+    },
+    "ProcedureTariff": {
+      "rows": 1,
+      "sha256": "3242537541b18f0cbc81feaf2d2975b8c42641938ab61f1fcd89074ca423c7dd"
+    },
+    "ProductionChange": {
+      "rows": 300,
+      "sha256": "33b23eeb63549f2631d9e3f519ddc1e70b5a8224fc07e212a72fc75b27d04c79"
+    },
+    "ProductionItem": {
+      "rows": 100,
+      "sha256": "f0d22fa1071cb69bbc8aa9001333730e97c9e0cf1c85b187c3b7e15f852b8b68"
+    },
+    "Reassessment": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ReassessmentChange": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ScheduleBlock": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "Session": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "TherapyPlan": {
+      "rows": 1,
+      "sha256": "9519d850771cd3ddbe0020495ecaf26bd2e3e7306468d4317c8e37470d8975f5"
+    },
+    "TherapyPlanRevision": {
+      "rows": 1,
+      "sha256": "98fdbd015ed692a44c079d3ed5d15755b538c3272d2de38731fdfde7a76a86f7"
+    },
+    "TherapyPlanStatusChange": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "TissProfile": {
+      "rows": 1,
+      "sha256": "52646de14e4481e04814b480b259b2475935d81e100d2a4926cce3d79c58de9d"
+    },
+    "TreatmentSession": {
+      "rows": 100,
+      "sha256": "1edb09330759c272eda0e00e12eef47d970116fd142e85c9419b6cd5cec911b0"
+    },
+    "TreatmentSessionChange": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "User": {
+      "rows": 4,
+      "sha256": "92b6ee7d2e31506a4df3f50947f8820a784a65445dfdfba89ad7cfa7d038d958"
+    },
+    "_prisma_migrations": {
+      "rows": 36,
+      "sha256": "33f617259e283349ad2719ff5089183cace03108904d1728013e39504a129e43"
+    }
+  },
+  "files": [
+    {
+      "id": "30fbef1e-5f1a-48fa-8917-51eb7c39e475",
+      "fileHash": "a6c7f20e5562d41fe1399abfdd32209d68880ebd4fc1d0502b880b7d052324d2",
+      "batchId": "cb52f0f2-e628-4c4a-b002-ceca65553788",
+      "contentDigest": "92b9e56331080e107b896d7226c52780bfb4c92f092653a32009c5227b5d075d",
+      "actorId": "cmva3wo2d0000zk2sjf10b212",
+      "bytes": 249937,
+      "sha256": "a6c7f20e5562d41fe1399abfdd32209d68880ebd4fc1d0502b880b7d052324d2"
+    }
+  ]
+}

@@ -283,3 +283,16 @@ preserva BatchSequence para não reutilizar números. Exclusão de usuário resp
 novos vínculos de autoria. Snapshots restritos podem conter indicação clínica confirmada;
 relatórios operacionais usam projeção explícita sem esse texto. Snapshot não deve ser
 recalculado com cadastros atuais em restauração ou regeneração de arquivo.
+
+### XML TISS (#103)
+
+Restaurar TissProfile, novos campos explícitos de BillingGuide e metadata de BatchArtifact
+junto aos bytes originais e relações da #102. Perfis são append-only e preservados no reset;
+autoria entra na proteção de exclusão do usuário. Artefatos mantêm finalidade, versão do
+gerador, evidência XSD, MD5, SHA-256 e identidade do snapshot. Não substituir arquivo perdido
+por regeneração nem promover arquivo HOMOLOGACAO/LEGADO a produção durante recuperação.
+
+Repor guard de finalidade no envio, checks e trigger de perfil, dependência do validador,
+worker e schemas exatos do manifesto. Checksum divergente recusa download. Teste local
+pg_dump/pg_restore de banco sintético preservou bytes e vínculos de 20 artefatos; não prova
+recuperação/PITR do ambiente remoto. Ensaio desse ambiente permanece na #106.

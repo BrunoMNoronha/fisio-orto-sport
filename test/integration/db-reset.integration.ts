@@ -1,3 +1,5 @@
+import {saveTissProfile} from "@/modules/administrativo/tiss/profile-service";
+import {TISS_DEFAULTS} from "@/modules/administrativo/tiss/profile";
 import {saveBatch,registerValidatedBatchArtifactTx} from "@/modules/administrativo/batch-service";
 import {batchSchema} from "@/modules/administrativo/batch-validation";
 import { saveGuide,saveGuideProfile } from "@/modules/administrativo/guide-service";
@@ -85,6 +87,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       id: contractId, requestId: randomUUID(), expectedVersion: 0, operatorId, name: "CONTRATO SINTETICO", providerCode: "SINT", cnes: null,
       tissVersion: "04.03.00", manualReference: "Manual sintético", homologationChannel: null, ...CONTRACT_DEFAULTS, active: true, reason: "Teste de preservação",
     } });
+    await saveTissProfile(prisma,adm.id,{id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Perfil sintético preservado",contractId,data:TISS_DEFAULTS});
     const fisio = await user("Fisio", "FISIOTERAPEUTA", { crefito: `R${suffix}`.slice(0, 20) });
     const procedureId = randomUUID();
     await saveAdministrativeConfig(prisma, adm.id, { kind: "procedure", values: { id: procedureId, requestId: randomUUID(), expectedVersion: 0,
@@ -191,7 +194,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     const batch=batchSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Lote sintético de limpeza",operation:"SALVAR",contractId,tissVersion:"04.03.00",guideIds:[guideId]});
     await saveBatch(prisma,adm.id,batch);await saveBatch(prisma,adm.id,{...batch,operation:"FECHAR",expectedVersion:1,requestId:randomUUID()});
     const frozen=await prisma.billingBatch.findUniqueOrThrow({where:{id:batch.id}});
-    const file=await prisma.$transaction(tx=>registerValidatedBatchArtifactTx(tx,adm.id,{id:randomUUID(),batchId:batch.id,contentDigest:frozen.contentDigest,bytes:new TextEncoder().encode("SINTETICO SEM XSD"),validationReference:"Fixture de limpeza sem homologação",requestId:randomUUID()}));
+    const file=await prisma.$transaction(tx=>registerValidatedBatchArtifactTx(tx,adm.id,{purpose:'PRODUCAO',id:randomUUID(),batchId:batch.id,contentDigest:frozen.contentDigest,bytes:new TextEncoder().encode("SINTETICO SEM XSD"),validationReference:"Fixture de limpeza sem homologação",requestId:randomUUID()}));
     await saveBatch(prisma,adm.id,{...batch,operation:"ENVIAR",expectedVersion:2,requestId:randomUUID(),artifactId:file.id,sentOn:new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo'}).format(new Date())),protocol:"SINTETICO",channel:"MANUAL"});
     await prisma.treatmentSessionChange.create({
       data: { sessionId: session.id, version: 2, field: "evolution", reason: "r", editorId: fisio.id, editorNameSnapshot: "Fisio" },

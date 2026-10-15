@@ -29,6 +29,7 @@ const LABELS: Record<string, string> = {
   guias: "Guias SP/SADT",
   lotes: "Lotes",
   "perfis-guia": "Perfis de guia",
+  "perfis-xml": "Perfis XML",
   beneficiarios: "Beneficiários",
   coberturas: "Coberturas",
   autorizacoes: "Autorizações",

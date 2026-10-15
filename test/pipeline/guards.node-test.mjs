@@ -20,6 +20,8 @@ test("migração administrativa permanece compatível com o gate aditivo (#97)",
   const batches=repositoryMigrations().filter(m=>m.name==="20261015160000_administrativo_lotes");
   assert.equal(batches.length,1);
   assertCompatibleMigrations(batches);
+  const xml=repositoryMigrations().filter(m=>m.name==="20261015170000_administrativo_xml");
+  assert.equal(xml.length,1);assertCompatibleMigrations(xml);
 });
 function env(environment = "Preview") {
   const target = targets.environments[environment];

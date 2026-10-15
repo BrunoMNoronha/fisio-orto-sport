@@ -531,3 +531,17 @@ compatível. Marca produção ENVIADO e constitui faturamento administrativo; n�
 Correções acrescentam eventos encadeados sem sobrescrever o envio nem duplicar valores.
 Relatório/CSV/impressão reconciliam o lote inteiro, com limites sem truncamento e projeção
 operacional sem indicação clínica. Detalhes e evidências em evidencias/102-lotes.md.
+
+## Implementação ADM-07 (#103) — 15/10/2026
+
+Bruno autorizou parametrizar piloto/versão/manual/canal em tela e avançar com defaults.
+Perfil XML versionado por contrato: ANS 4.03.00, HOMOLOGACAO, aceite não confirmado e equipe
+opcional omitida. Produção exige piloto/manual/canal e confirmação explícita. Default não
+comprova homologação externa. Campos RN/contratado solicitante são explícitos por guia,
+sem inferência; ausência bloqueia geração, preservando snapshot de lote existente.
+
+XML deriva exclusivamente do snapshot fechado, valida XSD oficial fixado, calcula MD5
+conforme especificação ANS em ISO-8859-1 e preserva bytes/SHA-256/evidência em BatchArtifact.
+Geração/download ADMIN; finalidade de homologação é impedida de registrar envio de produção.
+Não há transmissão nem alteração do momento de faturamento da #102. Validações, benchmark,
+ensaio de restauração e limites externos em [103-xml](evidencias/103-xml.md).

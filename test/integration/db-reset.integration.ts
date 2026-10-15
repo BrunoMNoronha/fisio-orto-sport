@@ -1,3 +1,5 @@
+import {saveBatch,registerValidatedBatchArtifactTx} from "@/modules/administrativo/batch-service";
+import {batchSchema} from "@/modules/administrativo/batch-validation";
 import { saveGuide,saveGuideProfile } from "@/modules/administrativo/guide-service";
 import { guideSchema,DEFAULT_GUIDE_RULES } from "@/modules/administrativo/guide-validation";
 import { saveProduction } from "@/modules/administrativo/production-service";
@@ -76,12 +78,12 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     const adm = await user("Adm", "ADMIN");
     const operatorId = randomUUID();
     await saveAdministrativeConfig(prisma, adm.id, { kind: "operator", values: {
-      id: operatorId, requestId: randomUUID(), expectedVersion: 0, name: `OPERADORA SINTETICA ${suffix}`, registrationAns: null, active: true, reason: "Teste de preservação",
+      id: operatorId, requestId: randomUUID(), expectedVersion: 0, name: `OPERADORA SINTETICA ${suffix}`, registrationAns: String(Math.floor(100000+Math.random()*899999)), active: true, reason: "Teste de preservação",
     } });
     const contractId = randomUUID();
     await saveAdministrativeConfig(prisma, adm.id, { kind: "contract", values: {
-      id: contractId, requestId: randomUUID(), expectedVersion: 0, operatorId, name: "CONTRATO SINTETICO", providerCode: null, cnes: null,
-      tissVersion: null, manualReference: null, homologationChannel: null, ...CONTRACT_DEFAULTS, active: true, reason: "Teste de preservação",
+      id: contractId, requestId: randomUUID(), expectedVersion: 0, operatorId, name: "CONTRATO SINTETICO", providerCode: "SINT", cnes: null,
+      tissVersion: "04.03.00", manualReference: "Manual sintético", homologationChannel: null, ...CONTRACT_DEFAULTS, active: true, reason: "Teste de preservação",
     } });
     const fisio = await user("Fisio", "FISIOTERAPEUTA", { crefito: `R${suffix}`.slice(0, 20) });
     const procedureId = randomUUID();
@@ -90,7 +92,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     await saveAdministrativeConfig(prisma, adm.id, { kind: "tariff", values: { id: randomUUID(), requestId: randomUUID(), expectedVersion: 0,
       procedureId, amount: 12345, startsOn: new Date("2026-01-01T00:00:00Z"), endsOn: null, active: true, reason: "Preservação" } });
     await saveAdministrativeConfig(prisma, adm.id, { kind: "professional", values: { id: randomUUID(), requestId: randomUUID(), expectedVersion: 0,
-      userId: fisio.id, name: "FISIO SINTETICO", purpose: "AMBOS", councilCode: null, councilNumber: null, councilState: null, occupationCode: null, active: true, reason: "Preservação" } });
+      userId: fisio.id, name: "FISIO SINTETICO", purpose: "AMBOS", councilCode: "99", councilNumber: "SINT", councilState: "SP", occupationCode: "999999", active: true, reason: "Preservação" } });
     await user("Recep", "RECEPCAO", { active: false });
     const sign = { authorId: fisio.id, authorNameSnapshot: "Fisio" };
 
@@ -98,8 +100,8 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     await prisma.authRateLimit.create({ data: { key: suffix.padEnd(64, "0").slice(0, 64), count: 1, resetAt: new Date("2099-01-01") } });
     await prisma.clinicSettings.upsert({
       where: { id: 1 },
-      update: {},
-      create: { id: 1, displayName: "Clínica Fictícia", updatedById: adm.id },
+      update: {legalName:"CLINICA SINTETICA",cnpj:"99999999000199"},
+      create: { id: 1, displayName: "Clínica Fictícia", legalName:"CLINICA SINTETICA",cnpj:"99999999000199",updatedById: adm.id },
     });
     await prisma.auditLog.create({ data: { action: "LOGIN", result: "SUCESSO", actorId: adm.id, actorRole: "ADMIN" } });
 
@@ -183,8 +185,14 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     await saveProduction(prisma,adm.id,productionSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preparação sintética para teste de limpeza",sessionId:session.id,coverageId:benefits.coverage.id,procedureId,quantity:1,endTime:"",authorizationItemId:"",operation:"PREPARAR"}));
     const guideSession=await prisma.treatmentSession.create({data:{patientId:patient.id,planId:plan.id,planRevisionId:plan.revisions[0].id,occurredAt:new Date("2026-01-15T12:00:00Z"),professionalId:fisio.id,professionalNameSnapshot:"Fisio",evolution:"SINTETICO",idempotencyKey:randomUUID(),...sign}});
     const guideProduction=randomUUID();await saveProduction(prisma,adm.id,productionSchema.parse({id:guideProduction,requestId:randomUUID(),expectedVersion:0,reason:"Conferência sintética para limpeza",sessionId:guideSession.id,coverageId:benefits.coverage.id,procedureId,quantity:1,endTime:"",authorizationItemId:benefits.item.id,operation:"CONFERIR"}));
-    await saveGuideProfile(prisma,adm.id,{id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preservação de perfil",contractId,reference:"Perfil sintético de limpeza",rules:DEFAULT_GUIDE_RULES});
-    await saveGuide(prisma,adm.id,guideSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Limpeza de guia sintética",operation:"SALVAR",coverageId:benefits.coverage.id,authorizationId:benefits.authorization.id,month:"2026-01",requesterId:"",requestedOn:"",characterCode:"",attendanceCode:"",regimeCode:"",accidentCode:"",productionIds:[guideProduction]}));
+    await saveGuideProfile(prisma,adm.id,{id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preservação de perfil",contractId,reference:"Perfil sintético de limpeza",rules:{...DEFAULT_GUIDE_RULES,characterCodes:["SINT"],attendanceCodes:["SINT"],regimeCodes:["SINT"],accidentCodes:["SINT"]}});
+    const requester=await prisma.billingProfessional.findUniqueOrThrow({where:{userId:fisio.id}}),guideId=randomUUID();
+    await saveGuide(prisma,adm.id,guideSchema.parse({id:guideId,requestId:randomUUID(),expectedVersion:0,reason:"Limpeza de guia sintética",operation:"CONFERIR",coverageId:benefits.coverage.id,authorizationId:benefits.authorization.id,month:"2026-01",requesterId:requester.id,requestedOn:"2026-01-01",characterCode:"SINT",attendanceCode:"SINT",regimeCode:"SINT",accidentCode:"SINT",productionIds:[guideProduction]}));
+    const batch=batchSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Lote sintético de limpeza",operation:"SALVAR",contractId,tissVersion:"04.03.00",guideIds:[guideId]});
+    await saveBatch(prisma,adm.id,batch);await saveBatch(prisma,adm.id,{...batch,operation:"FECHAR",expectedVersion:1,requestId:randomUUID()});
+    const frozen=await prisma.billingBatch.findUniqueOrThrow({where:{id:batch.id}});
+    const file=await prisma.$transaction(tx=>registerValidatedBatchArtifactTx(tx,adm.id,{id:randomUUID(),batchId:batch.id,contentDigest:frozen.contentDigest,bytes:new TextEncoder().encode("SINTETICO SEM XSD"),validationReference:"Fixture de limpeza sem homologação",requestId:randomUUID()}));
+    await saveBatch(prisma,adm.id,{...batch,operation:"ENVIAR",expectedVersion:2,requestId:randomUUID(),artifactId:file.id,sentOn:new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo'}).format(new Date())),protocol:"SINTETICO",channel:"MANUAL"});
     await prisma.treatmentSessionChange.create({
       data: { sessionId: session.id, version: 2, field: "evolution", reason: "r", editorId: fisio.id, editorNameSnapshot: "Fisio" },
     });

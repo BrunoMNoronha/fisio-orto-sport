@@ -1,0 +1,5 @@
+import {randomUUID} from "node:crypto";
+import {getBatchComposition} from "@/modules/administrativo/batch-queries";
+import {BatchForm} from "../batch-form";
+import {ContractPicker} from "../contract-picker";
+export default async function Page({searchParams}:{searchParams:Promise<{contractId?:string}>}){const q=await searchParams,p=await getBatchComposition(undefined,q.contractId);return <div className="mx-auto max-w-4xl space-y-5"><h1 className="text-2xl font-semibold">Preparar lote</h1>{!p?<p role="alert">Contrato inválido.</p>:!p.contract?<ContractPicker/>:<><p>{p.contract.operator.name} / {p.contract.name} · TISS {p.contract.tissVersion??'pendente'} · limites: {p.contract.maxGuides} guias / {p.contract.maxItems} itens</p>{p.limited&&<p>Exibidas 100 candidatas. Nenhuma guia é incluída automaticamente; prepare lotes menores.</p>}{p.contract.tissVersion?<BatchForm id={randomUUID()} requestId={randomUUID()} version={0} contractId={p.contract.id} tissVersion={p.contract.tissVersion} candidates={p.candidates} canClose={p.canClose}/>:<p>Configure a versão TISS do contrato antes de preparar o lote.</p>}</>}</div>;}

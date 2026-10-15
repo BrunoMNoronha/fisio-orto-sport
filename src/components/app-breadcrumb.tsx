@@ -27,6 +27,7 @@ const LABELS: Record<string, string> = {
   administrativo: "Administrativo",
   producao: "Produção",
   guias: "Guias SP/SADT",
+  lotes: "Lotes",
   "perfis-guia": "Perfis de guia",
   beneficiarios: "Beneficiários",
   coberturas: "Coberturas",
@@ -56,6 +57,7 @@ const LABELS: Record<string, string> = {
 
 // Rótulos que dependem do segmento anterior (ex.: "nova" em avaliacoes não é "Nova versão").
 const CONTEXT_LABELS: Record<string, string> = {
+  "lotes/nova": "Novo lote",
   "avaliacoes/nova": "Nova avaliação",
   "planos/novo": "Novo plano",
   "sessoes/nova": "Nova sessão",

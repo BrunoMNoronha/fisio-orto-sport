@@ -1,0 +1,11 @@
+import { z } from "zod";
+import { configurationMeta } from "./validation";
+import { parseCivilDate } from "./catalog-validation";
+const code = z.string().trim().max(20).regex(/^[a-zA-Z0-9._-]*$/);
+export const guideRulesSchema = z.object({ requireCnes: z.boolean(), requireEndTime: z.boolean(), requireClinicalIndication: z.boolean(), allowMultipleItems: z.boolean(), characterCodes: z.array(code.min(1)).max(50), attendanceCodes: z.array(code.min(1)).max(50), regimeCodes: z.array(code.min(1)).max(50), accidentCodes: z.array(code.min(1)).max(50) }).strict();
+export const DEFAULT_GUIDE_RULES = { requireCnes: false, requireEndTime: false, requireClinicalIndication: false, allowMultipleItems: true, characterCodes: [], attendanceCodes: [], regimeCodes: [], accidentCodes: [] };
+export const guideProfileSchema = z.object({ ...configurationMeta, contractId: z.uuid(), reference: z.string().trim().min(1).max(300), rules: guideRulesSchema }).strict();
+export const guideSchema = z.object({ ...configurationMeta, operation: z.enum(['SALVAR', 'CONFERIR', 'DEVOLVER', 'CANCELAR']), coverageId: z.uuid(), authorizationId: z.union([z.uuid(), z.literal('')]).transform(v => v || null), month: z.string().regex(/^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])$/), requesterId: z.union([z.uuid(), z.literal('')]).transform(v => v || null), requestedOn: z.string().refine(v => !v || !!parseCivilDate(v), 'Data de solicitação inválida.').transform(v => v ? new Date(v + 'T00:00:00Z') : null), characterCode: code, attendanceCode: code, regimeCode: code, accidentCode: code, clinicalIndication: z.string().trim().max(1000).optional(), clinicalConfirmed: z.boolean().optional(), productionIds: z.array(z.uuid()).max(1000).refine(v => new Set(v).size === v.length, 'Produção repetida.') }).strict();
+export type GuideInput = z.output<typeof guideSchema>;
+export type GuideRules = z.output<typeof guideRulesSchema>;
+export type GuidePending = { field: string; message: string };

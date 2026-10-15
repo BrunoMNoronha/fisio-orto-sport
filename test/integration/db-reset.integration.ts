@@ -1,3 +1,5 @@
+import { saveGuide,saveGuideProfile } from "@/modules/administrativo/guide-service";
+import { guideSchema,DEFAULT_GUIDE_RULES } from "@/modules/administrativo/guide-validation";
 import { saveProduction } from "@/modules/administrativo/production-service";
 import { productionSchema } from "@/modules/administrativo/production-validation";
 import { CONTRACT_DEFAULTS } from "@/modules/administrativo/contract-defaults";
@@ -179,6 +181,10 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       },
     });
     await saveProduction(prisma,adm.id,productionSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preparação sintética para teste de limpeza",sessionId:session.id,coverageId:benefits.coverage.id,procedureId,quantity:1,endTime:"",authorizationItemId:"",operation:"PREPARAR"}));
+    const guideSession=await prisma.treatmentSession.create({data:{patientId:patient.id,planId:plan.id,planRevisionId:plan.revisions[0].id,occurredAt:new Date("2026-01-15T12:00:00Z"),professionalId:fisio.id,professionalNameSnapshot:"Fisio",evolution:"SINTETICO",idempotencyKey:randomUUID(),...sign}});
+    const guideProduction=randomUUID();await saveProduction(prisma,adm.id,productionSchema.parse({id:guideProduction,requestId:randomUUID(),expectedVersion:0,reason:"Conferência sintética para limpeza",sessionId:guideSession.id,coverageId:benefits.coverage.id,procedureId,quantity:1,endTime:"",authorizationItemId:benefits.item.id,operation:"CONFERIR"}));
+    await saveGuideProfile(prisma,adm.id,{id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preservação de perfil",contractId,reference:"Perfil sintético de limpeza",rules:DEFAULT_GUIDE_RULES});
+    await saveGuide(prisma,adm.id,guideSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Limpeza de guia sintética",operation:"SALVAR",coverageId:benefits.coverage.id,authorizationId:benefits.authorization.id,month:"2026-01",requesterId:"",requestedOn:"",characterCode:"",attendanceCode:"",regimeCode:"",accidentCode:"",productionIds:[guideProduction]}));
     await prisma.treatmentSessionChange.create({
       data: { sessionId: session.id, version: 2, field: "evolution", reason: "r", editorId: fisio.id, editorNameSnapshot: "Fisio" },
     });

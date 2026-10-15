@@ -323,3 +323,10 @@ Produção explícita, snapshots, consumo/devolução atômicos, revisão clíni
 pendências implementados conforme #96–#98. Evidências em [99-producao](evidencias/99-producao.md).
 Integração/publicação ainda pendentes. #100 (relatórios) e #101 (guias) podem usar os
 itens conferidos e revalidateProductionTx sem consumir a autorização novamente.
+
+### ADM-04 (#100) — implementada e validada localmente em 15/10/2026
+
+Relatórios de produção, pendências e autorizações com filtros estritos, paginação,
+totais integrais, CSV protegido e impressão completa/PDF nativo. Reutiliza #96–#99;
+sem migração adicional. Evidências em [100-relatorios](evidencias/100-relatorios.md).
+Integração/publicação da #100 ainda pendentes.

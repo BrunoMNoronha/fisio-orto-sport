@@ -111,6 +111,7 @@
     },
     {
       "id": "ADM-03",
+      "status": "Implementada e validada localmente em 15/10/2026; integração/publicação pendentes; evidências em evidencias/99-producao.md",
       "title": "Conferir produção faturável vinculada às sessões sem cobrança automática",
       "phase": "M1 — Base e produção",
       "depends": [

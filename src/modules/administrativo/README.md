@@ -168,3 +168,42 @@ ADMIN edita canal de homologação, sessões estimadas/mês (1.000), intervalo d
 Sem dados reais inventados ou homologação presumida. Persistência e histórico usam a
 transação de configuração existente. Migração aditiva 20261015120000_administrativo_parametros.
 Consumidores futuros devem aplicar os parâmetros; não há fechamento automático.
+
+## Produção conferida (#99)
+
+Administrativo → Produção e fila de pendências: os três perfis preparam, conferem,
+devolvem e invalidam itens explicitamente. A consulta administrativa seleciona apenas
+identidade da sessão/paciente, data, status, versão e nome do profissional; não carrega
+prontuário, evolução, diagnóstico ou plano. Autoria vem da sessão autenticada.
+
+ProductionItem possui PENDENTE, APTO e INVALIDADO. FECHADO/ENVIADO são estados reservados
+às #101/#102, sem ação pública de fechamento nesta entrega. Uma sessão pode ter vários
+procedimentos; cada procedimento tem um único item não invalidado por sessão, com a
+quantidade agregada. Correções de identidade exigem invalidar o anterior e preparar outro.
+Hora inicial/data derivam de occurredAt em America/Sao_Paulo; hora final real é opcional,
+sem inferência da agenda. Tarifa/cobertura/regra/autorização e identificação profissional
+ficam em snapshot; total bigint = quantidade × centavos inteiros.
+
+saveProduction trava paciente → configuração administrativa → sessão, valida versão e
+chave de envio e executa conferência/consumo/histórico na mesma transação. Uma pendência
+persiste com motivo; não consome. Devolver/invalidar faz devolução integral e motivada.
+ProductionChange é append-only e obrigatório por versão no banco. A devolução isolada
+pelo livro de autorização não pode deixar um item apto/fechado apontando para consumo
+revertido. Configuração/tarifa usa a trava comum da #97; não se abre outra transação.
+
+Trigger diferida de TreatmentSession vê a autoria gravada pela action clínica. Correção
+ou invalidação devolve consumo e coloca itens abertos em pendência atomicamente. Se há
+produção, SQL direto de correção também precisa registrar TreatmentSessionChange com
+editor; não se atribui silenciosamente a edição ao autor original. Em FECHADO/ENVIADO,
+conserva snapshot/valor/consumo e marca adjustmentPending, com histórico administrativo.
+
+revalidateProductionTx é o ponto para futuros seletores de guia/lote: trava e relê a
+sessão/produção, vigência, regra e saldo, creditando somente o consumo original ao testar
+o próprio item. Não consome novamente nem recalcula o preço histórico. Para vários itens,
+o consumidor deve ordenar pacientes/sessões antes de obter as travas e fechar na mesma
+transação. Não confundir FECHADO com recebível: faturamento nasce no envio (#96).
+
+Migração aditiva 20261015140000_administrativo_producao. Recuperação inclui ProductionItem,
+ProductionChange, FKs, índices, funções/triggers e autores, com história na mesma transação.
+Ambas entram na limpeza manual dependente de paciente; sem expurgo automático. Usuários
+com ProductionChange não podem ser excluídos. Ver evidencias/99-producao.md.

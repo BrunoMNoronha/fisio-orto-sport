@@ -150,3 +150,12 @@ A Recepção não vê as abas Anamnese, Avaliações, Planos, Sessões e Reavali
 ## Fora do escopo (por ora)
 
 Alta operacional (posterior ao MVP pela DEC-01, #43; efeitos a decidir antes de implementar); CREFITO na assinatura da anamnese (a Fase 2c guardou o CREFITO só em `User.crefito`; sexo e profissão ficaram em `Patient`); trilha de auditoria de leitura; anexos; retenção/anonimização; edição ou exclusão de versões.
+
+## Integração com produção administrativa (#99)
+
+As actions clínicas conservam a trava do paciente antes de alterar a sessão. Uma trigger
+PostgreSQL diferida lê a autoria de TreatmentSessionChange/invalidatedById e revisa os
+itens administrativos na mesma transação: antes de fechamento, devolução de autorização
+e estado PENDENTE; depois, snapshot preservado e adjustmentPending. Não há geração
+automática de produção nem acesso clínico novo para Recepção. Correções diretas no banco
+com produção devem registrar editor no histórico na mesma transação, sem autor inferido.

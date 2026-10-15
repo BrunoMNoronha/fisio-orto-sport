@@ -249,3 +249,11 @@ entre cadastro e snapshot na mesma transação. Ver [98-coberturas](evidencias/9
   resoluções COFFITO vigentes sobre prontuário — **não consultadas**; as
   decisões atuais não dependem de prazo legal e requerem orientação
   especializada para revisão.
+
+### Produção administrativa (#99)
+
+Incluir ProductionItem e ProductionChange com sessões, coberturas, procedimentos e livro
+de autorização. Restaurar FKs, índices, guards e triggers diferidas de histórico e revisão
+clínica; cadastro e evento consistente na mesma transação. Sem expurgo pelo AuditLog.
+Reinicialização manual limpa ambas com Patient; exclusão de usuário respeita ProductionChange.
+Snapshot fechado/consumo não é apagado por correção clínica: fica pendência de ajuste.

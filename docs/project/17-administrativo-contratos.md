@@ -484,3 +484,12 @@ Revisão de mesa: o cenário S1 foi percorrido contra os estados e invariantes a
 conferindo a soma de cada passo; comparação com schema, guards, financeiro, auditoria
 e pipeline está na seção de compatibilidade. Nenhum teste automatizado se aplica a esta
 entrega documental.
+
+## Implementação ADM-03 (#99) — 15/10/2026
+
+Produção explícita por sessão/procedimento, com quantidade agregada e múltiplos procedimentos
+por sessão. PENDENTE/APTO/INVALIDADO implementados; FECHADO/ENVIADO reservam a separação
+aprovada em D-08 para #101/#102. Snapshot e total em bigint preservados. Alteração clínica
+reabre conferência com devolução antes do fechamento; depois apenas pendência de ajuste.
+Seletores futuros usam revalidateProductionTx na transação do fechamento e não consomem
+de novo. Detalhes em src/modules/administrativo/README.md e evidencias/99-producao.md.

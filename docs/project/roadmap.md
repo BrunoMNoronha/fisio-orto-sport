@@ -316,3 +316,10 @@ O intervalo de 30 dias é planejamento, sem alterar competência civil já acord
 
 
 Próxima entrega funcional: #99; #97/#98 já implementadas localmente. Homologação real permanece em #103/#106.
+
+### ADM-03 (#99) — implementada e validada localmente em 15/10/2026
+
+Produção explícita, snapshots, consumo/devolução atômicos, revisão clínica e fila de
+pendências implementados conforme #96–#98. Evidências em [99-producao](evidencias/99-producao.md).
+Integração/publicação ainda pendentes. #100 (relatórios) e #101 (guias) podem usar os
+itens conferidos e revalidateProductionTx sem consumir a autorização novamente.

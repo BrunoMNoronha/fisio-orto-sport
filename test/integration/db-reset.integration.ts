@@ -1,3 +1,5 @@
+import { saveProduction } from "@/modules/administrativo/production-service";
+import { productionSchema } from "@/modules/administrativo/production-validation";
 import { CONTRACT_DEFAULTS } from "@/modules/administrativo/contract-defaults";
 // Integração do `pnpm db:reset` (issue #62) com PostgreSQL real. Como a ferramenta esvazia tabelas e
 // as demais suítes rodam em paralelo no banco de INTEGRATION_DATABASE_URL, este teste cria um banco
@@ -176,6 +178,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
         ...sign,
       },
     });
+    await saveProduction(prisma,adm.id,productionSchema.parse({id:randomUUID(),requestId:randomUUID(),expectedVersion:0,reason:"Preparação sintética para teste de limpeza",sessionId:session.id,coverageId:benefits.coverage.id,procedureId,quantity:1,endTime:"",authorizationItemId:"",operation:"PREPARAR"}));
     await prisma.treatmentSessionChange.create({
       data: { sessionId: session.id, version: 2, field: "evolution", reason: "r", editorId: fisio.id, editorNameSnapshot: "Fisio" },
     });

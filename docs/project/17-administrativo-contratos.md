@@ -493,3 +493,14 @@ aprovada em D-08 para #101/#102. Snapshot e total em bigint preservados. Altera�
 reabre conferência com devolução antes do fechamento; depois apenas pendência de ajuste.
 Seletores futuros usam revalidateProductionTx na transação do fechamento e não consomem
 de novo. Detalhes em src/modules/administrativo/README.md e evidencias/99-producao.md.
+
+## Implementação ADM-04 (#100) — 15/10/2026
+
+Relatórios operacionais sob administrativo:ler, inclusive CSV e impressão. Período de
+produção é execução civil inclusiva em São Paulo. Autorizações filtram interseção da
+vigência e exibem saldos atuais de todos os movimentos, sem posição histórica de corte.
+Totais segregam contrato/procedimento/profissional/estado e usam centavos bigint.
+Páginas de 20 itens, totais integrais e exportações completas em RepeatableRead.
+Para filtro com vários contratos, o teto integral é o menor maxExportRows participante;
+excesso recusa CSV/impressão sem truncamento. Cada solicitação gera posição nova,
+identificada pelo horário. Sem recebimento, XML, XLSX ou dados clínicos nesta entrega.

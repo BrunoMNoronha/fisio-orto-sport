@@ -380,3 +380,16 @@ clínica/prontuário/senha/carteira nas projeções. CSV tem private/no-store/no
 inventar obrigações; cadastros inativos permanecem no histórico. Cada saída é nova
 consulta com horário próprio, não posição histórica congelada, contabilidade ou caixa
 consolidado com pacientes. XLSX, DRE e painéis preditivos seguem fora do escopo.
+
+## Validação do ciclo — ADM-10 (#106)
+
+O executor local `scripts/administrativo/validate-local.mjs` cria bancos descartáveis
+novos no container de testes, sem aceitar URL remota nem ler .env. A fixture compartilhada
+com os testes XML exercita os serviços reais até geração/XSD, envio manual simulado,
+conciliação e relatórios. Replays de fechamento/XML/envio/recebimento não duplicam fatos;
+testes adicionais cobrem disputa pelo saldo final e rollback após criar cabeçalho.
+pg_dump/pg_restore compara todas as tabelas e arquivos originais sem regeneração.
+Roteiro por perfil, treinamento, correções e limites em
+docs/project/18-administrativo-operacao-validacao.md. Homologação externa permanece
+pendente por decisão do usuário; fixture de produção técnica local não comprova aceite
+de operadora e não deve ser enviada. Não há migração ou alteração da política de deploy.

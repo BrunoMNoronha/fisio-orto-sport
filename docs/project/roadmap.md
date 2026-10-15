@@ -361,4 +361,13 @@ parcial/revisão/baixa, estorno/substituição atômica e ajustes identificados.
 em Administrativo, lote enviado e Financeiro, sem caixa consolidado com pacientes.
 Migração aditiva com backfill de envios anteriores, invariantes PostgreSQL, autoria,
 histórico imutável e inventário de manutenção/recuperação. Implementação e evidências
-locais em [104-conciliacao](evidencias/104-conciliacao.md); PR/publicação separados.
+locais em [104-conciliacao](evidencias/104-conciliacao.md). Integrada e publicada em Preview
+no commit 030fe48, com migração confirmada e workflow 38809512331 aprovado.
+
+### ADM-09 (#105) — relatórios financeiros de operadoras
+
+Faturamento por lote e recebimentos/glosas por guia/item, com eixos temporais explícitos,
+posição atual do mesmo recorte, agregados sem duplicação, CSV/impressão completos e
+drill-down autorizado. Sem migração ou alteração da razão financeira. Implementação
+local e evidências em [105-relatorios](evidencias/105-relatorios.md); integração/publicação
+da #105 são etapas separadas.

@@ -504,3 +504,16 @@ Páginas de 20 itens, totais integrais e exportações completas em RepeatableRe
 Para filtro com vários contratos, o teto integral é o menor maxExportRows participante;
 excesso recusa CSV/impressão sem truncamento. Cada solicitação gera posição nova,
 identificada pelo horário. Sem recebimento, XML, XLSX ou dados clínicos nesta entrega.
+
+## Implementação ADM-05 (#101) — 15/10/2026
+
+Guias agrupadas por cobertura/beneficiário/contrato/autorização e mês de execução, com
+numeração transacional por contrato sem reuso após cancelamento. Produção original tem
+associação ativa única e mantém o consumo já feito. RASCUNHO/APTA/CANCELADA implementados;
+EM_LOTE preservado para fechamento da #102. Snapshots e histórico próprios, idempotência,
+valores bigint/fator 1 e revalidação das fontes antes de fechar lote.
+
+Perfil genérico de campos/códigos configurável por ADMIN, sem códigos fictícios em defaults.
+Obrigatoriedade de CNES, hora final e indicação clínica é explícita. Indicação de faturamento
+é confirmação separada sob clinico:gerir e não é entregue à Recepção. Não há leitura de
+prontuário, XML ou homologação nesta entrega. Detalhes em evidencias/101-guias.md.

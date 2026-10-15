@@ -26,6 +26,8 @@ const LABELS: Record<string, string> = {
   financeiro: "Financeiro",
   administrativo: "Administrativo",
   producao: "Produção",
+  guias: "Guias SP/SADT",
+  "perfis-guia": "Perfis de guia",
   beneficiarios: "Beneficiários",
   coberturas: "Coberturas",
   autorizacoes: "Autorizações",

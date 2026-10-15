@@ -22,6 +22,8 @@ type Tx = Prisma.TransactionClient;
 // Todas as FKs para User, exceto Session (sessão de login, removida junto). Um teste compara esta
 // lista com o banco: FK nova para User sem entrada aqui faz o teste falhar.
 export const USER_LINKS = [
+  { table: "GuideChange", column: "actorId", category: "administrativo" },
+  { table: "GuideProfile", column: "actorId", category: "administrativo" },
   { table: "ProductionChange", column: "actorId", category: "administrativo" },
   { table: "Patient", column: "createdById", category: "pacientes" },
   { table: "Patient", column: "updatedById", category: "pacientes" },

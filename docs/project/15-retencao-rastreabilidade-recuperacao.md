@@ -257,3 +257,13 @@ de autorização. Restaurar FKs, índices, guards e triggers diferidas de histó
 clínica; cadastro e evento consistente na mesma transação. Sem expurgo pelo AuditLog.
 Reinicialização manual limpa ambas com Patient; exclusão de usuário respeita ProductionChange.
 Snapshot fechado/consumo não é apagado por correção clínica: fica pendência de ajuste.
+
+### Guias SP/SADT (#101)
+
+Recuperar BillingGuide, BillingGuideItem, GuideChange, GuideProfile e GuideSequence junto
+com produção, cobertura, autorização, contrato, profissionais e autores. Restaurar FKs,
+índice parcial de associação ativa única, guards e triggers diferidas de histórico.
+Snapshots incluem valores em centavos e identificação faturada; texto clínico mínimo de
+faturamento fica restrito ao perfil clínico e não é projetado para a Recepção. Históricos
+próprios não são expurgados com AuditLog. Reinicialização manual limpa guia/vínculos/histórico
+junto a Patient e preserva perfil/contador de contrato; exclusão de usuário respeita autoria.

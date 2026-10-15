@@ -2,7 +2,8 @@
 import {parentPort,workerData} from 'node:worker_threads';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {XmlDocument,XsdValidator,ParseOption,xmlRegisterInputProvider,openBuffer,readBuffer,closeBuffer} from 'libxml2-wasm';
+import {pathToFileURL} from 'node:url';
+const {XmlDocument,XsdValidator,ParseOption,xmlRegisterInputProvider,openBuffer,readBuffer,closeBuffer}=await import(pathToFileURL(workerData.validatorModule).href);
 let doc,schema,validator;
 try {
  const dir=new URL('./schemas/4.03.00/',import.meta.url),manifest=JSON.parse(readFileSync(new URL('manifest.json',dir),'utf8'));

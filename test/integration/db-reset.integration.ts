@@ -1,15 +1,20 @@
+import { CONTRACT_DEFAULTS } from "@/modules/administrativo/contract-defaults";
 // Integração do `pnpm db:reset` (issue #62) com PostgreSQL real. Como a ferramenta esvazia tabelas e
 // as demais suítes rodam em paralelo no banco de INTEGRATION_DATABASE_URL, este teste cria um banco
 // PRÓPRIO (CREATE DATABASE), aplica as migrações nele, semeia dados fictícios de todas as tabelas e o
 // descarta no fim. Exige permissão CREATEDB (o usuário da CI e do Docker local têm).
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { after, before, beforeEach, describe, it } from "node:test";
 import { Client } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import type { AdminCliIO } from "@/modules/auth/admin-cli";
-import { CLEARED_TABLES, runResetCli, type ResetHooks } from "@/modules/manutencao/reset-cli";
+import { CLEARED_TABLES, PRESERVED_TABLES, runResetCli, type ResetHooks } from "@/modules/manutencao/reset-cli";
+import { saveAdministrativeConfig } from "@/modules/administrativo/service";
+import { seedBeneficiary } from "./beneficiary-fixture";
+import { consumeAuthorization } from "@/modules/administrativo/beneficiary-service";
 import { createPayment, reversePayment } from "@/modules/financeiro/payment-service";
 
 const baseUrl = process.env.INTEGRATION_DATABASE_URL;
@@ -42,7 +47,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
 
   async function countAll() {
     const result: Record<string, number> = {};
-    for (const table of [...CLEARED_TABLES, "AuditLog", "User", "ClinicSettings", "_prisma_migrations"]) {
+    for (const table of [...CLEARED_TABLES, "AuditLog", ...PRESERVED_TABLES]) {
       result[table] = (await raw.query(`SELECT count(*)::int AS n FROM "${table}"`)).rows[0].n;
     }
     return result;
@@ -50,6 +55,11 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
 
   // Todos os campos de todos os usuários (inclusive hash), só para comparar.
   const usersSnapshot = async () => (await raw.query(`SELECT * FROM "User" ORDER BY id`)).rows;
+  const administrativeSnapshot = async () => {
+    const rows = [];
+    for (const table of ["HealthOperator", "OperatorContract", "BillingProcedure", "ProcedureTariff", "BillingProfessional", "AdministrativeConfigChange", "ProcedureAuthorizationRule"]) rows.push((await raw.query(`SELECT * FROM "${table}" ORDER BY id`)).rows);
+    return rows;
+  };
 
   // Dados fictícios de todas as tabelas, com a referência cruzada revisão do plano ↔ reavaliação.
   async function seed() {
@@ -60,7 +70,23 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
         select: { id: true },
       });
     const adm = await user("Adm", "ADMIN");
+    const operatorId = randomUUID();
+    await saveAdministrativeConfig(prisma, adm.id, { kind: "operator", values: {
+      id: operatorId, requestId: randomUUID(), expectedVersion: 0, name: `OPERADORA SINTETICA ${suffix}`, registrationAns: null, active: true, reason: "Teste de preservação",
+    } });
+    const contractId = randomUUID();
+    await saveAdministrativeConfig(prisma, adm.id, { kind: "contract", values: {
+      id: contractId, requestId: randomUUID(), expectedVersion: 0, operatorId, name: "CONTRATO SINTETICO", providerCode: null, cnes: null,
+      tissVersion: null, manualReference: null, homologationChannel: null, ...CONTRACT_DEFAULTS, active: true, reason: "Teste de preservação",
+    } });
     const fisio = await user("Fisio", "FISIOTERAPEUTA", { crefito: `R${suffix}`.slice(0, 20) });
+    const procedureId = randomUUID();
+    await saveAdministrativeConfig(prisma, adm.id, { kind: "procedure", values: { id: procedureId, requestId: randomUUID(), expectedVersion: 0,
+      contractId, name: "PROCEDIMENTO SINTETICO", tableCode: "00", code: "0001", active: true, reason: "Preservação" } });
+    await saveAdministrativeConfig(prisma, adm.id, { kind: "tariff", values: { id: randomUUID(), requestId: randomUUID(), expectedVersion: 0,
+      procedureId, amount: 12345, startsOn: new Date("2026-01-01T00:00:00Z"), endsOn: null, active: true, reason: "Preservação" } });
+    await saveAdministrativeConfig(prisma, adm.id, { kind: "professional", values: { id: randomUUID(), requestId: randomUUID(), expectedVersion: 0,
+      userId: fisio.id, name: "FISIO SINTETICO", purpose: "AMBOS", councilCode: null, councilNumber: null, councilState: null, occupationCode: null, active: true, reason: "Preservação" } });
     await user("Recep", "RECEPCAO", { active: false });
     const sign = { authorId: fisio.id, authorNameSnapshot: "Fisio" };
 
@@ -78,6 +104,8 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       select: { id: true },
     });
     // Cobrança cancelada e a substituta que aponta para ela (FK da própria tabela).
+    const benefits = await seedBeneficiary(prisma,adm.id,{patientId:patient.id,contractId,procedureId});
+    await consumeAuthorization(prisma,adm.id,{itemId:benefits.item.id,quantity:1,executionOn:"2026-01-15",sourceKey:randomUUID(),requestId:randomUUID(),reason:"Teste de limpeza autorizada"});
     const charge = await prisma.charge.create({
       data: { patientId: patient.id, description: "Cobrança fictícia", amountCents: 15000, dueDate: new Date("2026-10-10"), idempotencyKey: `c1-${suffix}`, createdById: adm.id },
       select: { id: true },
@@ -225,6 +253,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
 
   it("execução limpa todas as tabelas previstas, preserva usuários (todos os campos), configurações, migrações e auditoria", async () => {
     const users = await usersSnapshot();
+    const administrative = await administrativeSnapshot();
     const before = await countAll();
     assert.ok(Object.values(before).every((n) => n > 0), "todas as tabelas começam com dados");
 
@@ -237,6 +266,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     assert.equal(after.ClinicSettings, before.ClinicSettings);
     assert.equal(after._prisma_migrations, before._prisma_migrations);
     assert.deepEqual(await usersSnapshot(), users);
+    assert.deepEqual(await administrativeSnapshot(), administrative);
     assert.match(result.out.join("\n"), /Usuários preservados: \d+/);
 
     // A imutabilidade da auditoria continua valendo.

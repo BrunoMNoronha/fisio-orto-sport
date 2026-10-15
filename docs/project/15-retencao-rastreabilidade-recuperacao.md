@@ -218,6 +218,22 @@ variables com alvos públicos estão em [pipeline-deploy](pipeline-deploy.md#var
 
 ## Pendências
 
+A #97 acrescenta seis tabelas de configuração administrativa, sem expurgo automático:
+HealthOperator, OperatorContract, BillingProcedure, ProcedureTariff, BillingProfessional e
+AdministrativeConfigChange. Incluir dados, autores, extensão btree_gist, exclusion GiST e
+funções/triggers no backup/restauração. No carregamento de dados, cada cadastro e seu
+snapshot devem entrar na mesma transação por causa das triggers diferidas.
+A reinicialização de desenvolvimento preserva essas tabelas e compara seu conteúdo integral.
+O procedimento e os limites desta entrega estão no [módulo administrativo](../../src/modules/administrativo/README.md).
+Isso não comprova restauração no ambiente publicado nem altera os riscos de backup já aceitos.
+
+A #98 adiciona BeneficiaryCoverage, BenefitAuthorization, AuthorizationItem,
+AuthorizationUse e BeneficiaryChange, dependentes do paciente e sem expurgo automático.
+Somente a reinicialização manual já autorizada para a base limpa esses vínculos junto
+com o paciente. ProcedureAuthorizationRule é configuração histórica preservada.
+Backups devem incluir essas seis tabelas e suas proteções; a restauração exige coerência
+entre cadastro e snapshot na mesma transação. Ver [98-coberturas](evidencias/98-coberturas.md).
+
 - Orientação especializada (LGPD e norma COFFITO sobre prontuário): quem orienta
   e fonte consultada. Ao chegar, revisar R1–R5, A1, A3 e A5.
 - Decisões "por ora" (R1–R6, A1, A3, B4, B5, O1, O2): revisar antes de volume

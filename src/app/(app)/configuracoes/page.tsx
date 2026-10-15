@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CLINIC_TIMEZONE } from "@/modules/agenda/validation";
 import { requirePermission } from "@/modules/auth/dal";
 import { can } from "@/modules/auth/permissions";
@@ -45,6 +46,12 @@ export default async function ConfiguracoesPage() {
           documentos gerados depois de salvar; nada já registrado é recalculado.
         </p>
       </div>
+      {can(actor.role, "administrativo:configurar") && (
+        <Link href="/configuracoes/operadoras" className="rounded-lg border p-4 text-sm font-medium underline underline-offset-4">
+          Configurar operadoras e contratos
+        </Link>
+      )}
+      {can(actor.role, "administrativo:configurar") && <Link href="/configuracoes/profissionais" className="rounded-lg border p-4 text-sm font-medium underline underline-offset-4">Configurar identificação profissional</Link>}
       <SettingsForm
         initial={values}
         version={version}

@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { href: "/pacientes", label: "Pacientes", icon: UsersIcon, key: "pacientes" },
   { href: "/agenda", label: "Agenda", icon: CalendarDaysIcon, key: "agenda" },
   { href: "/financeiro", label: "Financeiro", icon: WalletIcon, key: "financeiro" },
+  { href: "/administrativo", label: "Administrativo", icon: UserRoundCogIcon, key: "administrativo" },
   { href: "/usuarios", label: "Usuários", icon: UserRoundCogIcon, key: "usuarios" },
   { href: "/configuracoes", label: "Configurações", icon: SettingsIcon, key: "configuracoes" },
 ] as const

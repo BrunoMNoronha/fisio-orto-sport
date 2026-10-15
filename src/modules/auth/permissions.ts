@@ -21,6 +21,12 @@ export const PERMISSIONS = [
   // alcance igual (decisão de Bruno em 04/10/2026). Não dá acesso a conteúdo clínico.
   "financeiro:ler",
   "financeiro:gerir",
+  // Administrativo V1: recorte e matriz ratificados por Bruno em 14/10/2026 (#96).
+  "administrativo:ler",
+  "administrativo:preparar",
+  "administrativo:configurar",
+  "administrativo:fechar",
+  "administrativo:conciliar",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -30,7 +36,7 @@ export const ROLES = ["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"] as const satisfies 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: PERMISSIONS,
   // Recepção: dados cadastrais e agenda; sem dados clínicos.
-  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "financeiro:ler", "financeiro:gerir"],
+  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "financeiro:ler", "financeiro:gerir", "administrativo:ler", "administrativo:preparar"],
   // Fisioterapeuta: tudo o que a Recepção pode (cadastro e agenda de todos os pacientes e
   // profissionais, decisão da issue #31) mais os dados clínicos. Nunca `usuarios:*`.
   // Contrato testado: permissões de RECEPCAO ⊆ permissões de FISIOTERAPEUTA.
@@ -43,6 +49,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "clinico:gerir",
     "financeiro:ler",
     "financeiro:gerir",
+    "administrativo:ler",
+    "administrativo:preparar",
   ],
 };
 

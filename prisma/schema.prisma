@@ -60,6 +60,27 @@ model User {
   chargesCancelled                Charge[]                  @relation("ChargeCancelledBy")
   paymentsCreated                 Payment[]                 @relation("PaymentCreatedBy")
   paymentReversalsCreated          PaymentReversal[]         @relation("PaymentReversalCreatedBy")
+  healthOperatorsCreated          HealthOperator[]          @relation("HealthOperatorCreatedBy")
+  healthOperatorsUpdated          HealthOperator[]          @relation("HealthOperatorUpdatedBy")
+  operatorContractsCreated        OperatorContract[]        @relation("OperatorContractCreatedBy")
+  operatorContractsUpdated        OperatorContract[]        @relation("OperatorContractUpdatedBy")
+  administrativeConfigChanges     AdministrativeConfigChange[]
+  billingProceduresCreated        BillingProcedure[] @relation("BillingProcedureCreatedBy")
+  billingProceduresUpdated        BillingProcedure[] @relation("BillingProcedureUpdatedBy")
+  procedureTariffsCreated         ProcedureTariff[] @relation("ProcedureTariffCreatedBy")
+  procedureTariffsUpdated         ProcedureTariff[] @relation("ProcedureTariffUpdatedBy")
+  billingProfessionalsCreated     BillingProfessional[] @relation("BillingProfessionalCreatedBy")
+  billingProfessionalsUpdated     BillingProfessional[] @relation("BillingProfessionalUpdatedBy")
+  billingProfile                  BillingProfessional? @relation("BillingProfessionalUser")
+  coveragesCreated BeneficiaryCoverage[] @relation("CoverageCreatedBy")
+  coveragesUpdated BeneficiaryCoverage[] @relation("CoverageUpdatedBy")
+  authorizationsCreated BenefitAuthorization[] @relation("AuthorizationCreatedBy")
+  authorizationsUpdated BenefitAuthorization[] @relation("AuthorizationUpdatedBy")
+  authorizationItemsCreated AuthorizationItem[] @relation("AuthorizationItemCreatedBy")
+  authorizationItemsUpdated AuthorizationItem[] @relation("AuthorizationItemUpdatedBy")
+  beneficiaryChanges BeneficiaryChange[]
+  authorizationUses AuthorizationUse[]
+  procedureAuthorizationRules ProcedureAuthorizationRule[]
 }
 
 // Sessão no banco: o cookie guarda um token aleatório; aqui fica só o hash SHA-256 dele.
@@ -130,6 +151,7 @@ model Patient {
   treatmentSessions           TreatmentSession[]
   reassessments               Reassessment[]
   charges                     Charge[]
+  beneficiaryCoverages BeneficiaryCoverage[]
 
   @@index([fullName])
   @@index([status, fullName])
@@ -775,4 +797,293 @@ model PaymentReversal {
   createdBy      User     @relation("PaymentReversalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([createdById])
+}
+
+
+// ADM-01, primeira fatia (#97): configurações estruturadas, sem carga real ou homologação.
+// Registro ANS e identificação contratual podem ficar pendentes. Nada é inferido do legado.
+model HealthOperator {
+  id              String   @id @default(uuid())
+  name            String   @db.VarChar(120)
+  registrationAns String?  @unique @db.VarChar(6)
+  active          Boolean  @default(true)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  createdById     String
+  updatedById     String
+  createdBy       User @relation("HealthOperatorCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy       User @relation("HealthOperatorUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  contracts       OperatorContract[]
+  changes         AdministrativeConfigChange[]
+
+  @@index([name, id])
+}
+
+// Nome/código do contrato distinguem vários vínculos da clínica com a mesma operadora.
+// tissVersion é versão informada, não prova de validação/homologação.
+model OperatorContract {
+  id             String   @id @default(uuid())
+  operatorId     String
+  name           String   @db.VarChar(120)
+  providerCode   String?  @db.VarChar(30)
+  cnes           String?  @db.VarChar(7)
+  tissVersion    String?  @db.VarChar(8)
+  manualReference String? @db.VarChar(300)
+  homologationChannel String? @db.VarChar(300)
+  monthlySessions Int @default(1000)
+  closingIntervalDays Int @default(30)
+  maxGuides Int @default(100)
+  maxItems Int @default(1000)
+  maxXmlBytes Int @default(2097152)
+  maxExportRows Int @default(10000)
+
+  active         Boolean  @default(true)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  createdById    String
+  updatedById    String
+  operator       HealthOperator @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  createdBy      User @relation("OperatorContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy      User @relation("OperatorContractUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  changes        AdministrativeConfigChange[]
+
+  procedures     BillingProcedure[]
+  beneficiaryCoverages BeneficiaryCoverage[]
+  benefitAuthorizations BenefitAuthorization[]
+  authorizationItems AuthorizationItem[]
+
+  @@unique([operatorId, name])
+  @@index([operatorId, active, name, id])
+}
+
+// Histórico próprio e imutável; não herda retenção de AuditLog. CHECK XOR garante uma origem.
+// Snapshot só de campos administrativos. requestId/fingerprint protegem replay inclusive após edição.
+model AdministrativeConfigChange {
+  id          String @id @default(uuid())
+  operatorId  String?
+  contractId  String?
+  procedureId String?
+  tariffId String?
+  professionalId String?
+  version     Int
+  snapshot    Json
+  reason      String @db.VarChar(300)
+  requestId   String @unique @db.VarChar(36)
+  fingerprint String @db.VarChar(64)
+  actorId     String
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  operator    HealthOperator? @relation(fields: [operatorId], references: [id], onDelete: Restrict)
+  contract    OperatorContract? @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  procedure   BillingProcedure? @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+  tariff      ProcedureTariff? @relation(fields: [tariffId], references: [id], onDelete: Restrict)
+  professional BillingProfessional? @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  actor       User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([operatorId, version])
+  @@unique([contractId, version])
+  @@unique([procedureId, version])
+  @@unique([tariffId, version])
+  @@unique([professionalId, version])
+  @@index([actorId])
+}
+
+// Catálogo por contrato: códigos próprios podem coincidir entre operadoras.
+model BillingProcedure {
+  id String @id @default(uuid())
+  contractId String
+  tableCode String @db.VarChar(10)
+  code String @db.VarChar(30)
+  name String @db.VarChar(160)
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  contract OperatorContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  createdBy User @relation("BillingProcedureCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("BillingProcedureUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  tariffs ProcedureTariff[]
+  changes AdministrativeConfigChange[]
+
+  authorizationItems AuthorizationItem[]
+  authorizationRules ProcedureAuthorizationRule[]
+  @@unique([contractId, tableCode, code])
+  @@unique([id, contractId])
+  @@index([contractId, name, id])
+}
+
+// Intervalo civil inclusivo. Exclusion GiST no SQL impede sobreposição de tarifas ativas.
+model ProcedureTariff {
+  id String @id @default(uuid())
+  procedureId String
+  amountCents Int
+  startsOn DateTime @db.Date
+  endsOn DateTime? @db.Date
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  procedure BillingProcedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+  createdBy User @relation("ProcedureTariffCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("ProcedureTariffUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  changes AdministrativeConfigChange[]
+
+  @@index([procedureId, startsOn, id])
+}
+
+// Dados faturáveis próprios, sem alterar User/CREFITO nem conceder acesso clínico.
+model BillingProfessional {
+  id String @id @default(uuid())
+  userId String? @unique
+  name String @db.VarChar(120)
+  purpose String @db.VarChar(12)
+  councilCode String? @db.VarChar(2)
+  councilNumber String? @db.VarChar(20)
+  councilState String? @db.VarChar(2)
+  occupationCode String? @db.VarChar(6)
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  user User? @relation("BillingProfessionalUser", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy User @relation("BillingProfessionalCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("BillingProfessionalUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  changes AdministrativeConfigChange[]
+
+  @@index([name, id])
+}
+model BeneficiaryCoverage {
+  id String @id @default(uuid())
+  patientId String
+  contractId String
+  beneficiaryName String @db.VarChar(120)
+  cardNumber String @db.VarChar(60)
+  planName String? @db.VarChar(120)
+  startsOn DateTime @db.Date
+  endsOn DateTime? @db.Date
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  contract OperatorContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  createdBy User @relation("CoverageCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("CoverageUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  authorizations BenefitAuthorization[]
+  changes BeneficiaryChange[]
+  @@unique([id, contractId])
+  @@index([patientId, startsOn, id])
+  @@index([contractId])
+}
+model BenefitAuthorization {
+  id String @id @default(uuid())
+  coverageId String
+  contractId String
+  number String @db.VarChar(60)
+  accessCode String? @db.VarChar(60)
+  issuedOn DateTime @db.Date
+  startsOn DateTime @db.Date
+  endsOn DateTime @db.Date
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  coverage BeneficiaryCoverage @relation(fields: [coverageId, contractId], references: [id, contractId], onDelete: Restrict)
+  contract OperatorContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  createdBy User @relation("AuthorizationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("AuthorizationUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  items AuthorizationItem[]
+  changes BeneficiaryChange[]
+  @@unique([id, contractId])
+  @@unique([coverageId, number])
+}
+model AuthorizationItem {
+  id String @id @default(uuid())
+  authorizationId String
+  contractId String
+  procedureId String
+  authorizedQuantity Int
+  active Boolean @default(true)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  createdById String
+  updatedById String
+  authorization BenefitAuthorization @relation(fields: [authorizationId, contractId], references: [id, contractId], onDelete: Restrict)
+  contract OperatorContract @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  procedure BillingProcedure @relation(fields: [procedureId, contractId], references: [id, contractId], onDelete: Restrict)
+  createdBy User @relation("AuthorizationItemCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy User @relation("AuthorizationItemUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  uses AuthorizationUse[]
+  changes BeneficiaryChange[]
+  @@unique([authorizationId, procedureId])
+}
+// Livro interno de consumo/devolução para ADM-03; nenhuma sessão gera consumo automático.
+model AuthorizationUse {
+  id String @id @default(uuid())
+  itemId String
+  quantity Int
+  executionOn DateTime @db.Date
+  reversesId String? @unique
+  sourceKey String @unique @db.VarChar(100)
+  requestId String @unique @db.VarChar(36)
+  fingerprint String @db.VarChar(64)
+  snapshot Json
+  reason String @db.VarChar(300)
+  actorId String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  item AuthorizationItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  reverses AuthorizationUse? @relation("AuthorizationUseReturn", fields: [reversesId], references: [id], onDelete: Restrict)
+  returnedBy AuthorizationUse? @relation("AuthorizationUseReturn")
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([itemId])
+}
+model BeneficiaryChange {
+  id String @id @default(uuid())
+  coverageId String?
+  authorizationId String?
+  itemId String?
+  version Int
+  snapshot Json
+  reason String @db.VarChar(300)
+  requestId String @unique @db.VarChar(36)
+  fingerprint String @db.VarChar(64)
+  actorId String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  coverage BeneficiaryCoverage? @relation(fields: [coverageId], references: [id], onDelete: Restrict)
+  authorization BenefitAuthorization? @relation(fields: [authorizationId], references: [id], onDelete: Restrict)
+  item AuthorizationItem? @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@unique([coverageId, version])
+  @@unique([authorizationId, version])
+  @@unique([itemId, version])
+  @@index([actorId])
+}
+// Cada versão é imutável; ausência de versão significa regra pendente.
+model ProcedureAuthorizationRule {
+  id String @id @default(uuid())
+  procedureId String
+  version Int
+  mode String @db.VarChar(12)
+  reference String @db.VarChar(300)
+  reason String @db.VarChar(300)
+  requestId String @unique @db.VarChar(36)
+  fingerprint String @db.VarChar(64)
+  actorId String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  procedure BillingProcedure @relation(fields: [procedureId], references: [id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@unique([procedureId, version])
+  @@index([actorId])
 }

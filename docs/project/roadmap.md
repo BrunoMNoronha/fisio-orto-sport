@@ -351,4 +351,14 @@ na #103. Evidências em [102-lotes](evidencias/102-lotes.md).
 Geração XSD/MD5 TISS 4.03.00 a partir do snapshot fechado, perfil por contrato em tela,
 bytes originais e download ADMIN, finalidade de homologação separada da produção. Defaults
 autorizados pelo usuário; dados/aceite reais da operadora continuam explícitos e pendentes.
-Evidências em [103-xml](evidencias/103-xml.md). Integração/publicação #103 pendentes.
+Evidências em [103-xml](evidencias/103-xml.md). Integrada e publicada em Preview no commit
+5228c19, com migração confirmada e workflow 38785477915 concluído com sucesso.
+
+### ADM-08 (#104) — conciliação de operadoras
+
+Razão própria por item enviado, recebimentos integralmente alocados no contrato, glosa
+parcial/revisão/baixa, estorno/substituição atômica e ajustes identificados. Navegação
+em Administrativo, lote enviado e Financeiro, sem caixa consolidado com pacientes.
+Migração aditiva com backfill de envios anteriores, invariantes PostgreSQL, autoria,
+histórico imutável e inventário de manutenção/recuperação. Implementação e evidências
+locais em [104-conciliacao](evidencias/104-conciliacao.md); PR/publicação separados.

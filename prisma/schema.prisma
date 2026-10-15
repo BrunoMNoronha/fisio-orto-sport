@@ -18,6 +18,7 @@ enum Role {
 }
 
 model User {
+ operatorSettlements OperatorSettlement[]
  tissProfiles TissProfile[]
   batchChanges BatchChange[]
   batchArtifacts BatchArtifact[]
@@ -833,6 +834,8 @@ model HealthOperator {
 // Nome/código do contrato distinguem vários vínculos da clínica com a mesma operadora.
 // tissVersion é versão informada, não prova de validação/homologação.
 model OperatorContract {
+ receivables OperatorReceivable[]
+ settlements OperatorSettlement[]
  tissProfiles TissProfile[]
   batches BillingBatch[]
   batchSequence BatchSequence?
@@ -1114,6 +1117,7 @@ model ProcedureAuthorizationRule {
 }
 
 model ProductionItem {
+ receivable OperatorReceivable?
   guideItems BillingGuideItem[]
   id String @id @default(uuid())
   sessionId String
@@ -1180,6 +1184,7 @@ model GuideSequence {
  contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
 }
 model BillingGuide {
+ receivables OperatorReceivable[]
  newbornCode String? @db.Char(1)
  requesterProviderCode String? @db.VarChar(14)
  requesterProviderName String? @db.VarChar(70)
@@ -1247,6 +1252,7 @@ model BatchSequence {
  contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
 }
 model BillingBatch {
+ receivables OperatorReceivable[]
  id String @id @default(uuid())
  contractId String
  number BigInt
@@ -1316,6 +1322,7 @@ model BatchArtifact {
  @@index([actorId])
 }
 model BatchSend {
+ receivables OperatorReceivable[]
  id String @id @default(uuid())
  batchId String
  artifactId String
@@ -1351,4 +1358,69 @@ model TissProfile {
  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
  @@unique([contractId,version])
  @@index([actorId])
+}
+
+// Razão da operadora: obrigação congelada no primeiro envio, nunca Charge/Payment.
+model OperatorReceivable {
+ id String @id
+ contractId String
+ batchId String
+ guideId String
+ productionId String @unique
+ sendId String
+ amountCents BigInt
+ billedOn DateTime @db.Date
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ batch BillingBatch @relation(fields:[batchId],references:[id],onDelete:Restrict)
+ guide BillingGuide @relation(fields:[guideId],references:[id],onDelete:Restrict)
+ production ProductionItem @relation(fields:[productionId],references:[id],onDelete:Restrict)
+ send BatchSend @relation(fields:[sendId],references:[id],onDelete:Restrict)
+ lines OperatorSettlementLine[]
+ @@index([contractId,billedOn,id])
+ @@index([batchId])
+ @@index([guideId])
+ @@index([sendId])
+}
+
+model OperatorSettlement {
+ id String @id @default(uuid())
+ contractId String
+ kind String @db.VarChar(12)
+ effectiveOn DateTime @db.Date
+ reference String @db.VarChar(120)
+ reason String @db.VarChar(300)
+ amountCents BigInt
+ actorId String
+ requestId String @unique @db.VarChar(36)
+ fingerprint String @db.VarChar(64)
+ reversesId String? @unique
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ reverses OperatorSettlement? @relation("OperatorSettlementReversal",fields:[reversesId],references:[id],onDelete:Restrict)
+ reversedBy OperatorSettlement? @relation("OperatorSettlementReversal")
+ lines OperatorSettlementLine[]
+ @@index([contractId,effectiveOn,id])
+ @@index([actorId])
+}
+
+model OperatorSettlementLine {
+ id String @id @default(uuid())
+ settlementId String
+ receivableId String
+ glosaRootId String?
+ code String @default("") @db.VarChar(40)
+ reversalPart Boolean @default(false)
+ receivedDelta BigInt @default(0)
+ analysisDelta BigInt @default(0)
+ writtenOffDelta BigInt @default(0)
+ billedDelta BigInt @default(0)
+ settlement OperatorSettlement @relation(fields:[settlementId],references:[id],onDelete:Restrict)
+ receivable OperatorReceivable @relation(fields:[receivableId],references:[id],onDelete:Restrict)
+ glosaRoot OperatorSettlementLine? @relation("OperatorGlosaOrigin",fields:[glosaRootId],references:[id],onDelete:Restrict)
+ revisions OperatorSettlementLine[] @relation("OperatorGlosaOrigin")
+ @@index([settlementId])
+ @@index([receivableId])
+ @@index([glosaRootId])
 }

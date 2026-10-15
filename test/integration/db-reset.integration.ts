@@ -1,5 +1,7 @@
 import {saveTissProfile} from "@/modules/administrativo/tiss/profile-service";
 import {TISS_DEFAULTS} from "@/modules/administrativo/tiss/profile";
+import {saveSettlement} from "@/modules/administrativo/settlement-service";
+import {settlementSchema} from "@/modules/administrativo/settlement-validation";
 import {saveBatch,registerValidatedBatchArtifactTx} from "@/modules/administrativo/batch-service";
 import {batchSchema} from "@/modules/administrativo/batch-validation";
 import { saveGuide,saveGuideProfile } from "@/modules/administrativo/guide-service";
@@ -196,6 +198,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     const frozen=await prisma.billingBatch.findUniqueOrThrow({where:{id:batch.id}});
     const file=await prisma.$transaction(tx=>registerValidatedBatchArtifactTx(tx,adm.id,{purpose:'PRODUCAO',id:randomUUID(),batchId:batch.id,contentDigest:frozen.contentDigest,bytes:new TextEncoder().encode("SINTETICO SEM XSD"),validationReference:"Fixture de limpeza sem homologação",requestId:randomUUID()}));
     await saveBatch(prisma,adm.id,{...batch,operation:"ENVIAR",expectedVersion:2,requestId:randomUUID(),artifactId:file.id,sentOn:new Date(new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo'}).format(new Date())),protocol:"SINTETICO",channel:"MANUAL"});
+    await saveSettlement(prisma,adm.id,settlementSchema.parse({id:randomUUID(),requestId:randomUUID(),contractId,kind:'RECEBER',effectiveOn:new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo'}).format(new Date()),reference:'DEMONSTRATIVO SINTETICO LIMPEZA',reason:'Histórico próprio incluído no inventário',amount:'0,01',lines:[{receivableId:guideProduction,amount:'0,01'}]}));
     await prisma.treatmentSessionChange.create({
       data: { sessionId: session.id, version: 2, field: "evolution", reason: "r", editorId: fisio.id, editorNameSnapshot: "Fisio" },
     });

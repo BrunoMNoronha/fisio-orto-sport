@@ -336,3 +336,47 @@ Leitura exige administrativo:ler; somente ADMIN com administrativo:conciliar esc
 Consultas projetam identificação operacional e valores, sem prontuário/indicação clínica.
 Itens, glosas e histórico têm páginas próprias; totais usam todos os itens do filtro.
 O histórico abrange o contrato e explica essa abrangência quando há filtro por lote.
+## Relatórios financeiros de operadoras — ADM-09 (#105)
+
+Os cinco relatórios administrativos compartilham navegação e saídas: produção,
+pendências, autorizações (#100), faturamento e acompanhamento financeiro (#105).
+`/administrativo/relatorios/faturamento` tem uma linha por lote inteiro fechado/enviado;
+`/administrativo/relatorios/conciliacao` tem uma linha por obrigação de item enviado,
+com vínculos para lote, guia, produção e conciliação. Agregados são por operadora/contrato.
+Não existe nova tabela de saldo, migração ou escrita financeira nesta entrega.
+
+Faturamento admite fechamento civil em São Paulo ou primeiro envio. Fechado é preparado:
+valor original do lote não é faturado; somente obrigações da #104 entram no faturado.
+O valor do lote e o faturado são medidas distintas, nunca somadas entre si. Correções
+de envio não mudam a competência imutável da obrigação original.
+
+Acompanhamento admite execução, fechamento, envio, recebimento válido ou glosa original.
+Datas inicial/final são inclusivas. Os três primeiros eixos selecionam pela data do
+item/lote. Recebimento seleciona itens com alguma alocação atualmente válida no período
+(original estornado/substituído não seleciona); glosa seleciona pela data efetiva do
+registro original, inclusive quando paga/liberada/baixada depois. Primeira/última data
+mostram as ocorrências que selecionaram o item; não são datas de corte do saldo.
+
+Todos os saldos mostram a posição atual completa **do mesmo conjunto de itens**, com
+movimentos de todas as datas. No eixo recebimento, a coluna adicional de recebimentos
+válidos no período é separada do recebido atual dos itens. No eixo glosa, a coluna de
+glosa original no período é medida de origem, não saldo. Nenhuma é somada às classes
+da equação `faturado original + ajustes = recebido + aberto + análise + baixa definitiva`.
+Exemplo: um item de R$100 com recebimentos de R$30 em fevereiro/R$30 em março e glosa
+de R$20 em abril aparece no recorte de recebimento de fevereiro com período R$30,
+recebido atual R$60, análise R$20 e aberto R$20, reconciliando os mesmos R$100.
+
+Movimentos são agregados por obrigação antes de juntar lote/guia. Uma remessa com
+várias alocações contribui somente por suas parcelas; cabeçalho não multiplica valores.
+RepeatableRead reúne contagem, totais, linhas e rótulos no mesmo snapshot. Tela tem
+páginas de 20; CSV UTF-8/BOM e impressão/PDF nativo representam todas as linhas do filtro,
+sob o menor maxExportRows dos contratos participantes. Excesso recusa integralmente,
+sem truncar. Campos textuais reutilizam proteção contra fórmulas da #100.
+
+Páginas, seletores, CSV e impressão exigem administrativo:ler antes de consultar.
+ADMIN, RECEPCAO e FISIOTERAPEUTA leem conforme matriz ratificada da #96. Não há indicação
+clínica/prontuário/senha/carteira nas projeções. CSV tem private/no-store/nosniff; impressão
+é dinâmica. Filtros inválidos têm erro explícito; vazio tem cabeçalho/metadados sem
+inventar obrigações; cadastros inativos permanecem no histórico. Cada saída é nova
+consulta com horário próprio, não posição histórica congelada, contabilidade ou caixa
+consolidado com pacientes. XLSX, DRE e painéis preditivos seguem fora do escopo.

@@ -562,3 +562,20 @@ Conciliação e histórico sob administrativo:ler; escrita ADMIN sob administrat
 Datas efetivas civis separadas do instante técnico, posição atual identificada como tal.
 Sem consolidação de caixa de paciente/operadora, recurso eletrônico ou importação automática.
 Razão própria incluída em manutenção, autoria e recuperação; ver evidencias/104-conciliacao.md.
+## Implementação ADM-09 (#105) — 15/10/2026
+
+Relatórios de faturamento por lote inteiro e de recebimentos/glosas por obrigação
+enviada, com totais por operadora/contrato, CSV e impressão completa. Reutilizam os
+fatos imutáveis da #104 e a infraestrutura de saída da #100, sem tabela de saldo nova.
+Posição atual sempre explícita; não há reconstrução de corte histórico na V1.
+
+Eixos separados: execução, fechamento civil em São Paulo, primeiro envio, recebimento
+atualmente válido e data efetiva da glosa original. Datas inclusivas. Recebimento/glosa
+selecionam um conjunto de itens; faturado/saldos desse conjunto incluem todos os movimentos
+atuais. Medida do período é exibida separadamente e não é somada ao saldo. Remessas são
+somadas por alocação, não por cabeçalho repetido. Fechado sem envio continua preparado.
+
+RepeatableRead para contagem/totais/linhas/rótulos, limites integrais sem truncamento,
+private/no-store em CSV, impressão dinâmica, proteção de células e autorização antes
+de todas as portas. Leitura dos três perfis preserva a matriz refinada; não há prontuário
+na projeção nem soma com o financeiro de pacientes. Evidências em evidencias/105-relatorios.md.

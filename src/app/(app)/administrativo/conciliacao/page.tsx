@@ -28,6 +28,6 @@ export default async function Page({searchParams}:{searchParams:Promise<Record<s
       {w.history.map(record=><div key={record.id} className="rounded border p-3"><Link className="underline font-medium" href={'/administrativo/conciliacao/registros/'+record.id}>{SETTLEMENT_LABELS[record.kind as typeof SETTLEMENT_KINDS[number]]} · {formatBRL(record.amountCents)}</Link><p>Efetiva {formatCivilDate(record.effectiveOn)} · {record.reference} · {record.actor.name}</p><p>Registrado {record.createdAt.toISOString()} · {record.reason}</p>{record.reversedBy&&<p>Estornado/substituído por <Link className="underline" href={'/administrativo/conciliacao/registros/'+record.reversedBy.id}>{record.reversedBy.id}</Link></p>}</div>)}
       <nav aria-label="Páginas do histórico" className="flex gap-4">{w.historyPage>1&&<Link href={href(w.page,w.historyPage-1)}>Histórico anterior</Link>}{w.historyPage<w.historyPages&&<Link href={href(w.page,w.historyPage+1)}>Histórico seguinte</Link>}</nav>
     </>}
-    <div className="flex gap-4"><Link className="underline" href="/administrativo">Administrativo</Link><Link className="underline" href="/financeiro">Financeiro de pacientes</Link></div>
+    <div className="flex gap-4"><Link className="underline" href="/administrativo">Administrativo</Link><Link className="underline" href="/financeiro">Financeiro de pacientes</Link>{w&&<Link className="underline" href={'/administrativo/relatorios/conciliacao?axis=envio&contractId='+w.contract.id}>Relatório completo de recebimentos e glosas</Link>}</div>
   </div>;
 }

@@ -1,16 +1,19 @@
 import Link from "next/link";
+import {isFinancialReportKind,FINANCIAL_REPORT_KINDS,FINANCIAL_REPORT_TITLES} from '@/modules/administrativo/financial-report-validation';
+import {FinancialReportPage} from '../financial-page';
 import { getAdministrativeReport } from "@/modules/administrativo/report-queries";
 import { REPORT_KINDS, REPORT_TITLES, administrativeReportQuery, type AdministrativeReportKind } from "@/modules/administrativo/report-validation";
 import { ReportFilters } from "../report-filters";
 import { ReportSummary, ReportTables } from "../report-view";
 export default async function ReportPage({ params, searchParams }: { params: Promise<{ kind: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { kind } = await params, raw = await searchParams;
+  if(isFinancialReportKind(kind))return <FinancialReportPage kind={kind} raw={raw}/>;
   const result = await getAdministrativeReport(kind as AdministrativeReportKind, raw);
   const r = result.report;
   const valid = REPORT_KINDS.includes(kind as AdministrativeReportKind);
   const values = Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === 'string')) as Record<string, string>;
   return <div className="mx-auto flex w-full max-w-7xl flex-col gap-5"><h1 className="text-2xl font-semibold">{valid ? REPORT_TITLES[kind as AdministrativeReportKind] : 'Relatório inválido'}</h1>
-    <nav aria-label="Relatórios administrativos" className="flex flex-wrap gap-4">{REPORT_KINDS.map(k => <Link className="underline" aria-current={k === kind ? 'page' : undefined} href={`/administrativo/relatorios/${k}`} key={k}>{REPORT_TITLES[k]}</Link>)}</nav>
+    <nav aria-label="Relatórios administrativos" className="flex flex-wrap gap-4">{REPORT_KINDS.map(k => <Link className="underline" aria-current={k === kind ? 'page' : undefined} href={`/administrativo/relatorios/${k}`} key={k}>{REPORT_TITLES[k]}</Link>)}{FINANCIAL_REPORT_KINDS.map(k=><Link className="underline" key={k} href={'/administrativo/relatorios/'+k}>{FINANCIAL_REPORT_TITLES[k]}</Link>)}</nav>
     <p>Cada relatório possui filtros próprios. Ao trocar de relatório, selecione novamente o período e os filtros.</p>
     {valid && <ReportFilters kind={kind as AdministrativeReportKind} values={values} labels={r?.labels ?? {}} />}
     {result.error && <p role="alert">{result.error}</p>}

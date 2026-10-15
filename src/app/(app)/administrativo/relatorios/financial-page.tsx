@@ -1,0 +1,11 @@
+import Link from 'next/link';
+import {getFinancialReport} from '@/modules/administrativo/financial-report-queries';
+import {FINANCIAL_REPORT_KINDS,FINANCIAL_REPORT_TITLES,financialReportQuery,type FinancialReportKind} from '@/modules/administrativo/financial-report-validation';
+import {REPORT_KINDS,REPORT_TITLES} from '@/modules/administrativo/report-validation';
+import {FinancialFilters} from './financial-filters';
+import {FinancialSummary,FinancialTables} from './financial-view';
+export async function FinancialReportPage({kind,raw}:{kind:FinancialReportKind;raw:Record<string,string|string[]|undefined>}){
+  const {report:r,error}=await getFinancialReport(kind,raw);
+  const values=Object.fromEntries(Object.entries(raw).filter(([,value])=>typeof value==='string')) as Record<string,string>;
+  return <div className="mx-auto flex w-full max-w-7xl flex-col gap-5"><h1 className="text-2xl font-semibold">{FINANCIAL_REPORT_TITLES[kind]}</h1><nav aria-label="Relatórios administrativos" className="flex flex-wrap gap-4">{REPORT_KINDS.map(k=><Link className="underline" href={'/administrativo/relatorios/'+k} key={k}>{REPORT_TITLES[k]}</Link>)}{FINANCIAL_REPORT_KINDS.map(k=><Link key={k} className="underline" aria-current={k===kind?'page':undefined} href={'/administrativo/relatorios/'+k}>{FINANCIAL_REPORT_TITLES[k]}</Link>)}</nav><p>Cada relatório possui filtros próprios. Ao trocar de relatório, selecione novamente o eixo, período e filtros.</p><FinancialFilters key={kind} kind={kind} values={values} labels={r?.labels??{}}/>{error&&<p role="alert">{error}</p>}{r&&!r.error&&<><FinancialSummary report={r}/><div className="flex flex-wrap gap-4"><a className="underline" href={`/administrativo/relatorios/${kind}/csv?${financialReportQuery(r.filters)}`}>Baixar CSV completo</a><Link className="underline" href={`/impressao/administrativo/${kind}?${financialReportQuery(r.filters)}`}>Impressão completa / PDF</Link></div><FinancialTables report={r}/><nav aria-label="Paginação" className="flex gap-4">{r.page>1&&<Link href={'?'+financialReportQuery(r.filters,r.page-1)}>Anterior</Link>}<span>Página {r.page} de {r.pages}; {r.items.length} linhas exibidas de {r.total}.</span>{r.page<r.pages&&<Link href={'?'+financialReportQuery(r.filters,r.page+1)}>Próxima</Link>}</nav></>}</div>;
+}

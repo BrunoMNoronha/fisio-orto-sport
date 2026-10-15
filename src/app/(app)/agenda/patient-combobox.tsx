@@ -129,7 +129,7 @@ export function PatientCombobox({
             <span className="font-medium">{value.label}</span>
           </>
         ) : (
-          <span className="text-muted-foreground">Nenhum paciente selecionado. Busque pelo nome e escolha na lista.</span>
+          <span className="text-muted-foreground">Sem seleção de {texts.noun}. Busque pelo nome e escolha na lista.</span>
         )}
       </p>
       <div className="relative">

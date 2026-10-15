@@ -207,3 +207,36 @@ Migração aditiva 20261015140000_administrativo_producao. Recuperação inclui 
 ProductionChange, FKs, índices, funções/triggers e autores, com história na mesma transação.
 Ambas entram na limpeza manual dependente de paciente; sem expurgo automático. Usuários
 com ProductionChange não podem ser excluídos. Ver evidencias/99-producao.md.
+
+## Relatórios operacionais (#100)
+
+Administrativo → Relatórios oferece produção por execução, pendências com motivo e
+saldo por item autorizado. Todos exigem `administrativo:ler` (os três perfis), inclusive
+CSV e impressão. O mesmo parser estrito rejeita filtros desconhecidos, repetidos,
+incompatíveis, datas inválidas e períodos invertidos antes de consultar o banco.
+Busca por nomes via Server Action; URLs guardam apenas IDs, datas, estado e página.
+
+`readAdministrativeReport` usa uma transação PostgreSQL RepeatableRead para contagem,
+totais, rótulos e itens. Produção considera `executionOn` civil inclusiva em São Paulo;
+autorização considera interseção da vigência, com saldo **atual de todos os movimentos**,
+sem corte histórico. Uma soma lateral por item agrega consumo e devoluções antes dos
+joins. Valores somam em numeric do PostgreSQL, retornam texto e viram bigint no JS.
+Unidades/totais ficam separados por contrato, procedimento, profissional e estado.
+PENDENTE/INVALIDADO não contribuem com valor histórico residual. APTO/FECHADO/ENVIADO
+mantêm valor conferido do snapshot; pendências atuais aparecem separadamente. Isto não
+substitui a revalidação transacional ao fechar guia, nem representa receita recebida.
+
+A tela pagina 20 itens e totaliza o filtro completo. CSV e impressão leem tudo em uma
+nova posição consistente, sem herdar a página. Alterações entre solicitações podem
+mudar o resultado, por isso cada saída declara seu horário de geração. `maxExportRows`
+é aplicado ao total integral usando o menor limite entre os contratos participantes
+(padrão 10.000 se vazio). Excesso recusa explicitamente, sem exportar parte dos dados.
+CSV usa UTF-8/BOM, ponto e vírgula, CRLF, aspas/escape e neutralização de fórmulas em
+texto. Centavos são inteiros explícitos; importe códigos como texto na planilha para
+preservar zeros. Downloads autenticados usam private/no-store e nome fixo sem paciente.
+
+Impressão própria traz eixo, filtros, horário, completude, totais e itens; CSS A4
+paisagem, cabeçalho de tabela repetido, quebra de texto e linhas preservadas. PDF é a
+função nativa do navegador, sem biblioteca/XLSX. Saldo disponível é aritmético:
+autorização vencida/inativa não permite consumo, mesmo com saldo nominal positivo.
+Nenhuma migração é necessária. Evidências: `docs/project/evidencias/100-relatorios.md`.

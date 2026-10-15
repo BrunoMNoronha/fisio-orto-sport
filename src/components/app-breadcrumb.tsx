@@ -25,6 +25,7 @@ const LABELS: Record<string, string> = {
   profissionais: "Identificação profissional",
   financeiro: "Financeiro",
   administrativo: "Administrativo",
+  producao: "Produção",
   beneficiarios: "Beneficiários",
   coberturas: "Coberturas",
   autorizacoes: "Autorizações",

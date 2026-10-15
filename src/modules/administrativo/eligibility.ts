@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { parseCivilDate } from "./catalog-validation";
 import { readCoverageContext } from "./beneficiary-context";
 export type EligibilityInput = { patientId: string; coverageId: string; procedureId: string; executionOn: string; quantity: number; itemId?: string };
-export async function readEligibilityTx(tx: Prisma.TransactionClient, input: EligibilityInput) {
+export async function readEligibilityTx(tx: Prisma.TransactionClient, input: EligibilityInput, existingUseId?: string) {
   const date = parseCivilDate(input.executionOn);
   if (!date || !Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 2147483647) return { status: "ENTRADA_INVALIDA" as const };
   const coverage = await readCoverageContext(tx,input.coverageId);
@@ -30,7 +30,10 @@ export async function readEligibilityTx(tx: Prisma.TransactionClient, input: Eli
   const sum = await tx.authorizationUse.aggregate({ where: { itemId: item.id }, _sum: { quantity: true } });
   const consumed = sum._sum.quantity ?? 0, available = item.authorizedQuantity - consumed;
   const balance = { authorized: item.authorizedQuantity, consumed, available };
-  if (input.quantity > available) return { status: "SALDO_INSUFICIENTE" as const, balance };
+  // Crédito só para revalidar o próprio consumo, nunca exposto pelo wrapper público.
+  const existingUse = existingUseId ? await tx.authorizationUse.findUnique({where:{id:existingUseId},select:{itemId:true,quantity:true,reversesId:true,returnedBy:{select:{id:true}}}}) : null;
+  const credit = existingUse && existingUse.itemId===item.id && !existingUse.reversesId && !existingUse.returnedBy ? existingUse.quantity : 0;
+  if (input.quantity > available + credit) return { status: "SALDO_INSUFICIENTE" as const, balance };
   return { status: "APTA" as const, balance, snapshot: { ...snapshot, authorizationId: item.authorization.id,
     authorizationVersion: item.authorization.version, authorizationNumber: item.authorization.number, accessCode: item.authorization.accessCode,
     itemId: item.id, itemVersion: item.version } };

@@ -345,3 +345,10 @@ numeração, cancelamento preservado, envio manual com protocolo/data/arquivo va
 correções vinculadas. Conferência, CSV e impressão integrais conforme contratos da #96.
 #99–#101 já integradas; #102 aguarda integração/publicação. Geração/validação XML permanece
 na #103. Evidências em [102-lotes](evidencias/102-lotes.md).
+
+### ADM-07 (#103) — implementação local com perfil parametrizável em 15/10/2026
+
+Geração XSD/MD5 TISS 4.03.00 a partir do snapshot fechado, perfil por contrato em tela,
+bytes originais e download ADMIN, finalidade de homologação separada da produção. Defaults
+autorizados pelo usuário; dados/aceite reais da operadora continuam explícitos e pendentes.
+Evidências em [103-xml](evidencias/103-xml.md). Integração/publicação #103 pendentes.

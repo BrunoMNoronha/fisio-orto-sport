@@ -1,0 +1,4 @@
+
+# Vendor ANS e golden ISO-8859-1: preservar bytes originais e finais de linha.
+src/modules/administrativo/tiss/schemas/4.03.00/*.xsd -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+test/fixtures/tiss/*.xml -text

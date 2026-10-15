@@ -1,3 +1,4 @@
+import {TISS_DEFAULTS} from "./tiss/profile";
 import {createHash,randomUUID} from "node:crypto";
 import type {Prisma,PrismaClient} from "@/generated/prisma/client";
 import {lockBeneficiary} from "./beneficiary-service";
@@ -49,7 +50,8 @@ export async function saveBatch(db:Pick<PrismaClient,'$transaction'>,actorId:str
  for(const l of links){const result=await revalidateGuideTx(tx,l.guideId);if(result.status!=='OK')fail('Guia '+String(l.guide.number)+': '+result.status+'. Devolva e confira as fontes.');if(l.guide.contractId!==input.contractId||(l.guide.snapshot as {contract?:{tissVersion?:string}}).contract?.tissVersion!==input.tissVersion)fail('Lote misto entre contratos/versões.');total+=l.guide.totalCents;frozen.push({guideId:l.guideId,number:String(l.guide.number),month:l.guide.month,guideVersion:l.guide.version,sourceDigest:l.guide.sourceDigest,totalCents:String(l.guide.totalCents),snapshot:l.guide.snapshot,clinicalIndication:l.guide.clinicalIndication,clinicalConfirmed:l.guide.clinicalConfirmed,items:l.guide.items.map(i=>({id:i.productionId,snapshot:i.snapshot}))});}
  if(total>BigInt('9223372036854775807'))fail('Total excede capacidade em centavos; divida o lote.');
  for(const l of links){for(const i of l.guide.items){await tx.productionItem.update({where:{id:i.productionId},data:{state:'FECHADO',version:{increment:1}}});await recordProductionChange(tx,i.productionId,actorId,input.reason,randomUUID(),fingerprint);}await tx.billingGuide.update({where:{id:l.guideId},data:{state:'EM_LOTE',version:{increment:1}}});await recordGuideChange(tx,l.guideId,actorId,input.reason,randomUUID(),fingerprint);await tx.batchGuide.update({where:{id:l.id},data:{closedGuideVersion:l.guide.version+1}});}
- const snapshot=json({contract:{id:contract!.id,name:contract!.name,version:contract!.version,operatorId:contract!.operator.id,operator:contract!.operator.name,tissVersion:current!.tissVersion,maxGuides:contract!.maxGuides,maxItems:contract!.maxItems,maxXmlBytes:contract!.maxXmlBytes,maxExportRows:contract!.maxExportRows},guides:frozen});
+ const xmlProfile=await tx.tissProfile.findFirst({where:{contractId:input.contractId},orderBy:{version:'desc'},select:{id:true,version:true,data:true}});
+ const snapshot=json({xmlProfile:xmlProfile??{id:null,version:0,data:TISS_DEFAULTS},contract:{id:contract!.id,name:contract!.name,version:contract!.version,operatorId:contract!.operator.id,operator:contract!.operator.name,tissVersion:current!.tissVersion,maxGuides:contract!.maxGuides,maxItems:contract!.maxItems,maxXmlBytes:contract!.maxXmlBytes,maxExportRows:contract!.maxExportRows},guides:frozen});
  await tx.billingBatch.update({where:{id:input.id},data:{state:'FECHADO',version:{increment:1},contentVersion:1,closedAt:new Date(),snapshot,contentDigest:hash(snapshot),totalCents:total}});
  }else if(input.operation==='CANCELAR'){
  if(!current||!['ABERTO','FECHADO'].includes(current!.state))fail('Somente lote aberto/fechado sem envio pode ser cancelado.');
@@ -59,7 +61,8 @@ export async function saveBatch(db:Pick<PrismaClient,'$transaction'>,actorId:str
  if(!current||!['FECHADO','ENVIADO'].includes(current!.state))fail('Envio exige lote fechado e arquivo validado.');
  if(input.operation==='ENVIAR'&&current!.state!=='FECHADO'||input.operation==='CORRIGIR_ENVIO'&&current!.state!=='ENVIADO')fail('Transição de envio inválida.');
  if(!input.artifactId||!input.sentOn||!input.protocol||!input.channel)fail('Informe arquivo validado, data civil, protocolo e canal do envio manual.');
- const artifact=await tx.batchArtifact.findUnique({where:{id:input.artifactId!},select:{id:true,batchId:true,contentDigest:true,createdAt:true}});if(!artifact||artifact.batchId!==current!.id||artifact.contentDigest!==current!.contentDigest)fail('Arquivo validado não corresponde a este lote.');
+ const artifact=await tx.batchArtifact.findUnique({where:{id:input.artifactId!},select:{id:true,batchId:true,contentDigest:true,createdAt:true,purpose:true}});if(!artifact||artifact.batchId!==current!.id||artifact.contentDigest!==current!.contentDigest)fail('Arquivo validado não corresponde a este lote.');
+ if(artifact!.purpose!=='PRODUCAO')fail('Arquivo de homologação/legado não pode constituir envio de produção.');
  const civil=(d:Date)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo'}).format(d);const sent=input.sentOn!.toISOString().slice(0,10);if(sent<civil(current!.closedAt!)||sent<civil(artifact!.createdAt)||sent>civil(new Date()))fail('Data de envio deve ser posterior ou igual ao fechamento/arquivo e não pode ser futura.');
  const links=await composition(tx,input.id);if(input.operation==='ENVIAR'&&links.some(l=>l.guide.items.some(i=>i.production.adjustmentPending)))fail('Há ajuste pendente após fechamento. Cancele e revise antes do envio.');
  const previous=await tx.batchSend.findFirst({where:{batchId:input.id,correctedBy:null},orderBy:[{createdAt:'desc'},{id:'desc'}]});
@@ -73,10 +76,11 @@ export async function saveBatch(db:Pick<PrismaClient,'$transaction'>,actorId:str
 }
 // Porta interna para #103: chamar SOMENTE após validar bytes contra XSD/regras do perfil.
 // A #102 não implementa validador nem oferece Server Action de registro de artefato.
-export async function registerValidatedBatchArtifactTx(tx:Tx,actorId:string,input:{id:string;batchId:string;contentDigest:string;bytes:Uint8Array;validationReference:string;requestId:string}){
+export async function registerValidatedBatchArtifactTx(tx:Tx,actorId:string,input:{id:string;batchId:string;contentDigest:string;bytes:Uint8Array;validationReference:string;requestId:string;purpose?:'HOMOLOGACAO'|'PRODUCAO';generatorVersion?:string;validationMetadata?:Prisma.InputJsonObject}){
  await lockBeneficiary(tx);await tx.$queryRaw`SELECT id FROM "BillingBatch" WHERE id=${input.batchId} FOR UPDATE`;
- const fileHash=createHash('sha256').update(input.bytes).digest('hex');const replay=await tx.batchArtifact.findUnique({where:{requestId:input.requestId}});if(replay){if(replay.batchId!==input.batchId||replay.contentDigest!==input.contentDigest||replay.fileHash!==fileHash||replay.validationReference!==input.validationReference)fail('Envio de artefato reutilizado com outros dados.');return replay;}
+ const purpose=input.purpose??'LEGADO',generatorVersion=input.generatorVersion??'legacy',metadata=input.validationMetadata??{};
+ const fileHash=createHash('sha256').update(input.bytes).digest('hex');const replay=await tx.batchArtifact.findUnique({where:{requestId:input.requestId}});if(replay){if(replay.batchId!==input.batchId||replay.contentDigest!==input.contentDigest||replay.fileHash!==fileHash||replay.validationReference!==input.validationReference||replay.purpose!==purpose||replay.generatorVersion!==generatorVersion||JSON.stringify(replay.validationMetadata)!==JSON.stringify(metadata))fail('Envio de artefato reutilizado com outros dados.');return replay;}
  const batch=await tx.billingBatch.findUniqueOrThrow({where:{id:input.batchId}});if(!['FECHADO','ENVIADO'].includes(batch.state)||batch.contentDigest!==input.contentDigest||!input.validationReference.trim())fail('Artefato exige conteúdo fechado correspondente.');
  const last=await tx.batchArtifact.findFirst({where:{batchId:input.batchId},orderBy:{version:'desc'},select:{version:true}});
- return tx.batchArtifact.create({data:{id:input.id,batchId:input.batchId,version:(last?.version??0)+1,contentVersion:batch.contentVersion,contentDigest:batch.contentDigest,bytes:Uint8Array.from(input.bytes),fileHash,validationReference:input.validationReference,actorId,requestId:input.requestId}});
+ return tx.batchArtifact.create({data:{purpose,generatorVersion,validationMetadata:metadata,id:input.id,batchId:input.batchId,version:(last?.version??0)+1,contentVersion:batch.contentVersion,contentDigest:batch.contentDigest,bytes:Uint8Array.from(input.bytes),fileHash,validationReference:input.validationReference,actorId,requestId:input.requestId}});
 }

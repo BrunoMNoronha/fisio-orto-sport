@@ -18,6 +18,7 @@ enum Role {
 }
 
 model User {
+ tissProfiles TissProfile[]
   batchChanges BatchChange[]
   batchArtifacts BatchArtifact[]
   batchSends BatchSend[]
@@ -832,6 +833,7 @@ model HealthOperator {
 // Nome/código do contrato distinguem vários vínculos da clínica com a mesma operadora.
 // tissVersion é versão informada, não prova de validação/homologação.
 model OperatorContract {
+ tissProfiles TissProfile[]
   batches BillingBatch[]
   batchSequence BatchSequence?
   guides BillingGuide[]
@@ -1178,6 +1180,9 @@ model GuideSequence {
  contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
 }
 model BillingGuide {
+ newbornCode String? @db.Char(1)
+ requesterProviderCode String? @db.VarChar(14)
+ requesterProviderName String? @db.VarChar(70)
   batches BatchGuide[]
  id String @id @default(uuid())
  contractId String
@@ -1290,6 +1295,9 @@ model BatchChange {
 }
 // Somente o validador futuro (#103) registra artefato validado; nenhuma action pública de criação.
 model BatchArtifact {
+ purpose String @default("LEGADO") @db.VarChar(12)
+ generatorVersion String @default("legacy") @db.VarChar(40)
+ validationMetadata Json @default("{}")
  id String @id @default(uuid())
  batchId String
  version Int
@@ -1325,5 +1333,22 @@ model BatchSend {
  corrects BatchSend? @relation("BatchSendCorrection",fields:[correctsId],references:[id],onDelete:Restrict)
  correctedBy BatchSend? @relation("BatchSendCorrection")
  @@index([batchId,createdAt,id])
+ @@index([actorId])
+}
+
+// Perfil XML versionado; defaults técnicos não confirmam aceite da operadora.
+model TissProfile {
+ id String @id @default(uuid())
+ contractId String
+ version Int
+ data Json
+ reason String @db.VarChar(300)
+ actorId String
+ requestId String @unique @db.VarChar(36)
+ fingerprint String @db.VarChar(64)
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ contract OperatorContract @relation(fields:[contractId],references:[id],onDelete:Restrict)
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ @@unique([contractId,version])
  @@index([actorId])
 }

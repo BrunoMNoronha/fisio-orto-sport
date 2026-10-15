@@ -1,0 +1,6 @@
+import {z} from "zod";
+import {configurationMeta} from "../validation";
+export const TISS_DEFAULTS={schemaVersion:'4.03.00' as const,mode:'HOMOLOGACAO' as const,pilotName:'',manualReference:'',homologationChannel:'',acceptedVersionConfirmed:false,includeExecutor:false,executorCodes:{} as Record<string,string>};
+export const tissProfileData=z.object({schemaVersion:z.literal('4.03.00'),mode:z.enum(['HOMOLOGACAO','PRODUCAO']),pilotName:z.string().trim().max(120),manualReference:z.string().trim().max(300),homologationChannel:z.string().trim().max(300),acceptedVersionConfirmed:z.boolean(),includeExecutor:z.boolean(),executorCodes:z.record(z.uuid(),z.string().trim().min(1).max(14)).default({})}).strict().refine(v=>v.mode!=='PRODUCAO'||(v.acceptedVersionConfirmed&&!!v.pilotName&&!!v.manualReference&&!!v.homologationChannel),'Produção exige piloto, manual, canal e confirmação da versão aceita.');
+export const tissProfileSchema=z.object({...configurationMeta,contractId:z.uuid(),data:tissProfileData}).strict();
+export const generateXmlSchema=z.object({batchId:z.uuid(),requestId:z.uuid(),expectedVersion:z.coerce.number().int().positive(),reason:z.string().trim().min(1).max(300)}).strict();

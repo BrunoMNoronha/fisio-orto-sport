@@ -17,6 +17,16 @@ export const PERMISSIONS = [
   // no servidor, os valores de que seus fluxos precisam, sem acesso ao painel.
   "configuracoes:ler",
   "configuracoes:gerir",
+  // Cobranças manuais (FIN-01, #86): os três perfis consultam e operam todos os pacientes, com
+  // alcance igual (decisão de Bruno em 04/10/2026). Não dá acesso a conteúdo clínico.
+  "financeiro:ler",
+  "financeiro:gerir",
+  // Administrativo V1: recorte e matriz ratificados por Bruno em 14/10/2026 (#96).
+  "administrativo:ler",
+  "administrativo:preparar",
+  "administrativo:configurar",
+  "administrativo:fechar",
+  "administrativo:conciliar",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -26,11 +36,22 @@ export const ROLES = ["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"] as const satisfies 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: PERMISSIONS,
   // Recepção: dados cadastrais e agenda; sem dados clínicos.
-  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir"],
+  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "financeiro:ler", "financeiro:gerir", "administrativo:ler", "administrativo:preparar"],
   // Fisioterapeuta: tudo o que a Recepção pode (cadastro e agenda de todos os pacientes e
   // profissionais, decisão da issue #31) mais os dados clínicos. Nunca `usuarios:*`.
   // Contrato testado: permissões de RECEPCAO ⊆ permissões de FISIOTERAPEUTA.
-  FISIOTERAPEUTA: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "clinico:ler", "clinico:gerir"],
+  FISIOTERAPEUTA: [
+    "pacientes:ler",
+    "pacientes:gerir",
+    "agenda:ler",
+    "agenda:gerir",
+    "clinico:ler",
+    "clinico:gerir",
+    "financeiro:ler",
+    "financeiro:gerir",
+    "administrativo:ler",
+    "administrativo:preparar",
+  ],
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

@@ -29,3 +29,9 @@ describe("toFormValues", () => {
     expect(toFormValues(patient)).toMatchObject({ cpf: "", phone: "" });
   });
 });
+
+it("plano de saúde mantém a carteirinha e o dia da validade ao preparar edição", () => {
+  const base = { birthDate: new Date("1990-01-01T00:00:00Z"), phone: "", healthInsuranceProvider: "Teste", healthInsurancePlan: "Plano", healthInsuranceCard: "000Ab", healthInsuranceValidUntil: new Date("2024-02-29T00:00:00Z") } as unknown as PatientDetail;
+  expect(toFormValues(base)).toMatchObject({ healthInsuranceProvider: "Teste", healthInsurancePlan: "Plano", healthInsuranceCard: "000Ab", healthInsuranceValidUntil: "2024-02-29" });
+  expect(toFormValues({ ...base, healthInsuranceProvider: null, healthInsurancePlan: null, healthInsuranceCard: null, healthInsuranceValidUntil: null })).toMatchObject({ healthInsuranceProvider: "", healthInsurancePlan: "", healthInsuranceCard: "", healthInsuranceValidUntil: "" });
+});

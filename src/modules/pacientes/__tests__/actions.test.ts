@@ -244,3 +244,21 @@ describe("sem exclusão física", () => {
     expect(prismaMock.patient.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+describe.each(["ADMIN", "RECEPCAO", "FISIOTERAPEUTA"])("plano de saúde (%s)", (role) => {
+  beforeEach(() => as(role));
+  const insurance = { healthInsuranceProvider: " Operadora Teste ", healthInsurancePlan: " Plano Teste ", healthInsuranceCard: " 000Ab-12/3 ", healthInsuranceValidUntil: "2024-02-29" };
+  it("cria, edita e limpa sem aceitar autoria do formulário", async () => {
+    await expectRedirect(createPatient(undefined, form({ ...adult, ...insurance, createdById: "falso" })), "/pacientes/p1");
+    expect(prismaMock.patient.create.mock.calls[0][0].data).toMatchObject({ healthInsuranceProvider: "Operadora Teste", healthInsurancePlan: "Plano Teste", healthInsuranceCard: "000Ab-12/3", healthInsuranceValidUntil: new Date("2024-02-29T00:00:00Z"), createdById: `u-${role}` });
+    await expectRedirect(updatePatient(undefined, form({ ...adult, ...insurance, id: "p1", healthInsuranceCard: "000CD", updatedById: "falso" })), "/pacientes/p1");
+    expect(prismaMock.patient.update.mock.calls[0][0].data).toMatchObject({ healthInsuranceCard: "000CD", updatedById: `u-${role}` });
+    await expectRedirect(updatePatient(undefined, form({ ...adult, id: "p1", ...Object.fromEntries(Object.keys(insurance).map((key) => [key, ""])) })), "/pacientes/p1");
+    expect(prismaMock.patient.update.mock.calls[1][0].data).toMatchObject(Object.fromEntries(Object.keys(insurance).map((key) => [key, null])));
+  });
+  it("data inválida não chega ao banco nem é ecoada", async () => {
+    const result = await createPatient(undefined, form({ ...adult, healthInsuranceValidUntil: "2026-02-30" }));
+    expect(result?.fieldErrors?.healthInsuranceValidUntil).toEqual(["Informe uma data de validade válida."]);
+    expect(prismaMock.patient.create).not.toHaveBeenCalled();
+  });
+});

@@ -9,7 +9,16 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { PatientActionState } from "@/modules/pacientes/actions";
-import { OCCUPATION_MAX, SEXES, SEX_LABELS, isMinor, maskCpf, maskPhone } from "@/modules/pacientes/validation";
+import {
+  HEALTH_INSURANCE_NAME_MAX,
+  HEALTH_INSURANCE_CARD_MAX,
+  OCCUPATION_MAX,
+  SEXES,
+  SEX_LABELS,
+  isMinor,
+  maskCpf,
+  maskPhone,
+} from "@/modules/pacientes/validation";
 
 type Action = (prev: PatientActionState, formData: FormData) => Promise<PatientActionState>;
 
@@ -18,6 +27,10 @@ export type PatientFormValues = {
   birthDate: string;
   sex: string;
   occupation: string;
+  healthInsuranceProvider: string;
+  healthInsurancePlan: string;
+  healthInsuranceCard: string;
+  healthInsuranceValidUntil: string;
   cpf: string;
   phone: string;
   email: string;
@@ -33,6 +46,10 @@ export const EMPTY_PATIENT: PatientFormValues = {
   birthDate: "",
   sex: "",
   occupation: "",
+  healthInsuranceProvider: "",
+  healthInsurancePlan: "",
+  healthInsuranceCard: "",
+  healthInsuranceValidUntil: "",
   cpf: "",
   phone: "",
   email: "",
@@ -179,6 +196,15 @@ export function PatientForm({
           {text("guardianRelationship", "Parentesco ou relação (opcional)", { maxLength: 60 })}
         </fieldset>
       )}
+
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-2 text-base font-medium">Plano de saúde (opcional)</legend>
+        {text("healthInsuranceProvider", "Operadora / convênio (opcional)", { maxLength: HEALTH_INSURANCE_NAME_MAX })}
+        {text("healthInsurancePlan", "Nome do plano (opcional)", { maxLength: HEALTH_INSURANCE_NAME_MAX })}
+        {text("healthInsuranceCard", "Número da carteirinha (opcional)", { maxLength: HEALTH_INSURANCE_CARD_MAX })}
+        {text("healthInsuranceValidUntil", "Validade da carteirinha (opcional)", { type: "date" })}
+        <p className="text-xs text-muted-foreground sm:col-span-2">A validade é informativa e não bloqueia o atendimento.</p>
+      </fieldset>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="paciente-notes">Observações administrativas (opcional)</Label>

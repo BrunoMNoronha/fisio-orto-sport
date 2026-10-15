@@ -4,6 +4,9 @@ Decisão de Bruno em 04/10/2026. `main` é a branch principal de desenvolvimento
 `production` reúne os candidatos a release. A atualização de `production`
 publica em Preview. O acionamento manual de Production é a liberação humana.
 
+Implantação e homologação inicial registradas em
+[evidencias/pipeline-preview-2026-10-04](evidencias/pipeline-preview-2026-10-04.md).
+
 ```text
 main → PR manual para production → CI → migração Neon Preview → Vercel Preview
      → homologação → workflow manual → migração Neon Production

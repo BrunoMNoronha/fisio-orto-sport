@@ -4,9 +4,20 @@ import { PERMISSIONS, ROLES, can, type Permission } from "../permissions";
 
 const expected: Record<Role, Permission[]> = {
   ADMIN: [...PERMISSIONS],
-  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir"],
+  RECEPCAO: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "financeiro:ler", "financeiro:gerir", "administrativo:ler", "administrativo:preparar"],
   // Issue #31: o Fisioterapeuta recebe tudo o que a Recepção tem, além do clínico.
-  FISIOTERAPEUTA: ["pacientes:ler", "pacientes:gerir", "agenda:ler", "agenda:gerir", "clinico:ler", "clinico:gerir"],
+  FISIOTERAPEUTA: [
+    "pacientes:ler",
+    "pacientes:gerir",
+    "agenda:ler",
+    "agenda:gerir",
+    "clinico:ler",
+    "clinico:gerir",
+    "financeiro:ler",
+    "financeiro:gerir",
+    "administrativo:ler",
+    "administrativo:preparar",
+  ],
 };
 
 describe("can()", () => {
@@ -41,9 +52,33 @@ describe("can()", () => {
     expect(can("FISIOTERAPEUTA", "auditoria:ler")).toBe(false);
   });
 
+  it("os três perfis consultam e operam o financeiro com alcance igual (FIN-01, #86)", () => {
+    for (const role of ROLES) {
+      expect(can(role, "financeiro:ler")).toBe(true);
+      expect(can(role, "financeiro:gerir")).toBe(true);
+    }
+    // O financeiro não amplia o acesso da Recepção a dados clínicos, usuários ou configurações.
+    expect(can("RECEPCAO", "clinico:ler")).toBe(false);
+    expect(can("RECEPCAO", "configuracoes:ler")).toBe(false);
+    expect(can("FISIOTERAPEUTA", "usuarios:ler")).toBe(false);
+  });
+
   it("nega sem perfil ou com perfil desconhecido", () => {
+    // Mesmo perfis sem sessão não podem atingir o novo domínio.
     expect(can(null, "pacientes:ler")).toBe(false);
     expect(can(undefined, "pacientes:ler")).toBe(false);
     expect(can("OUTRO" as Role, "pacientes:ler")).toBe(false);
+  });
+
+  it("aplica a matriz administrativa ratificada sem ampliar acesso clínico", () => {
+    for (const role of ROLES) {
+      expect(can(role, "administrativo:ler")).toBe(true);
+      expect(can(role, "administrativo:preparar")).toBe(true);
+      for (const permission of ["administrativo:configurar", "administrativo:fechar", "administrativo:conciliar"] as const) {
+        expect(can(role, permission)).toBe(role === "ADMIN");
+      }
+    }
+    expect(can("RECEPCAO", "clinico:ler")).toBe(false);
+    expect(can(null, "administrativo:configurar")).toBe(false);
   });
 });

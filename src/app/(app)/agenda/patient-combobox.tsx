@@ -11,7 +11,15 @@ const SEARCH_ERROR = "Não foi possível buscar pacientes. Tente novamente.";
 
 type Status = "idle" | "loading" | "done" | "error";
 
-// Busca de paciente ativo no servidor (padrão ARIA combobox + listbox). A seleção fica num
+// Textos da agenda (só pacientes ativos). O financeiro (FIN-01) busca também inativos.
+export const ACTIVE_PATIENT_TEXTS = {
+  noun: "paciente ativo",
+  plural: "pacientes",
+  listLabel: "Pacientes ativos",
+};
+type Texts = typeof ACTIVE_PATIENT_TEXTS;
+
+// Busca de paciente no servidor (padrão ARIA combobox + listbox). A seleção fica num
 // campo oculto `name`, independente do texto digitado: refinar a busca não perde o paciente
 // escolhido. Cada busca tem um número; só a resposta da busca mais recente é aplicada.
 export function PatientCombobox({
@@ -19,13 +27,17 @@ export function PatientCombobox({
   value,
   onChange,
   errors,
+  label = "Paciente *",
   search = searchActivePatients,
+  texts = ACTIVE_PATIENT_TEXTS,
 }: {
   name: string;
   value: PatientOption | null;
   onChange: (option: PatientOption) => void;
   errors?: string[];
+  label?: string;
   search?: (query: string) => Promise<PatientSearchResult>;
+  texts?: Texts;
 }) {
   const id = useId();
   const inputId = `${id}-busca`;
@@ -66,12 +78,12 @@ export function PatientCombobox({
       setStatus("done");
       setAnnouncement(
         result.items.length === 0
-          ? "Nenhum paciente ativo encontrado."
-          : `${result.items.length}${result.hasMore ? " primeiros" : ""} pacientes encontrados.`,
+          ? `Nenhum ${texts.noun} encontrado.`
+          : `${result.items.length}${result.hasMore ? " primeiros" : ""} ${texts.plural} encontrados.`,
       );
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [open, query, search]);
+  }, [open, query, search, texts]);
 
   function choose(option: PatientOption) {
     onChange(option);
@@ -108,7 +120,7 @@ export function PatientCombobox({
 
   return (
     <div className="flex flex-col gap-2 sm:col-span-3">
-      <Label htmlFor={inputId}>Paciente *</Label>
+      <Label htmlFor={inputId}>{label}</Label>
       <input type="hidden" name={name} value={value?.id ?? ""} />
       <p id={`${id}-ajuda`} className="text-sm">
         {value ? (
@@ -131,7 +143,7 @@ export function PatientCombobox({
           aria-invalid={errors ? true : undefined}
           aria-describedby={describedBy}
           autoComplete="off"
-          placeholder={value ? "Buscar outro paciente ativo" : "Buscar paciente ativo pelo nome"}
+          placeholder={value ? `Buscar outro ${texts.noun}` : `Buscar ${texts.noun} pelo nome`}
           value={query}
           maxLength={100}
           onChange={(event) => {
@@ -144,7 +156,7 @@ export function PatientCombobox({
         />
         {open && (
           <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-            <ul id={listId} role="listbox" aria-label="Pacientes ativos" className="max-h-64 overflow-auto py-1">
+            <ul id={listId} role="listbox" aria-label={texts.listLabel} className="max-h-64 overflow-auto py-1">
               {items.map((option, index) => (
                 <li
                   key={option.id}
@@ -167,7 +179,7 @@ export function PatientCombobox({
             </ul>
             {status === "loading" && <p className="px-3 py-2 text-sm text-muted-foreground">Buscando…</p>}
             {status === "done" && items.length === 0 && (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Nenhum paciente ativo encontrado.</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">Nenhum {texts.noun} encontrado.</p>
             )}
             {status === "done" && hasMore && (
               <p className="border-t px-3 py-2 text-xs text-muted-foreground">

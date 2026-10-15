@@ -285,3 +285,29 @@ describe("máscaras de digitação", () => {
     expect(result.success && [result.data.cpf, result.data.phone]).toEqual([VALID_CPF, "11987654321"]);
   });
 });
+
+describe("plano de saúde cadastral (#85)", () => {
+  const fields = ["healthInsuranceProvider", "healthInsurancePlan", "healthInsuranceCard", "healthInsuranceValidUntil"] as const;
+  it("ausência, vazio e espaços viram null em criação e edição", () => {
+    for (const value of [undefined, "", "   "]) {
+      const input = { ...adult, ...Object.fromEntries(fields.map((key) => [key, value])) };
+      for (const data of [patientSchema.parse(input), updatePatientSchema.parse({ ...input, id: "p1" })]) {
+        for (const key of fields) expect(data[key]).toBeNull();
+      }
+    }
+  });
+  it("apara texto e preserva letras, pontuação e zeros da carteirinha sem exigir operadora", () => {
+    const data = patientSchema.parse({ ...adult, healthInsurancePlan: "  Plano Fictício  ", healthInsuranceCard: "  000Ab-12/3  " });
+    expect(data).toMatchObject({ healthInsuranceProvider: null, healthInsurancePlan: "Plano Fictício", healthInsuranceCard: "000Ab-12/3" });
+  });
+  it.each([["healthInsuranceProvider", 120], ["healthInsurancePlan", 120], ["healthInsuranceCard", 60]])("limita %s sem truncar", (key, max) => {
+    expect(patientSchema.safeParse({ ...adult, [key]: "x".repeat(max) }).success).toBe(true);
+    expect(errorsOf({ ...adult, [key]: "x".repeat(max + 1) })[key]).toContain(`máximo ${max}`);
+  });
+  it.each(["0001-01-01", "2024-02-29", "2000-01-01", "2999-12-31", "9999-12-31"])("aceita data civil %s e mantém o dia UTC", (value) => {
+    expect(patientSchema.parse({ ...adult, healthInsuranceValidUntil: value }).healthInsuranceValidUntil?.toISOString()).toBe(`${value}T00:00:00.000Z`);
+  });
+  it.each(["2025-02-29", "2026-02-30", "2026-13-01", "04/10/2026", "0000-01-01", "2026-01-01T00:00:00Z", "texto"])("recusa validade inválida %s", (value) => {
+    expect(errorsOf({ ...adult, healthInsuranceValidUntil: value }).healthInsuranceValidUntil).toBe("Informe uma data de validade válida.");
+  });
+});

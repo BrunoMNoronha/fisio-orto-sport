@@ -1,15 +1,214 @@
 # Roadmap — Fisio OrtoSport
 
-Revisado em **26/09/2026** com código, testes locais, histórico e evidências do GitHub. Esta revisão atualiza o planejamento; as correções funcionais abaixo ainda não foram executadas.
+## Módulo administrativo — planejamento de 14/10/2026
 
-## Estado verificado
+**Estado: recorte e permissões aprovados; #97 e #98 implementadas e validadas localmente.**
+Catálogo/tarifas/identificação na #97; cobertura histórica, autorizações e saldo na #98.
+O [levantamento de contratos](17-administrativo-contratos.md) registra 14 decisões
+(D-01–D-14), com aprovação do recorte e refinamentos em 14/10/2026.
+Operadora piloto e volume permanecem pendentes e bloqueiam somente o trabalho dependente.
+Dados da operadora/contrato são parametrizados em Configurações → Operadoras e contratos;
+nenhum valor real ou estado de homologação foi presumido. Issue central:
+[#95 — Roadmap administrativo](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/95).
+O usuário solicitou roadmap, criação de issues e análise individual; o XML anexado é apenas
+referência de formato, sem definição de operadora ou processo. Não publicar o anexo real.
 
-O núcleo das Fases 1 a 4 está implementado. A maior lacuna funcional é a continuidade entre agenda e atendimento: os dois registros ainda são independentes. Financeiro permanece posterior ao MVP. Não há base para atribuir um percentual de conclusão enquanto o escopo complementar da agenda estiver em decisão.
+Baseline local `4f35fdb`: FIN-03 integrada pela PR #94. Consulta ao GitHub em 14/10/2026
+confirmou #85–#88 encerradas. As menções abaixo a integração pendente da FIN-03 são
+registros históricos de 07/10/2026, superados quanto ao merge; publicação e migração
+em Production não foram verificadas nesta rodada.
+
+### Entrega por marcos
+
+| Marco | Entregas | Resultado verificável |
+|---|---|---|
+| M0 — Contratos | #96 | Perfil de operadora, estados, campos, permissões e armazenamento definidos; pendências explícitas |
+| M1 — Base e produção | #97 → #98 → #99 → #100 | Contratos e preços, cobertura/autorização, produção conferida e relatórios CSV/impressão |
+| M2 — Guias e XML | #101 → #102 → #103 | Guias SP/SADT, lote fechado, conferência e arquivo XML validado/preservado |
+| M3 — Conciliação | #104 → #105 | Recebimentos de operadoras, glosas e relatórios conciliáveis |
+| M4 — Validação | #106 | Ciclo completo, recuperação e homologação externa com evidência; liberação manual |
+
+M2 começa após #99; não precisa esperar #100. #105 depende também da infraestrutura de
+exportação de #100. Testes e documentação acompanham cada entrega; M4 reúne a evidência,
+não concentra toda a verificação no final. A sequência representa dependências técnicas,
+sem autorizar delegação, implementação, envio externo ou publicação.
+
+### Issues e dependências
+
+| Issue | Escopo | Depende de | Esforço relativo |
+|---|---|---|---|
+| [#96](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/96) — ADM-00 | Definir contratos, permissões e perfil de homologação do administrativo | Baseline #85–#88 | Médio |
+| [#97](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/97) — ADM-01 | Cadastrar operadoras, contratos e procedimentos com preços por vigência | #96 | Grande |
+| [#98](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/98) — ADM-02 | Controlar cobertura do beneficiário e autorizações por procedimento | #97 | Grande |
+| [#99](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/99) — ADM-03 | Conferir produção faturável vinculada às sessões sem cobrança automática | #98 | Grande |
+| [#100](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/100) — ADM-04 | Entregar relatórios de produção, pendências e autorizações com CSV e impressão | #99 | Médio |
+| [#101](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/101) — ADM-05 | Montar e validar guias SP/SADT com histórico dos dados faturados | #99 | Grande |
+| [#102](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/102) — ADM-06 | Fechar lotes por operadora e registrar envio manual com protocolo | #101 | Grande |
+| [#103](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/103) — ADM-07 | Gerar XML TISS validado e preservar o arquivo exato de cada lote | #96, #102 | Grande |
+| [#104](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/104) — ADM-08 | Conciliar recebimentos de operadoras e registrar glosas por item | #102, #103 | Grande |
+| [#105](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/105) — ADM-09 | Exportar relatórios de faturamento, recebimentos e glosas por operadora | #100, #104 | Médio |
+| [#106](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/106) — ADM-10 | Validar o ciclo administrativo e homologar XML antes da liberação | #97, #98, #99, #100, #101, #102, #103, #104, #105 | Grande |
+
+Cada issue contém problema, 6–7 etapas, critérios de aceite, validação, riscos, exclusões
+e uma seção de análise individual com divisão de PRs e áreas afetadas.
+O [backlog estruturado](administrativo-backlog.json) preserva o texto publicado, URLs,
+dependências, esforço e análise de cada entrega.
+
+### Análise do desenvolvimento
+
+- **#96:** resolver contratos antes da migração. Operadora e versão TISS são decisões de domínio; não reproduzir a versão do exemplo automaticamente.
+- **#97:** duas fatias verticais, operadoras/contratos e procedimentos/tarifas. Proteger vigências concorrentes e manter preços históricos.
+- **#98:** implementada localmente: cobertura histórica, autorização e saldo por procedimento, correção/cancelamento justificados e primitivas transacionais de consumo/devolução para #99. Evidências em [98-coberturas](evidencias/98-coberturas.md); integração/publicação pendentes.
+- **#99:** projeção administrativa mínima, depois conferência e consumo transacional. Invalidação clínica e fechamento precisam da mesma ordem de travas; consumir autorização uma única vez.
+- **#100:** consultas operacionais primeiro, depois CSV e impressão; exportar todo o filtro com limite explícito e neutralização de fórmulas.
+- **#101:** associação rastreável de produção à guia, depois validação condicional e snapshots. Revalidar no fechamento.
+- **#102:** composição, fechamento atômico e eventos de envio separados. Repetir geração/envio não cria nova obrigação financeira.
+- **#103:** prova técnica de XSD no runtime; serialização, hash, persistência e download em fatias. Guardar bytes originais, distinguindo hash TISS de checksum.
+- **#104:** razão própria de operadora, alocações parciais e glosas, depois estornos/correções. Não adaptar Charge como dívida fictícia do paciente.
+- **#105:** reusar exportação e razão anteriores; separar data de produção/faturamento/recebimento e posição atual de histórico.
+- **#106:** ensaiar ciclo e recuperação, consolidar CI/Preview e homologação da operadora com SHA, versão e protocolo.
+
+### Contratos comuns e limites
+
+Manter regras de #85–#88 e acesso financeiro atual. A proposta de permissões do novo domínio
+é ratificada em #96, inclusive alcance da relação Recepção ⊆ Fisioterapeuta.
+Recepção não recebe evolução/prontuário; presença não gera cobrança e plano terapêutico
+não equivale a autorização. Inadimplência/autorização não bloqueia registro clínico.
+
+Histórico fechado não muda por edição cadastral. Valores exatos, datas civis separadas do
+instante técnico, idempotência e proteção de concorrência no banco. Novos vínculos
+participam de manutenção, exclusão de usuários e recuperação; histórico não herda expurgo
+de sete dias do AuditLog. Código Next só após ler guias da versão instalada; node_modules
+estava ausente nesta rodada documental.
+
+Conciliação proposta: faturado líquido = recebido válido + aberto + glosa em análise +
+baixa definitiva por glosa, com ajustes rastreados. Um valor não pode ocupar duas
+classificações simultaneamente; estornos/revisões recompõem somente o valor afetado.
+
+CSV e impressão/PDF pelo navegador na V1. Fora: integração automática, recurso eletrônico
+de glosa, emissão fiscal, DRE, despesas, repasses, pacotes, XLSX nativo e IA.
+O plugin OpenAI Developers mencionado não é dependência técnica deste escopo.
+
+### Pendências e critério de conclusão
+
+#96 deve registrar operadoras piloto, manual/versão aceita, procedimentos/preços,
+agrupamento, validade/consumo, permissões, volumes e persistência/backup do XML.
+Esses itens estão catalogados como D-01–D-14 nos [contratos do administrativo](17-administrativo-contratos.md),
+com responsável, impacto, issue bloqueada e recomendação; nenhum foi decidido em 14/10/2026.
+Sem decisão aplicável, a issue dependente não assume valor padrão silencioso.
+
+Sem prazo de calendário prometido: capacidade, custos adicionais e disponibilidade do
+canal de homologação continuam indefinidos. Usar esforços relativos da tabela e reestimar
+após M0. Responsáveis não foram atribuídos automaticamente.
+
+Conclusão: todas as issues aceitas, quantidades/valores conciliados, XML validado no XSD e
+homologado pela operadora piloto, artefatos recuperáveis, matriz de acesso/concorrência
+verificada e evidências por SHA/ambiente. Separar implementado, validado, homologado e
+publicado. Seguir [pipeline vigente](pipeline-deploy.md); Production requer liberação manual.
+
+Revisão base em **26/09/2026** com código, testes locais, histórico e evidências do GitHub;
+os limites e SHAs dessa revisão são históricos. Atualização financeira em **07/10/2026**:
+FIN-01 e FIN-02 integradas à `main`; FIN-03 implementada e validada localmente no
+candidato isolado da #88, ainda sem integração ou publicação desse candidato.
+
+## Estado verificado na revisão base de 26/09/2026
+
+Na revisão base, o núcleo das Fases 1 a 4 estava implementado, e a maior lacuna funcional
+era a continuidade entre agenda e atendimento. As entregas posteriores MEL-01/MEL-02 e o
+fechamento do gate do MVP pela VAL-03 estão registrados abaixo. Financeiro permanece
+posterior ao escopo do MVP; sua expansão não altera aqueles critérios.
 
 - Checkout analisado: `feat/fisio-acessos-recepcao`, HEAD `ae2b054901878f97f8f0c84223aa8e07463ec169`, com alterações locais preexistentes.
 - As entregas clínicas #24–#27 estão integradas, pelas PRs #29, #30, #32 e #33. A [PR #34](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/34), de permissões do fisioterapeuta, foi confirmada como mesclada durante a revisão; issue #31 encerrada. `main` remota consultada: `01824c8ae478bb95e85e6a6c603ff4c6be9b2c63`.
 - `prisma/admin.ts`, o script `db:admin` e suas instruções no README são trabalho local preexistente, ainda não uma entrega versionada neste HEAD. Sua revisão funcional permanece pendente.
 - Publicação, migrações em produção e funcionamento autenticado no ambiente publicado **não foram verificados nesta revisão**. Não interpretar isso como ausência de produção.
+
+## Cadastro de plano de saúde — #85
+
+Implementação validada: quatro campos opcionais no cadastro, edição e ficha;
+migração aditiva e permissões cadastrais preservadas. 883 testes unitários, 149 de integração,
+tipos, lint, build e fluxo autenticado nos três perfis verificados. Sem integração com operadoras
+ou financeiro. Publicação e migração em Preview/Production ainda pendentes. Ver [contrato e evidências](evidencias/85-plano-saude.md).
+
+## Cobranças manuais — FIN-01 #86
+
+Implementação validada após o gate do MVP (VAL-03): lançar, consultar, cancelar e substituir
+cobranças de qualquer paciente, com valor em centavos, histórico imutável, proteção contra envio
+duplicado e `financeiro:*` para os três perfis. A fatia FIN-01 não incluía pagamentos nem
+relatórios; pagamentos foram integrados na FIN-02 e relatórios estão no candidato FIN-03 abaixo.
+Publicação e migração em Preview/Production pendentes. Ver
+[evidências](evidencias/86-fin-01-cobrancas.md).
+
+## Pagamentos parciais e estornos — FIN-02 #87
+
+**Implementada e validada localmente em 05/10/2026**, na branch `codex/fin-02-pagamentos-estornos`,
+após a integração da FIN-01 e o gate do MVP. Integrada pela
+[PR #93](https://github.com/BrunoMNoronha/fisio-orto-sport/pull/93), no SHA `056517079ce778fed98645b8c545edd941cc2eb7`;
+não representa release publicado nem migração aplicada em Preview/Production.
+
+A entrega registra recebimentos parciais/integral até o saldo, estorno interno e correção
+vinculada na mesma cobrança, com originais imutáveis e autoria da sessão. Recebimento aceita
+retroatividade anterior à cobrança e até hoje em `America/Sao_Paulo`; estorno usa data civil
+entre o recebimento original e hoje. Corrigir um pagamento válido grava estorno e substituto
+atomicamente; original já estornado permite um substituto explícito, sem vincular automaticamente
+um recebimento comum. O saldo é derivado dos pagamentos válidos; estorno de quitação reabre o saldo.
+
+Identificador estável e fingerprint completo preservam o primeiro resultado nos reenvios,
+inclusive após estorno/cancelamento, e recusam conteúdo incompatível. As operações da mesma
+cobrança são serializadas, com guards no banco e migração aditiva; novos vínculos integram
+exclusão de usuários e manutenção. ADMIN, RECEPCAO e FISIOTERAPEUTA mantêm o mesmo alcance
+financeiro, sem conteúdo clínico para Recepção e sem bloquear atendimento por dívida.
+
+Lint, tipos, 88 suítes/1.068 testes Jest, nove testes da pipeline e fluxo autenticado
+dos três perfis aprovados localmente; anônimo/inativo negados, Recepção sem acesso clínico
+e tela de 375 px sem overflow. Resultados e limites, incluindo PostgreSQL e build finais,
+nas [evidências da FIN-02](evidencias/87-fin-02-pagamentos.md). Teste de integração no banco
+é validação local; a CI da `main` também passou no SHA integrado
+([execução 37399715480](https://github.com/BrunoMNoronha/fisio-orto-sport/actions/runs/37399715480)).
+
+Contratos no [briefing financeiro](16-financeiro-integracoes.md) e no
+[módulo financeiro](../../src/modules/financeiro/README.md). Relatórios, contas a receber,
+meios de pagamento, devolução bancária e integrações permanecem fora da #87. A FIN-03
+herda esta entrega; prazo, orçamento, volume e responsável seguem TBD.
+
+## Contas a receber e recebimentos — FIN-03 #88
+
+**Implementada e validada localmente em 07/10/2026**, sobre a `main` `0565170`, depois
+de confirmar a FIN-02 integrada pela PR #93 e o gate da VAL-03. Ainda sem merge,
+CI do candidato ou release publicado. Evidências e limites em
+[88-fin-03-relatorios.md](evidencias/88-fin-03-relatorios.md).
+
+As rotas `/financeiro/relatorios/contas-a-receber` e
+`/financeiro/relatorios/recebimentos` oferecem filtros GET opcionais por paciente e
+período inclusivo, paginação de 20 itens e totais de todo o filtro. Contas usam o
+vencimento, excluem canceladas/quitadas e exibem cobrado, recebido válido, saldo e
+saldo vencido; vence hoje não é atraso em `America/Sao_Paulo`. Recebimentos usam a
+data efetiva do pagamento. Estorno remove o original daquele período, recompõe o
+saldo e conserva o histórico da cobrança, sem lançamento negativo no dia do estorno.
+
+As somas e a apresentação usam centavos exatos com `bigint`; pagamentos são
+agregados antes da cobrança, sem duplicação por joins. Totais, paciente e itens são
+lidos no mesmo snapshot `REPEATABLE READ`. Filtros inválidos, duplicados ou com
+paciente inexistente retornam erro sem ampliar a consulta. Autorização
+`financeiro:ler` antecede qualquer leitura; os três perfis mantêm alcance igual,
+sem CPF no filtro e sem conteúdo clínico. Uma migração aditiva cria somente o índice
+de recebimentos por data efetiva, instante técnico e id, sem nova fonte de saldo.
+
+Checks do fonte final aprovados: lint, TypeScript, 92 suítes/1.139 testes Jest,
+nove testes da pipeline e build. Integração completa em PostgreSQL 18 descartável:
+31 suítes/188 testes, sem falhas nem ignorados; 28 migrações aplicadas e comparação
+Prisma sem diferença. Os 11 testes específicos da #88 incluem quatro corridas com
+pagamento/estorno entre total e itens, cada uma com controle `READ COMMITTED` que
+reproduz a inconsistência.
+
+Chromium headless no build de produção local aprovou os três perfis autenticados,
+negações de anônimo/inativo e do acesso clínico da Recepção. Filtros por teclado,
+paginação, erro de período e conciliação de originais, estornos e correções verificados.
+Viewport de 375 px sem rolagem horizontal e zero erros JavaScript de página. O roteiro
+usou somente dados fictícios; evidência local não equivale a ambiente publicado.
+
+Integração à `main`, CI e publicação/migrações em Preview/Production pendentes.
+Exportação, impressão, contabilidade, meios de pagamento e integrações ficam posteriores.
 
 ## Legenda
 
@@ -27,7 +226,7 @@ O núcleo das Fases 1 a 4 está implementado. A maior lacuna funcional é a cont
 | 2 — Pacientes | Parcial e testada | Cadastro, busca inclusive sem acento, consulta, edição, ativação/inativação, sexo/profissão, anamnese versionada e documentos de impressão sem armazenamento | Histórico clínico e agenda em abas separadas (vínculo agenda–sessão desde a MEL-01); CREFITO na anamnese desde a MEL-03, sem backfill das versões antigas |
 | 3 — Agenda | Primeira fatia implementada e testada | Agenda por profissional/período, criar, consultar, reagendar, cancelar, visões dia/semana/lista e agenda na ficha do paciente | Presença (MEL-01, #44), bloqueios por profissional e aviso de conflito do paciente (MEL-02, #45) implementados; horário de funcionamento e visão mensal posteriores ao MVP |
 | 4 — Prontuário | Núcleo implementado e testado | Avaliação inicial, plano com revisões imutáveis, sessões/evoluções, correções com histórico, invalidação e reavaliação comparativa com retorno ao plano | Alta apenas documentada; encerramento manual do plano não equivale a alta operacional; sem anexos, assinatura digital ou impressão dos novos registros |
-| 5 — Financeiro | Posterior ao MVP | Nenhuma implementação verificada | Cobranças, pagamentos, contas a receber, controle financeiro e relatórios |
+| 5 — Financeiro | FIN-01 e FIN-02 integradas; FIN-03 implementada e validada localmente no candidato | Cobranças manuais, pagamentos parciais/integral, saldo derivado, estornos/correções vinculadas, histórico e permissões; contas a receber e recebimentos com filtros, paginação e totais globais no candidato FIN-03 | Integração e CI da FIN-03; publicação e migrações em Preview/Production pendentes |
 | 6 — Evoluções | Posteriores ao MVP | Nenhuma implementação verificada | Notificações/lembretes, WhatsApp, portal, aplicativo mobile, teleatendimento, assinatura digital, dashboards avançados e IA |
 
 Profissionais são usuários ativos com perfil `FISIOTERAPEUTA` e CREFITO cadastral; não existe módulo próprio de profissionais/especialidades implementado. Recepção continua sem acesso clínico. Evolução existe por sessão; indicação de alta não encerra plano, inativa paciente ou cancela agenda.
@@ -51,7 +250,7 @@ Prioridade por risco de acesso indevido/perda de dados, impedimento do fluxo, al
 | MEL-04 — P2 | Experiência: fluxo clínico extenso e cinco abas clínicas, sem verificação visual nesta revisão | Verificar navegação completa, teclado, mensagens de conflito/erro, telas pequenas e impressão com dados fictícios; registrar defeitos reproduzíveis. Visão mensal posterior ao MVP (DEC-01), revista só se o uso mostrar necessidade | Médio; validação técnica de interface; não há defeito visual confirmado |
 | DEC-01 — P2, antes de fechar escopo | Produto: alta operacional, módulo próprio de profissionais e itens complementares da agenda permanecem indefinidos | Registrar o que fecha o MVP, responsável pela decisão e aceite. Não tratar encerramento do plano como alta nem cadastro de usuário como módulo de especialidades. **Decidida em 27/09/2026 (#43):** decisões, distinção entre encerramento e alta e critérios de conclusão em [06-escopo-mvp](06-escopo-mvp.md) | Pequeno; decisor Bruno M Noronha |
 | DEC-02 — P1 antes de uso com dados reais | Operação: retenção/anonimização e auditoria de leitura permanecem pendentes no briefing | Definir responsáveis e requisitos de retenção, acesso, backup/restauração e rastreabilidade; derivar tarefas técnicas com aceite. Este roadmap não estabelece prazos legais nem política clínica. Decisões registradas em 26/09/2026 em [15-retencao-rastreabilidade-recuperacao](15-retencao-rastreabilidade-recuperacao.md); auditoria de login/usuários na #56; teste de restauração concluído na #42; orientação especializada pendente | Médio; decisões da clínica e orientação especializada pertinente |
-| FUT-01 — P3 | Expansão: financeiro e integrações ainda não implementados | Detalhar após estabilizar o núcleo e decidir o escopo; evitar acoplar sessão clínica a cobrança nesta rodada | Grande; briefing próprio |
+| FUT-01 — P3 | Expansão financeira autorizada após o MVP: FIN-01 e FIN-02 integradas; FIN-03 implementada e validada localmente | [Briefing próprio](16-financeiro-integracoes.md): cobranças manuais, pagamentos e estornos com saldo exato; operação igual para ADMIN, Recepção e Fisioterapeuta; histórico por estorno/cancelamento. Relatórios conciliáveis na FIN-03; integrações posteriores, sem acoplar atendimento a cobrança | [FIN-01 #86](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/86) (médio) → [FIN-02 #87](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/87) (grande; integrada pela PR #93, SHA `0565170`) → [FIN-03 #88](https://github.com/BrunoMNoronha/fisio-orto-sport/issues/88) (médio; integração e CI própria pendentes). Gate do MVP satisfeito em 04/10/2026 ([VAL-03](evidencias/val-03-revalidacao-perfis.md)), com limites históricos preservados |
 
 Os itens acima são backlog recomendado, sem criação automática de issues ou autorização implícita para alterar dependências, banco ou produção. Os IDs são locais deste roadmap, não números de issues do GitHub.
 
@@ -60,8 +259,8 @@ Os itens acima são backlog recomendado, sem criação automática de issues ou 
 1. **Estabilização:** verificar a condição de COR-01; tratar COR-02/COR-03, COR-04 e VAL-01; concluir revisão de COR-05. DEC-02 deve anteceder uso com dados reais.
 2. **Evidência da entrega:** VAL-02 foi concluída em 27/09/2026 (#42), com o resultado técnico registrado. Homologação manual não foi executada nem adicionada como bloqueio obrigatório, conforme governança atual.
 3. **Fechamento do escopo:** a DEC-01 foi decidida em 27/09/2026 (#43), com os critérios de conclusão do MVP em [06-escopo-mvp](06-escopo-mvp.md). As regras da MEL-01 e da MEL-02 foram decididas em 27/09/2026 e estão na mesma página.
-4. **Próxima fatia:** MEL-01 (vínculo e presença, #44) e MEL-02 (bloqueios e aviso, #45) implementadas; falta revalidar o fluxo por perfil depois de publicá-las (critério 7 do MVP). Assinatura da anamnese e experiência entram conforme decisões e defeitos encontrados.
-5. **Expansão:** financeiro, notificações e demais evoluções ficam fora da rodada de estabilização. Visão mensal, horário de funcionamento, alta operacional e módulo de profissionais ficam posteriores ao MVP (DEC-01).
+4. **Fechamento do MVP:** MEL-01 (vínculo e presença, #44) e MEL-02 (bloqueios e aviso, #45) implementadas; a revalidação dos três perfis foi registrada na [VAL-03](evidencias/val-03-revalidacao-perfis.md), em 04/10/2026, com os limites aceitos na VAL-02. Assinatura da anamnese e experiência seguem suas decisões e evidências próprias.
+5. **Expansão:** FIN-02 integrada e gate do MVP comprovado permitiram implementar e validar localmente a FIN-03 (#88); integrar o candidato e concluir sua CI antes de publicar. Publicação/migrações seguem a pipeline vigente, com Production manual. Notificações, visão mensal, horário de funcionamento, alta operacional e módulo de profissionais continuam posteriores ao MVP (DEC-01).
 
 ## Evidências e limites da revisão
 
@@ -80,4 +279,40 @@ Alertas da auditoria: [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv
 
 Fontes locais: [schema](../../prisma/schema.prisma), [CI](../../.github/workflows/ci.yml), [auth](../../src/modules/auth/README.md), [agenda](../../src/modules/agenda/README.md), [clínico](../../src/modules/clinico/README.md), [profissionais](../../src/modules/profissionais/README.md), [escopo](06-escopo-mvp.md), [permissões](05-fluxo-permissoes.md) e [privacidade](08-dados-privacidade.md).
 
-**Conclusão:** base técnica apta com ressalvas para evolução; encerramento do MVP e prontidão do ambiente publicado ainda não demonstrados. A revisão é direcionada ao andamento e ao backlog, não uma auditoria exaustiva de segurança ou conformidade.
+**Conclusão da revisão base de 26/09/2026:** base técnica apta com ressalvas para evolução;
+o encerramento do MVP e a prontidão do ambiente publicado ainda não tinham sido demonstrados
+naquela revisão. O fechamento posterior do gate está na VAL-03; os estados das fatias
+financeiras acima distinguem código, validação e entrega. Este roadmap não é uma auditoria
+exaustiva de segurança ou conformidade.
+
+### Atualização de 15/10/2026 — ADM-00 concluída
+
+Bruno determinou parametrizar os dados em Configurações, adotar padrões editáveis e
+concluir #96 para avançar. Esta decisão substitui o bloqueio anterior por falta de
+operadora piloto e dimensionamento. O aceite da #96 passa a ser o contrato genérico
+parametrizável; homologação real continua no aceite de #103/#106.
+
+Em **Configurações → Operadoras e contratos → contrato**, ADMIN configura identificação,
+ANS, CNES, versão TISS, manual, canal de homologação e parâmetros de planejamento:
+
+| Parâmetro | Padrão inicial |
+|---|---|
+| Versão TISS em novos contratos | 04.03.00 (confirmar com a operadora) |
+| Sessões estimadas/mês | 1.000 |
+| Intervalo de fechamento | 30 dias |
+| Guias por lote | 100 |
+| Itens por lote | 1.000 |
+| XML | 2.097.152 bytes (2 MiB) |
+| Linhas por exportação | 10.000 |
+
+Padrões numéricos são persistidos por contrato, inclusive nos contratos existentes pela
+migração aditiva 20261015120000_administrativo_parametros; não sobrescrevemos versão TISS
+anterior. Mudanças usam autorização ADMIN, motivo, versão otimista, idempotência e snapshot
+histórico na mesma transação. Identificadores reais, manual e canal ficam vazios até
+configuração; não inventamos ANS/CNES/códigos. Nenhum cadastro é declarado homologado.
+As próximas issues devem ler os limites do contrato e recusar excedentes sem truncamento;
+esta entrega não implementa lote, exportação ou geração XML, nem fechamento automático.
+O intervalo de 30 dias é planejamento, sem alterar competência civil já acordada.
+
+
+Próxima entrega funcional: #99; #97/#98 já implementadas localmente. Homologação real permanece em #103/#106.

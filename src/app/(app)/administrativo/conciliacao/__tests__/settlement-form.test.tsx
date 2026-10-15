@@ -1,0 +1,41 @@
+jest.mock('@/modules/administrativo/settlement-actions',()=>({saveSettlementAction:jest.fn()}));
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {saveSettlementAction} from '@/modules/administrativo/settlement-actions';
+import {SettlementForm} from '../settlement-form';
+const action=saveSettlementAction as jest.Mock;
+const common={id:'id-original',requestId:'request-original',contractId:'contract',today:'2026-10-15',candidates:[{id:'item1',label:'BENEFICIARIO SINTETICO · lote 1'}],glosas:[{id:'glosa1',receivableId:'item1',label:'GLOSA SINTETICA em análise'}]};
+beforeEach(()=>{jest.clearAllMocks();action.mockResolvedValue({error:'Falha sintética; formulário preservado.'});});
+test('receber de glosa envia alocação explícita e mantém chave estável no rerender',async()=>{
+  const {rerender}=render(<SettlementForm {...common}/>);
+  fireEvent.change(screen.getByLabelText('Valor total (R$)'),{target:{value:'40,00'}});
+  fireEvent.change(screen.getByLabelText('Valor alocado (R$)'),{target:{value:'40,00'}});
+  fireEvent.change(screen.getByLabelText('Origem da alocação'),{target:{value:'glosa1'}});
+  rerender(<SettlementForm {...common} id="outro-id" requestId="outro-request"/>);
+  fireEvent.submit(screen.getByRole('button',{name:'Confirmar movimento'}).closest('form')!);
+  await waitFor(()=>expect(action).toHaveBeenCalledTimes(1));
+  const form=action.mock.calls[0][1] as FormData;
+  expect(form.get('requestId')).toBe('request-original');expect(form.get('id')).toBe('id-original');expect(form.has('actorId')).toBe(false);
+  expect(JSON.parse(String(form.get('lines')))).toEqual([{receivableId:'item1',glosaRootId:'glosa1',amount:'40,00',code:''}]);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Falha sintética');expect(screen.getByLabelText('Valor alocado (R$)')).toHaveValue('40,00');
+});
+test('glosa exige código e mantém as alocações no erro',async()=>{
+  render(<SettlementForm {...common}/>);
+  fireEvent.change(screen.getByLabelText('Operação'),{target:{value:'GLOSAR'}});
+  expect(screen.getByLabelText('Código/motivo de glosa do demonstrativo')).toBeRequired();
+  fireEvent.change(screen.getByLabelText('Código/motivo de glosa do demonstrativo'),{target:{value:'SINT-104'}});
+  fireEvent.change(screen.getByLabelText('Valor alocado (R$)'),{target:{value:'20,00'}});
+  fireEvent.submit(screen.getByRole('button',{name:'Confirmar movimento'}).closest('form')!);
+  await waitFor(()=>expect(action).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(String((action.mock.calls[0][1] as FormData).get('lines')))[0]).toMatchObject({code:'SINT-104',glosaRootId:''});
+});
+test('estorno usa originais no servidor; substituição envia somente novas alocações',async()=>{
+  render(<SettlementForm {...common} source={{id:'receipt',amount:'60,00',lines:[{receivableId:'item1',glosaRootId:'',amount:'60,00'}]}}/>);
+  fireEvent.submit(screen.getByRole('button',{name:'Confirmar movimento'}).closest('form')!);
+  await waitFor(()=>expect(action).toHaveBeenCalledTimes(1));
+  expect((action.mock.calls[0][1] as FormData).get('lines')).toBe('[]');
+  fireEvent.change(screen.getByLabelText('Operação'),{target:{value:'SUBSTITUIR'}});
+  fireEvent.change(screen.getByLabelText('Valor alocado (R$)'),{target:{value:'50,00'}});
+  fireEvent.submit(screen.getByRole('button',{name:'Confirmar movimento'}).closest('form')!);
+  await waitFor(()=>expect(action).toHaveBeenCalledTimes(2));
+  const form=action.mock.calls[1][1] as FormData;expect(form.get('reversesId')).toBe('receipt');expect(JSON.parse(String(form.get('lines')))).toEqual([{receivableId:'item1',glosaRootId:'',amount:'50,00',code:''}]);
+});

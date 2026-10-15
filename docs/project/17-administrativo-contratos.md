@@ -545,3 +545,20 @@ conforme especificação ANS em ISO-8859-1 e preserva bytes/SHA-256/evidência e
 Geração/download ADMIN; finalidade de homologação é impedida de registrar envio de produção.
 Não há transmissão nem alteração do momento de faturamento da #102. Validações, benchmark,
 ensaio de restauração e limites externos em [103-xml](evidencias/103-xml.md).
+## Implementação ADM-08 (#104) — 15/10/2026
+
+Razão de operadora separada de Charge/Payment, constituída por item no primeiro envio
+manual. Obrigações anteriores são preenchidas pela migração aditiva, sem duplicar
+correções/reenvios. Recebimento só confirma 100% alocado no mesmo contrato, inclusive
+entre lotes; sem saldo não alocado/excedente, conforme refinamento D-09.
+
+Faturado original + ajuste explícito = recebido válido + aberto + análise + baixa
+definitiva. Revisão e pagamento de glosa referenciam a origem e movem somente a parcela
+correspondente. Baixa/reabertura/liberação exigem motivo. Estorno e substituição preservam
+originais e autores; substituição é atômica e o estorno do substituto não reativa o anterior.
+Limite de 1.000 alocações novas por ato, respeitando maxItems menor do contrato; sem corte.
+
+Conciliação e histórico sob administrativo:ler; escrita ADMIN sob administrativo:conciliar.
+Datas efetivas civis separadas do instante técnico, posição atual identificada como tal.
+Sem consolidação de caixa de paciente/operadora, recurso eletrônico ou importação automática.
+Razão própria incluída em manutenção, autoria e recuperação; ver evidencias/104-conciliacao.md.

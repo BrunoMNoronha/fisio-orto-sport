@@ -296,3 +296,18 @@ Repor guard de finalidade no envio, checks e trigger de perfil, dependência do 
 worker e schemas exatos do manifesto. Checksum divergente recusa download. Teste local
 pg_dump/pg_restore de banco sintético preservou bytes e vínculos de 20 artefatos; não prova
 recuperação/PITR do ambiente remoto. Ensaio desse ambiente permanece na #106.
+## Razão de operadoras — ADM-08 (#104)
+
+Restaurar `OperatorReceivable`, `OperatorSettlement` e `OperatorSettlementLine` junto de
+BatchSend/BillingBatch, guias, produção, contrato e User. Receivable referencia o envio
+original; linhas apontam para a obrigação, evento e glosa original; estorno/substituição
+apontam para o recebimento preservado. FKs restringem exclusão, sem cascata de histórico.
+
+Validar após restauração: uma obrigação por produção enviada, valores originais iguais
+ao snapshot enviado; soma faturado original + ajustes = recebido válido + aberto + análise
++ baixa definitiva; cada glosa e cada recebimento conciliados com seus eventos vinculados.
+Copiar apenas AuditLog não recupera a razão: não há expurgo financeiro de sete dias.
+As novas tabelas entram juntas no reset manual autorizado; catálogo/numerações/perfis e
+usuários continuam preservados. Autoria de OperatorSettlement impede excluir o usuário.
+Aplicação em Preview/Production e ensaio remoto de recuperação são etapas de publicação
+separadas; os testes desta issue usam somente PostgreSQL local sintético.

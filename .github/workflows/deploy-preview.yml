@@ -65,7 +65,7 @@ jobs:
         run: pnpm dlx vercel@62.2.0 build --yes
       - name: Publicar em Preview
         run: |
-          pnpm dlx vercel@62.2.0 deploy --prebuilt --target=preview --yes \
+          pnpm dlx vercel@62.2.0 deploy --prebuilt --archive=tgz --target=preview --yes \
             --meta githubCommitSha="$GITHUB_SHA" --meta githubCommitRef=production \
             --meta githubRepo=fisio-orto-sport --meta githubOrg=BrunoMNoronha \
             > release/preview-url.txt

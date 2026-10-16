@@ -103,18 +103,28 @@ export function verifyBuildEnvironment(env = process.env, directory = ".vercel")
   databaseTarget(env);
   const file = `${directory}/.env.${env.RELEASE_ENV.toLowerCase()}.local`;
   assert(existsSync(file), "Configuração Vercel não carregada.");
-  const loaded = parse(readFileSync(file));
-  // A CLI não exporta valores Sensitive/Secret: pode deixar as chaves vazias.
+  const source = readFileSync(file, "utf8");
+  const loaded = parse(source);
+  const unavailable = [];
+  // A CLI não exporta valores Sensitive/Secret: usa vazio ou [SENSITIVE].
   // O build mantém os secrets já validados do runner. O runtime ainda precisa
   // comprovar a conexão real por HMAC antes de qualquer promoção.
   for (const name of ["DATABASE_URL", "DATABASE_URL_UNPOOLED"]) {
-    if (typeof loaded[name] === "string" && !loaded[name].trim()) delete loaded[name];
+    if (typeof loaded[name] === "string" && (!loaded[name].trim() || loaded[name] === "[SENSITIVE]")) {
+      unavailable.push(name);
+      delete loaded[name];
+    }
   }
   assert(!loaded.RELEASE_ENV || loaded.RELEASE_ENV === env.RELEASE_ENV, "Ambiente de release sobrescrito no build.");
   const effective = { ...env, ...loaded };
   // Detecta overrides baixados pela CLI, além das URLs já conferidas no runner.
   const target = databaseTarget(effective);
   assert(!effective.VERCEL_ENV || effective.VERCEL_ENV === env.RELEASE_ENV.toLowerCase(), "Ambiente de build divergente.");
+  // Evita que vercel build injete o marcador no lugar do secret do runner.
+  if (unavailable.length) {
+    const cleaned = source.split(/\r?\n/).filter((line) => !unavailable.some((name) => new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=`).test(line))).join("\n");
+    writeFileSync(file, cleaned, { mode: 0o600 });
+  }
   return target;
 }
 

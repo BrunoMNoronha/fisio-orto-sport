@@ -187,12 +187,15 @@ test("overrides de host, credenciais, options e parâmetros duplicados bloqueiam
   }
 });
 
-test("secrets vazios no pull usam o runner para o build, mas nunca dispensam a prova de runtime", async () => {
+test("secrets vazios ou redigidos no pull usam o runner para o build, mas nunca dispensam a prova de runtime", async () => {
   const directory = mkdtempSync(join(tmpdir(), "fisio-release-sensitive-"));
   const file = join(directory, ".env.production.local");
   try {
-    writeFileSync(file, 'DATABASE_URL=""\nDATABASE_URL_UNPOOLED=""\nVERCEL_ENV=production\n');
-    assert.equal(verifyBuildEnvironment(production, directory).branchId, targets.environments.Production.branchId);
+    for (const value of ["", "[SENSITIVE]"]) {
+      writeFileSync(file, `DATABASE_URL="${value}"\nDATABASE_URL_UNPOOLED="${value}"\nVERCEL_ENV=production\n`);
+      assert.equal(verifyBuildEnvironment(production, directory).branchId, targets.environments.Production.branchId);
+      assert.equal(readFileSync(file, "utf8"), "VERCEL_ENV=production\n");
+    }
     await assert.rejects(verifyRuntimeConnection("candidate.vercel.app", production, server("")), /promoção bloqueada/);
     await assert.rejects(verifyRuntimeConnection("candidate.vercel.app", production, server(preview.DATABASE_URL)), /promoção bloqueada/);
   } finally { unlinkSync(file); rmdirSync(directory); }

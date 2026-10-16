@@ -115,9 +115,43 @@ pois ele contém a configuração de Preview.
 
 O deployment produtivo começa com `--prod --skip-domain`. Somente após
 confirmar `READY`, SHA e os checks HTTP de login/rota protegida o workflow
-executa `vercel promote`. Checks HTTP não substituem a homologação de sessão
+executa a promoção pela API Vercel com equipe e projeto explícitos. Checks HTTP não substituem a homologação de sessão
 autenticada. Falha de migração ou verificação anterior à promoção impede
 a atribuição dos domínios e preserva o deployment anterior.
+
+
+### Verificação da conexão efetiva antes de promover
+
+O gate confere três contextos: URLs do runner, overrides devolvidos por
+`vercel pull` e conexão da aplicação em execução. A configuração baixada é
+validada antes das migrações Production, para impedir que um override Preview
+avance até o build. Secrets que a Vercel não devolve ao pull continuam sujeitos
+à prova obrigatória do runtime; a configuração do runner isoladamente não
+autoriza promoção.
+
+O deployment ainda sem domínio deve responder em `/api/release/verify` a um
+desafio HMAC com nonce aleatório e validade de 60 segundos. A chave deriva da
+conexão esperada, incluindo host, porta, banco, role e senha, com separação de
+domínio. Senha e URL não são enviadas na requisição, devolvidas na resposta ou
+gravadas em artefatos. A rota consulta apenas `current_database()` e
+`current_user`, pela mesma instância Prisma usada no login. Sem desafio válido
+a resposta é 404 e não ocorre consulta ao banco.
+
+A prova vincula a resposta ao desafio, exige TLS e compara o endpoint com
+pooling, o banco e a role efetivamente usados. Preview não autentica um desafio
+Production, mesmo com nome de banco e senha iguais. Falta de prova, redirect,
+erro de banco ou divergência bloqueiam a promoção.
+
+A promoção usa a API Vercel com `teamId`, `projectId` e deployment explícitos,
+eliminando a inferência de usuário da CLI que retornava `User not found (404)`.
+Antes do POST, o helper repete as verificações de runtime, projeto, ambiente,
+SHA e branch atual. Depois aguarda o domínio apontar para o deployment correto.
+O passo final confere novamente a prova pelo domínio público.
+
+O artefato `runtime-production.json` contém somente identidade do alvo,
+deployment e horário da conferência. Não contém prova HMAC, senha, URL de conexão
+ou registros de negócio. A rota tem exceção exata no proxy de sessão e sua
+própria autenticação; as demais rotas continuam exigindo login.
 
 ## Recuperação
 

@@ -61,6 +61,8 @@ jobs:
         run: node scripts/pipeline/release.mjs audit --complete
       - name: Carregar configuração Vercel Preview
         run: pnpm dlx vercel@62.2.0 pull --yes --environment=preview --git-branch=production
+      - name: Validar conexões efetivas do build
+        run: node scripts/pipeline/release.mjs build-environment
       - name: Construir para Preview
         run: pnpm dlx vercel@62.2.0 build --yes
       - name: Publicar em Preview
@@ -76,6 +78,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: preview-release
-          path: release/preview.json
+          path: |
+            release/preview.json
+            release/runtime-preview.json
           if-no-files-found: error
           retention-days: 30

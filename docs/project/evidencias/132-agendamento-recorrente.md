@@ -60,3 +60,9 @@ Evidências visuais com dados fictícios:
 - [Modal em viewport móvel](132-recorrencia-modal-mobile.jpg).
 
 A validação descrita acima precede o commit e a abertura do PR. Não houve publicação ou migração remota.
+
+## Correção identificada no CI do PR #135
+
+O CI detectou que a fixture de db:reset não preenchia a nova tabela AppointmentBatch. A fixture agora cria um lote associado ao agendamento e registra seus IDs, preservando a verificação de limpeza de todas as tabelas.
+
+Validação local após o ajuste: 9 testes de integração de db:reset aprovados no PostgreSQL local e ESLint do arquivo aprovado. Nenhum banco remoto foi alterado.

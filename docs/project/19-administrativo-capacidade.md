@@ -10,8 +10,9 @@ de número de itens: cada item da massa executa duas unidades de R$50.
 
 Pré-requisitos locais iguais à #106: Node/pnpm do projeto, dependências congeladas,
 Docker com PostgreSQL 18 no container `fisio-adm99-test`, usuário `fisio`, porta 55499
-e POSTGRES_PASSWORD configurada internamente. Os executores não leem .env e não aceitam
-banco remoto. Não imprimem a senha; evidências são exclusivamente sintéticas.
+e POSTGRES_PASSWORD configurada internamente. Os executores forçam DATABASE_URL e
+DATABASE_URL_UNPOOLED para o banco local novo, sobrepondo URLs herdadas ou de .env;
+não aceitam banco remoto. Não imprimem a senha; evidências são exclusivamente sintéticas.
 
 ```powershell
 # Um lote de 100 guias / 1.000 itens para medição rápida

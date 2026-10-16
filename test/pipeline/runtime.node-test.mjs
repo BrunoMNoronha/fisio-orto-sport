@@ -39,8 +39,10 @@ test("runtime comprova conexão real, host, banco, role, pooling e TLS sem devol
 test("runtime Preview bloqueia Production mesmo com senha e nome de banco iguais", async () => {
   let queries = 0;
   const challenge = runtimeChallenge(production.DATABASE_URL);
-  const response = await runtimeVerification(request(challenge), { connectionString: preview.DATABASE_URL, queryIdentity: async () => { queries++; } });
-  assert.equal(response.status, 404); assert.equal(queries, 0);
+  for (const connectionString of [preview.DATABASE_URL, preview.DATABASE_URL.replace("preview_owner", "neondb_owner")]) {
+    const response = await runtimeVerification(request(challenge), { connectionString, queryIdentity: async () => { queries++; } });
+    assert.equal(response.status, 404); assert.equal(queries, 0);
+  }
   await assert.rejects(verifyRuntimeConnection("candidate.vercel.app", production, server(preview.DATABASE_URL)), /promoção bloqueada/);
 });
 
@@ -127,6 +129,7 @@ test("promove somente após validar runtime e SHA, com projeto explícito na API
 test("runtime errado, deployment estranho e branch avançada nunca disparam promoção", async () => {
   for (const overrides of [
     { runtimeUrl: preview.DATABASE_URL },
+    { runtimeUrl: preview.DATABASE_URL.replace("preview_owner", "neondb_owner") },
     { actual: { database: "neondb", role: "preview_owner" } },
     { modifiedDeployment: { target: "preview" } },
     { modifiedDeployment: { id: "dpl_OTHER" } },

@@ -137,8 +137,13 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
     await createPayment(prisma, fisio.id, {
       chargeId: replacementCharge.id, amountCents: 2000, receivedOn: new Date("2026-09-01"), requestId: `reset-sub-${suffix}`, replacesPaymentId: originalPayment.id,
     });
+    const appointmentBatch = await prisma.appointmentBatch.create({
+      data: { requestKey: randomUUID(), requestHash: "0".repeat(64), createdById: adm.id },
+      select: { id: true },
+    });
     const appointment = await prisma.appointment.create({
       data: {
+        batchId: appointmentBatch.id,
         patientId: patient.id,
         professionalId: fisio.id,
         startsAt: new Date("2099-01-02T12:00:00Z"),
@@ -148,6 +153,7 @@ describe("db:reset no PostgreSQL", { skip: !baseUrl && "INTEGRATION_DATABASE_URL
       },
       select: { id: true },
     });
+    await prisma.appointmentBatch.update({ where: { id: appointmentBatch.id }, data: { appointmentIds: [appointment.id] } });
     await prisma.scheduleBlock.create({
       data: { professionalId: fisio.id, startsAt: new Date("2099-01-03T12:00:00Z"), endsAt: new Date("2099-01-03T15:00:00Z"), createdById: adm.id },
     });

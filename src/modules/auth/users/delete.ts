@@ -37,6 +37,7 @@ export const USER_LINKS = [
   { table: "Appointment", column: "updatedById", category: "agenda" },
   { table: "Appointment", column: "cancelledById", category: "agenda" },
   { table: "Appointment", column: "attendanceMarkedById", category: "agenda" },
+  { table: "AppointmentBatch", column: "createdById", category: "agenda" },
   { table: "ScheduleBlock", column: "professionalId", category: "bloqueios" },
   { table: "ScheduleBlock", column: "createdById", category: "bloqueios" },
   { table: "ScheduleBlock", column: "removedById", category: "bloqueios" },

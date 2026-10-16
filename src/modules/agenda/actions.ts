@@ -26,6 +26,8 @@ import {
   rescheduleSchema,
 } from "./validation";
 import { normalizeSearch } from "@/modules/pacientes/validation";
+import { recurrenceSchema, recurringRequestSchema } from "./recurrence";
+import { insertRecurringAppointments, RecurringAppointmentError, type OccurrenceError } from "./recurring-service";
 
 export type AppointmentActionState =
   | {
@@ -37,6 +39,7 @@ export type AppointmentActionState =
       // agendamentos que impedem um bloqueio.
       patientConflicts?: ConflictItem[];
       conflicts?: ConflictItem[];
+      occurrenceErrors?: OccurrenceError[];
     }
   | undefined;
 
@@ -83,12 +86,29 @@ export async function createAppointment(
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error) };
 
   const data = parsed.data;
+  const recurring = formData.get("recurring") === "1";
+  const recurrence = recurring ? recurrenceSchema.safeParse({
+    date: formData.get("date"), sessionCount: formData.get("sessionCount"), weekdays: formData.getAll("weekdays"),
+  }) : null;
+  const attempt = recurring ? recurringRequestSchema.safeParse({ requestKey: formData.get("requestKey") }) : null;
+  if (recurrence && !recurrence.success) return { fieldErrors: fieldErrors(recurrence.error) };
+  if (attempt && !attempt.success) return { error: attempt.error.issues[0].message };
   let id: string;
   try {
-    id = await insertAppointment(prisma, data, actor.actorId, patientConflictOption(formData));
+    if (recurrence?.success && attempt?.success) {
+      const result = await insertRecurringAppointments(prisma, data, recurrence.data, actor.actorId, attempt.data.requestKey, patientConflictOption(formData));
+      id = result.id;
+    } else {
+      id = await insertAppointment(prisma, data, actor.actorId, patientConflictOption(formData));
+    }
   } catch (error) {
+    if (error instanceof RecurringAppointmentError) return { error: error.message, occurrenceErrors: error.occurrences };
     const failure = ruleFailure(error);
     if (failure) return failure;
+    if (recurring) {
+      console.error(`[agenda] falha ao criar lote: ${error instanceof Error ? error.name : "Erro desconhecido"}`);
+      return { error: "Não foi possível confirmar o resultado do lote. Tente novamente sem alterar os dados; a mesma tentativa não duplica os agendamentos." };
+    }
     throw error;
   }
   revalidatePath(AGENDA_PATH);

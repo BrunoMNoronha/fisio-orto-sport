@@ -142,6 +142,9 @@ describe("exclusão de usuário desativado no PostgreSQL", { skip: !url && "INTE
       });
     };
     const cases: [string, (userId: string) => Promise<unknown>][] = [
+      ["agenda", (userId) => prisma.appointmentBatch.create({ data: {
+        requestKey: "00000000-0000-4000-8000-000000000132", requestHash: "0".repeat(64), createdById: userId,
+      } })],
       ["financeiro", (userId) => financialLink(userId, false)],
       ["financeiro", (userId) => financialLink(userId, true)],
       [

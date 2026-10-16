@@ -15,7 +15,7 @@ export function DevUserPicker({ users, next }: Props) {
             <form action={devLogin}>
               <input type="hidden" name="userId" value={u.id} />
               <input type="hidden" name="next" value={next} />
-              <Button type="submit" variant="outline" className="h-auto w-full justify-between py-2 text-left">
+              <Button help="Entra com o usuário de desenvolvimento selecionado no ambiente habilitado." type="submit" variant="outline" className="h-auto w-full justify-between py-2 text-left">
                 <span className="flex flex-col">
                   <span className="font-medium">{u.name}</span>
                   <span className="text-xs text-muted-foreground">{u.email}</span>

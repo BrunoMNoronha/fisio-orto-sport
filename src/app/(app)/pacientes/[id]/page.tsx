@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -217,17 +218,17 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
                       )}
                     </div>
                   )}
-                  <Link href={`${base}/anamnese`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  <ActionLink help="Exibe todos os dados da anamnese atual do paciente." href={`${base}/anamnese`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                     Ver anamnese completa
-                  </Link>
+                  </ActionLink>
                 </>
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">Nenhuma anamnese registrada.</p>
                   {canWriteClinical && (
-                    <Link href={`${base}/anamnese/nova`} className={buttonVariants({ size: "sm" })}>
+                    <ActionLink help="Abre o formulário de uma nova anamnese do paciente." href={`${base}/anamnese/nova`} className={buttonVariants({ size: "sm" })}>
                       Registrar anamnese
-                    </Link>
+                    </ActionLink>
                   )}
                 </>
               )}
@@ -248,19 +249,19 @@ export default async function PacientePage({ params }: PageProps<"/pacientes/[id
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {latestAssessment ? (
-                <Link
+                <ActionLink help="Exibe a avaliação fisioterapêutica mais recente do paciente."
                   href={`${base}/avaliacoes/${latestAssessment.id}`}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
                   Ver última avaliação
-                </Link>
+                </ActionLink>
               ) : (
                 <p className="text-sm text-muted-foreground">Nenhuma avaliação registrada.</p>
               )}
               {canWriteClinical && anamnesis && (
-                <Link href={`${base}/avaliacoes/nova`} className={buttonVariants({ size: "sm" })}>
+                <ActionLink help="Abre o formulário de avaliação fisioterapêutica inicial." href={`${base}/avaliacoes/nova`} className={buttonVariants({ size: "sm" })}>
                   Nova avaliação inicial
-                </Link>
+                </ActionLink>
               )}
             </CardContent>
           </Card>

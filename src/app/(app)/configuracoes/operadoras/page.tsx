@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +14,11 @@ export default async function OperadorasPage({ searchParams }: { searchParams: P
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <h1 className="text-2xl font-semibold">Operadoras e contratos</h1>
       <p className="text-sm text-muted-foreground">Cadastre os dados contratuais conforme forem confirmados. A operadora piloto e o volume de faturamento permanecem pendentes; salvar uma versão TISS não comprova homologação.</p>
-      <div><Link href="/configuracoes/operadoras/nova" className={buttonVariants()}>Nova operadora</Link></div>
+      <div><ActionLink help="Abre o cadastro de uma nova operadora." href="/configuracoes/operadoras/nova" className={buttonVariants()}>Nova operadora</ActionLink></div>
       <form className="flex gap-2" method="get">
         <label htmlFor="q" className="sr-only">Buscar operadora pelo nome</label>
         <Input id="q" name="q" defaultValue={q} maxLength={120} placeholder="Buscar pelo nome" />
-        <Button variant="outline">Buscar</Button>
+        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." variant="outline">Buscar</Button>
       </form>
       {result.error && <p role="alert" className="text-destructive">{result.error}</p>}
       {!result.error && result.items.length === 0 && <p>Nenhuma operadora encontrada.</p>}

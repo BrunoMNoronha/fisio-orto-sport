@@ -1,3 +1,4 @@
+import { HelpLabel, NativeActionButton } from "@/components/informative-help";
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { getAuthorizationItem,checkEligibility } from "@/modules/administrativo/beneficiary-queries";
@@ -15,9 +16,9 @@ export default async function ItemPage({params,searchParams}:{params:Promise<{id
     <BeneficiaryForm key={item.version} kind="item" id={id} version={item.version} requestId={randomUUID()} hidden={{authorizationId:item.authorizationId,contractId:item.contractId,procedureId:item.procedureId}}
       initial={{authorizedQuantity:String(item.authorizedQuantity),active:String(item.active)}} cancelHref={`/administrativo/autorizacoes/${item.authorizationId}`} />
     <section className="flex flex-col gap-3"><h2 className="text-lg font-semibold">Consultar elegibilidade na execução</h2>
-      <form className="flex flex-wrap gap-3"><label htmlFor="data">Data de execução</label><input id="data" name="data" type="date" required defaultValue={search.data} className="rounded border p-2" />
-        <label htmlFor="quantidade">Quantidade</label><input id="quantidade" name="quantidade" type="number" min={1} max={2147483647} step={1} required defaultValue={search.quantidade??"1"} className="w-24 rounded border p-2" />
-        <button type="submit" className="underline">Consultar</button></form>
+      <form className="flex flex-wrap gap-3"><HelpLabel help="Data em que o procedimento será executado, usada para consultar vigência e elegibilidade." htmlFor="data">Data de execução</HelpLabel><input id="data" name="data" type="date" required defaultValue={search.data} className="rounded border p-2" />
+        <HelpLabel help="Número de unidades do procedimento para a consulta de elegibilidade." htmlFor="quantidade">Quantidade</HelpLabel><input id="quantidade" name="quantidade" type="number" min={1} max={2147483647} step={1} required defaultValue={search.quantidade??"1"} className="w-24 rounded border p-2" />
+        <NativeActionButton help="Consulta a elegibilidade com os parâmetros informados, sem registrar uma execução." type="submit" className="underline">Consultar</NativeActionButton></form>
       {result&&<p role="status" className="rounded border p-3 text-sm">{eligibilityLabels[result.status]} Consulta sem reservar ou consumir saldo.</p>}
     </section>
     <section><h2 className="text-lg font-semibold">Últimos movimentos de saldo</h2><p className="text-sm">Unidades consumidas e devolvidas pela conferência de produção.</p>

@@ -1,4 +1,6 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
@@ -54,7 +56,7 @@ export function BlockForm({ initial, professionals }: { initial: BlockFormValues
     const id = `bloqueio-${name}`;
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <Input {...a11y(id, errors?.[name])} {...bind(name)} type={type} required />
         <FieldError id={`${id}-erro`} messages={errors?.[name]} />
       </div>
@@ -83,7 +85,7 @@ export function BlockForm({ initial, professionals }: { initial: BlockFormValues
       )}
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="bloqueio-professionalId">Profissional *</Label>
+        <Label help="Profissional ao qual os horários ou bloqueios se referem." htmlFor="bloqueio-professionalId">Profissional *</Label>
         <NativeSelect
           {...a11y("bloqueio-professionalId", errors?.professionalId)}
           {...bind("professionalId")}
@@ -112,7 +114,7 @@ export function BlockForm({ initial, professionals }: { initial: BlockFormValues
       </p>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="bloqueio-reason">Motivo (opcional)</Label>
+        <Label help="Explique a indisponibilidade deste horário, sem incluir informações clínicas." htmlFor="bloqueio-reason">Motivo (opcional)</Label>
         <Input
           {...a11y("bloqueio-reason", errors?.reason)}
           name="reason"
@@ -125,12 +127,12 @@ export function BlockForm({ initial, professionals }: { initial: BlockFormValues
       </div>
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={pending}>
+        <Button help="Registra a indisponibilidade do profissional no período informado." type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Bloquear horário"}
         </Button>
-        <Link href="/agenda/bloqueios" className={buttonVariants({ variant: "outline" })}>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href="/agenda/bloqueios" className={buttonVariants({ variant: "outline" })}>
           Voltar
-        </Link>
+        </ActionLink>
       </div>
     </form>
   );

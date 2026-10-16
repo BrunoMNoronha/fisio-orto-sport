@@ -20,8 +20,8 @@ export function ErrorFallback({ digest, retry }: { digest?: string; retry: () =>
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <Button onClick={() => retry()}>Tentar novamente</Button>
-        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
+        <Button help="Tenta carregar novamente a tela que apresentou erro." onClick={() => retry()}>Tentar novamente</Button>
+        <Button help="Abre a página inicial do sistema." variant="outline" nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
       </div>
     </div>
   );

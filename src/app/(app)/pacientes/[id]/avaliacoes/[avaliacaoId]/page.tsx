@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,15 +45,15 @@ export default async function AvaliacaoPage({ params }: PageProps<"/pacientes/[i
           </h2>
           {canEdit && (
             <div className="flex flex-wrap gap-2">
-              <Link href={`${base}/${assessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
+              <ActionLink help="Abre a edição desta avaliação fisioterapêutica." href={`${base}/${assessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
                 Editar
-              </Link>
-              <Link
+              </ActionLink>
+              <ActionLink help="Abre um novo plano terapêutico com esta avaliação como referência."
                 href={`/pacientes/${patient.id}/planos/novo?avaliacao=${assessment.id}`}
                 className={buttonVariants()}
               >
                 Criar plano terapêutico
-              </Link>
+              </ActionLink>
             </div>
           )}
         </div>

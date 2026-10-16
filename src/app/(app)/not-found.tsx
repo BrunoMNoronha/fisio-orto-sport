@@ -16,8 +16,8 @@ export default function NotFound() {
         a lista.
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button nativeButton={false} render={<Link href="/pacientes" />}>Ir para pacientes</Button>
-        <Button variant="outline" nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
+        <Button help="Abre a lista de pacientes." nativeButton={false} render={<Link href="/pacientes" />}>Ir para pacientes</Button>
+        <Button help="Abre a página inicial do sistema." variant="outline" nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
       </div>
     </div>
   );

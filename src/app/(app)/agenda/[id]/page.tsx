@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -77,7 +78,7 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
             {outside && <Badge variant="outline">{OUTSIDE_BADGE}</Badge>}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link
+            <ActionLink help="Exibe este agendamento na agenda do dia."
               href={agendaHref({
                 view: "dia",
                 date: toLocalDate(appointment.startsAt),
@@ -86,19 +87,19 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
               className={buttonVariants({ variant: "ghost" })}
             >
               Ver na agenda do dia
-            </Link>
+            </ActionLink>
             {canRegisterSession && (
-              <Link
+              <ActionLink help="Abre o formulário de atendimento vinculado a este agendamento."
                 href={`/pacientes/${appointment.patient.id}/sessoes/nova?agendamento=${id}`}
                 className={buttonVariants()}
               >
                 Registrar atendimento
-              </Link>
+              </ActionLink>
             )}
             {canManage && active && !locked && (
-              <Link href={`/agenda/${id}/reagendar`} className={buttonVariants({ variant: "outline" })}>
+              <ActionLink help="Abre o formulário para escolher outro horário ou profissional; não altera o agendamento antes de salvar." href={`/agenda/${id}/reagendar`} className={buttonVariants({ variant: "outline" })}>
                 Reagendar
-              </Link>
+              </ActionLink>
             )}
           </div>
         </div>

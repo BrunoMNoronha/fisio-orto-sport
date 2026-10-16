@@ -32,7 +32,7 @@ export function SetupForm({ next }: { next: string }) {
         </Alert>
       )}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="setupToken">Código de configuração</Label>
+        <Label help="Código de configuração fornecido para autorizar a criação da primeira conta." htmlFor="setupToken">Código de configuração</Label>
         <Input
           id="setupToken"
           name="setupToken"
@@ -47,7 +47,7 @@ export function SetupForm({ next }: { next: string }) {
         </p>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Nome</Label>
+        <Label help="Nome pelo qual o administrador será identificado no sistema." htmlFor="name">Nome</Label>
         <Input
           id="name"
           name="name"
@@ -60,7 +60,7 @@ export function SetupForm({ next }: { next: string }) {
         <FieldError id="name-erro" messages={errors?.name} />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">E-mail</Label>
+        <Label help="Endereço de e-mail utilizado para acessar a conta." htmlFor="email">E-mail</Label>
         <Input
           id="email"
           name="email"
@@ -74,7 +74,7 @@ export function SetupForm({ next }: { next: string }) {
         <FieldError id="email-erro" messages={errors?.email} />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Senha</Label>
+        <Label help="Senha da primeira conta administrativa; respeite os requisitos exibidos no formulário." htmlFor="password">Senha</Label>
         <Input
           id="password"
           name="password"
@@ -92,7 +92,7 @@ export function SetupForm({ next }: { next: string }) {
           </p>
         )}
       </div>
-      <Button type="submit" size="lg" disabled={pending}>
+      <Button help="Cria a primeira conta administrativa e inicia sua sessão." type="submit" size="lg" disabled={pending}>
         {pending ? "Cadastrando…" : "Criar conta e entrar"}
       </Button>
     </form>

@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -52,18 +53,18 @@ export default async function PlanoPage({ params }: PageProps<"/pacientes/[id]/p
             <div className="flex flex-wrap items-start gap-2">
               {plan.status === "ATIVO" && (
                 <>
-                  <Link href={`/pacientes/${patient.id}/sessoes/nova?plano=${plan.id}`} className={buttonVariants()}>
+                  <ActionLink help="Abre o formulário para registrar um atendimento clínico." href={`/pacientes/${patient.id}/sessoes/nova?plano=${plan.id}`} className={buttonVariants()}>
                     Registrar sessão
-                  </Link>
-                  <Link
+                  </ActionLink>
+                  <ActionLink help="Abre o formulário de reavaliação clínica do paciente."
                     href={`/pacientes/${patient.id}/reavaliacoes/nova?plano=${plan.id}`}
                     className={buttonVariants({ variant: "outline" })}
                   >
                     Nova reavaliação
-                  </Link>
-                  <Link href={`${base}/${plan.id}/revisar`} className={buttonVariants({ variant: "outline" })}>
+                  </ActionLink>
+                  <ActionLink help="Abre o formulário de uma nova revisão do plano, preservando as anteriores." href={`${base}/${plan.id}/revisar`} className={buttonVariants({ variant: "outline" })}>
                     Revisar plano
-                  </Link>
+                  </ActionLink>
                 </>
               )}
               <PlanStatusDialog action={changePlanStatus.bind(null, patient.id, plan.id)} status={plan.status} />

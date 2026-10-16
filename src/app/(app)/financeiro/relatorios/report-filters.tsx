@@ -1,6 +1,6 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,25 +46,25 @@ export function ReportFilters({
           texts={PATIENT_TEXTS}
         />
         {patient && (
-          <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setPatient(null)}>
+          <Button help="Limpa a seleção deste filtro; aplique os filtros para atualizar o resultado." type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setPatient(null)}>
             Remover paciente do filtro
           </Button>
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
-        <Label htmlFor="relatorio-start">Data inicial</Label>
+        <Label help="Primeira data incluída na consulta do período." htmlFor="relatorio-start">Data inicial</Label>
         <Input id="relatorio-start" name="start" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} min="2000-01-01" max="2100-12-31" className="min-w-0" aria-describedby="relatorio-periodo-ajuda" />
       </div>
       <div className="flex min-w-0 flex-col gap-2">
-        <Label htmlFor="relatorio-end">Data final</Label>
+        <Label help="Última data incluída na consulta do período." htmlFor="relatorio-end">Data final</Label>
         <Input id="relatorio-end" name="end" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} min="2000-01-01" max="2100-12-31" className="min-w-0" aria-describedby="relatorio-periodo-ajuda" />
       </div>
       <p id="relatorio-periodo-ajuda" className="text-xs text-muted-foreground sm:col-span-2">
         {dateLabel}. As datas inicial e final estão incluídas. Deixe uma data vazia para não limitar esse lado do período.
       </p>
       <div className="flex flex-wrap gap-2 sm:col-span-2">
-        <Button type="submit" variant="secondary">Filtrar</Button>
-        <Link href={action} onClick={clearFilters} className={buttonVariants({ variant: "outline" })}>Limpar filtros</Link>
+        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">Filtrar</Button>
+        <ActionLink help="Limpa os filtros e atualiza a consulta." href={action} onClick={clearFilters} className={buttonVariants({ variant: "outline" })}>Limpar filtros</ActionLink>
       </div>
     </form>
   );

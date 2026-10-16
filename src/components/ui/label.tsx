@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { InformativeHelp } from "@/components/informative-help"
 import { cn } from "cn"
 
-function Label({ className, ...props }: React.ComponentProps<"label">) {
-  return (
+function Label({ className, help, ...props }: React.ComponentProps<"label"> & { help?: string }) {
+  const label = (
     <label
       data-slot="label"
       className={cn(
@@ -14,6 +15,7 @@ function Label({ className, ...props }: React.ComponentProps<"label">) {
       {...props}
     />
   )
+  return help ? <InformativeHelp text={help}>{label}</InformativeHelp> : label
 }
 
 export { Label }

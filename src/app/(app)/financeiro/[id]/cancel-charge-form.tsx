@@ -26,7 +26,7 @@ export function CancelChargeForm({ id }: { id: string }) {
   return (
     <>
       <Dialog>
-        <DialogTrigger render={<Button variant="destructive" />}>Cancelar cobrança</DialogTrigger>
+        <DialogTrigger render={<Button help="Abre a confirmação de cancelamento desta cobrança." variant="destructive" />}>Cancelar cobrança</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancelar esta cobrança?</DialogTitle>
@@ -38,7 +38,7 @@ export function CancelChargeForm({ id }: { id: string }) {
           <form action={formAction} className="flex flex-col gap-4">
             <input type="hidden" name="id" value={id} />
             <div className="flex flex-col gap-2">
-              <Label htmlFor="cancelar-cobranca-motivo">Motivo do cancelamento *</Label>
+              <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="cancelar-cobranca-motivo">Motivo do cancelamento *</Label>
               <Textarea
                 id="cancelar-cobranca-motivo"
                 name="reason"
@@ -60,8 +60,8 @@ export function CancelChargeForm({ id }: { id: string }) {
               </p>
             )}
             <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-              <Button type="submit" variant="destructive" disabled={pending}>
+              <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+              <Button help="Cancela esta cobrança com a justificativa informada, preservando o histórico financeiro." type="submit" variant="destructive" disabled={pending}>
                 {pending ? "Cancelando…" : "Confirmar cancelamento"}
               </Button>
             </DialogFooter>

@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import Link from "next/link";
 import { ArrowRightIcon, CalendarCheckIcon, CalendarRangeIcon, UsersIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -93,9 +94,9 @@ export default async function Home() {
               <CardTitle>Agenda de hoje</CardTitle>
               <CardDescription>Atendimentos confirmados para hoje.</CardDescription>
               <CardAction>
-                <Link href="/agenda" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                <ActionLink help="Abre a agenda para consultar os horários." href="/agenda" className={buttonVariants({ variant: "outline", size: "sm" })}>
                   Abrir agenda
-                </Link>
+                </ActionLink>
               </CardAction>
             </CardHeader>
             <CardContent>

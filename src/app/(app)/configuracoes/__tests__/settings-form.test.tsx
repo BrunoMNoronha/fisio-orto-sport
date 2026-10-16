@@ -33,10 +33,47 @@ beforeEach(() => {
 });
 
 describe("Configurações em abas (#78)", () => {
+  it("switch começa desligado, descarta e salva com os campos de outras abas", async () => {
+    save.mockResolvedValue({ ok: true, version: 4, message: "Configurações salvas." });
+    setup();
+    fireEvent.change(screen.getByLabelText("Nome de exibição"), { target: { value: "CLÍNICA TESTE" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Interface" }));
+    const toggle = screen.getByRole("switch", { name: "Exibir tooltips nos botões de ação" });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Descartar alterações" }));
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("tab", { name: "Clínica" }));
+    fireEvent.change(screen.getByLabelText("Nome de exibição"), { target: { value: "CLÍNICA TESTE" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Salvar configurações" })); });
+    const data = save.mock.calls[0][1] as FormData;
+    expect(data.get("actionTooltipsEnabled")).toBe("on");
+    expect(data.get("displayName")).toBe("CLÍNICA TESTE");
+    fireEvent.click(screen.getByRole("tab", { name: "Interface" }));
+    expect(toggle).toBeChecked();
+    expect(screen.getByRole("button", { name: "Salvar configurações" })).toBeDisabled();
+  });
+
+  it("falha ao salvar mantém a alteração pendente e permite voltar à preferência salva", async () => {
+    save.mockResolvedValue({ error: "Conflito de versão.", conflict: true });
+    setup();
+    fireEvent.click(screen.getByRole("tab", { name: "Interface" }));
+    const toggle = screen.getByRole("switch");
+    fireEvent.click(toggle);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Salvar configurações" })); });
+    expect(screen.getByText("Conflito de versão.")).toBeVisible();
+    expect(toggle).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Descartar alterações" }));
+    expect(toggle).not.toBeChecked();
+  });
+
   it("abas acessíveis; Desenvolvimento só aparece com ferramentas habilitadas", () => {
     setup();
     const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(tabs).toEqual(["Clínica", "Agenda e expediente", "Impressões", "Administração"]);
+    expect(tabs).toEqual(["Clínica", "Agenda e expediente", "Impressões", "Interface", "Administração"]);
     expect(screen.getByRole("tab", { name: "Clínica" })).toHaveAttribute("aria-selected", "true");
   });
 

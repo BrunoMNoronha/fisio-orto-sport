@@ -1,5 +1,5 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,14 +30,14 @@ export default async function BloqueiosPage({ searchParams }: PageProps<"/agenda
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-2 text-2xl font-semibold tracking-tight">Bloqueios da agenda</h1>
         <div className="ml-auto flex gap-3">
-          <Link href="/agenda" className={buttonVariants({ variant: "outline" })}>
+          <ActionLink help="Abre a agenda para consultar os horários." href="/agenda" className={buttonVariants({ variant: "outline" })}>
             Voltar à agenda
-          </Link>
+          </ActionLink>
           {canManage && (
-            <Link href={`/agenda/bloqueios/novo${newQuery}`} className={buttonVariants()}>
+            <ActionLink help="Abre o formulário para bloquear um intervalo de horários." href={`/agenda/bloqueios/novo${newQuery}`} className={buttonVariants()}>
               <PlusIcon />
               Novo bloqueio
-            </Link>
+            </ActionLink>
           )}
         </div>
       </div>
@@ -49,7 +49,7 @@ export default async function BloqueiosPage({ searchParams }: PageProps<"/agenda
 
       <form role="search" method="get" className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-56 flex-col gap-2">
-          <Label htmlFor="bloqueios-profissional">Profissional</Label>
+          <Label help="Profissional ao qual os horários ou bloqueios se referem." htmlFor="bloqueios-profissional">Profissional</Label>
           <AutoSubmitSelect
             id="bloqueios-profissional"
             name="professionalId"
@@ -64,7 +64,7 @@ export default async function BloqueiosPage({ searchParams }: PageProps<"/agenda
             ))}
           </AutoSubmitSelect>
         </div>
-        <Button type="submit" variant="secondary">
+        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
           Filtrar
         </Button>
       </form>

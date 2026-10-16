@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,14 +43,14 @@ export default async function SessaoPage({ params }: PageProps<"/pacientes/[id]/
             <SessionStatusBadge status={session.status} />
           </div>
           <div className="flex flex-wrap items-start gap-2">
-            <Link href={`/pacientes/${patient.id}/planos/${session.planId}`} className={buttonVariants({ variant: "ghost" })}>
+            <ActionLink help="Exibe o plano terapêutico de referência deste registro." href={`/pacientes/${patient.id}/planos/${session.planId}`} className={buttonVariants({ variant: "ghost" })}>
               Ver plano
-            </Link>
+            </ActionLink>
             {canManage && (
               <>
-                <Link href={`${base}/${session.id}/editar`} className={buttonVariants({ variant: "outline" })}>
+                <ActionLink help="Abre a correção deste atendimento, preservando seu histórico." href={`${base}/${session.id}/editar`} className={buttonVariants({ variant: "outline" })}>
                   Corrigir
-                </Link>
+                </ActionLink>
                 <InvalidateSessionDialog action={invalidateSession.bind(null, patient.id, session.id)} />
               </>
             )}

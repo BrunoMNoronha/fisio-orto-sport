@@ -1,6 +1,7 @@
 import {TISS_DEFAULTS} from "./tiss/profile";
 import {createHash,randomUUID} from "node:crypto";
-import type {Prisma,PrismaClient} from "@/generated/prisma/client";
+import {Prisma,type PrismaClient} from "@/generated/prisma/client";
+import {withLockedReadCache} from './locked-read-cache';
 import {lockBeneficiary} from "./beneficiary-service";
 import {revalidateGuideTx,recordGuideChange} from "./guide-service";
 import {recordProductionChange} from "./production-service";
@@ -14,11 +15,12 @@ export async function recordBatchChange(tx:Tx,id:string,actorId:string,reason:st
 async function lockBatchContext(tx:Tx,id:string,guideIds:string[]){
  // Pré-travar TODOS os pacientes antes da trava comum, inclusive guias já compostas.
  const guides=await tx.billingGuide.findMany({where:{OR:[{id:{in:guideIds}},{batches:{some:{batchId:id,active:true}}}]},select:{id:true,coverage:{select:{patientId:true}},items:{where:{active:true},select:{production:{select:{id:true,sessionId:true}}}}}});
- for(const patientId of [...new Set(guides.map(g=>g.coverage.patientId))].sort())await tx.$queryRaw`SELECT id FROM "Patient" WHERE id=${patientId} FOR UPDATE`;
+ const lock=async(table:'Patient'|'TreatmentSession'|'BillingGuide'|'ProductionItem',ids:string[])=>{if(ids.length)await tx.$queryRaw(Prisma.sql`SELECT id FROM ${Prisma.raw('"'+table+'"')} WHERE id IN (${Prisma.join([...new Set(ids)].sort())}) ORDER BY id COLLATE "C" FOR UPDATE`);};
+ await lock('Patient',guides.map(g=>g.coverage.patientId));
  await lockBeneficiary(tx);
- for(const sessionId of [...new Set(guides.flatMap(g=>g.items.map(i=>i.production.sessionId)))].sort())await tx.$queryRaw`SELECT id FROM "TreatmentSession" WHERE id=${sessionId} FOR UPDATE`;
- for(const guideId of guides.map(g=>g.id).sort())await tx.$queryRaw`SELECT id FROM "BillingGuide" WHERE id=${guideId} FOR UPDATE`;
- for(const productionId of [...new Set(guides.flatMap(g=>g.items.map(i=>i.production.id)))].sort())await tx.$queryRaw`SELECT id FROM "ProductionItem" WHERE id=${productionId} FOR UPDATE`;
+ await lock('TreatmentSession',guides.flatMap(g=>g.items.map(i=>i.production.sessionId)));
+ await lock('BillingGuide',guides.map(g=>g.id));
+ await lock('ProductionItem',guides.flatMap(g=>g.items.map(i=>i.production.id)));
  await tx.$queryRaw`SELECT id FROM "BillingBatch" WHERE id=${id} FOR UPDATE`;
 }
 async function composition(tx:Tx,id:string){return tx.batchGuide.findMany({where:{batchId:id,active:true},orderBy:{guideId:'asc'},include:{guide:{include:{items:{where:{active:true},orderBy:{productionId:'asc'},include:{production:{select:{id:true,state:true,version:true,adjustmentPending:true,amountCents:true}}}}}}}});}
@@ -45,9 +47,9 @@ export async function saveBatch(db:Pick<PrismaClient,'$transaction'>,actorId:str
  if(!contract!.active||!contract!.operator.active||contract!.tissVersion!==current!.tissVersion)fail('Configuração contratual alterada; revise o lote.');
  const links=await composition(tx,input.id);if(JSON.stringify(links.map(l=>l.guideId).sort())!==JSON.stringify([...input.guideIds].sort()))fail('Salve a composição selecionada antes de fechar.');if(!links.length)fail('Selecione ao menos uma guia apta.');if(links.length>contract!.maxGuides||links.reduce((n,l)=>n+l.guide.items.length,0)>contract!.maxItems)fail('Limites do contrato excedidos. Divida o lote.');
  const profiles=new Set(links.map(l=>JSON.stringify((l.guide.snapshot as {profile?:unknown}).profile)));if(profiles.size!==1)fail('Perfis de guia incompatíveis.');
- let total=BigInt(0);const frozen=[];
+ let total=BigInt(0);const frozen:Prisma.InputJsonObject[]=[];
  // Todas as revalidações precedem qualquer mudança de estado.
- for(const l of links){const result=await revalidateGuideTx(tx,l.guideId);if(result.status!=='OK')fail('Guia '+String(l.guide.number)+': '+result.status+'. Devolva e confira as fontes.');if(l.guide.contractId!==input.contractId||(l.guide.snapshot as {contract?:{tissVersion?:string}}).contract?.tissVersion!==input.tissVersion)fail('Lote misto entre contratos/versões.');total+=l.guide.totalCents;frozen.push({guideId:l.guideId,number:String(l.guide.number),month:l.guide.month,guideVersion:l.guide.version,sourceDigest:l.guide.sourceDigest,totalCents:String(l.guide.totalCents),snapshot:l.guide.snapshot,clinicalIndication:l.guide.clinicalIndication,clinicalConfirmed:l.guide.clinicalConfirmed,items:l.guide.items.map(i=>({id:i.productionId,snapshot:i.snapshot}))});}
+ await withLockedReadCache(tx,async cached=>{for(const l of links){const result=await revalidateGuideTx(cached,l.guideId);if(result.status!=='OK')fail('Guia '+String(l.guide.number)+': '+result.status+'. Devolva e confira as fontes.');if(l.guide.contractId!==input.contractId||(l.guide.snapshot as {contract?:{tissVersion?:string}}).contract?.tissVersion!==input.tissVersion)fail('Lote misto entre contratos/versões.');total+=l.guide.totalCents;frozen.push({guideId:l.guideId,number:String(l.guide.number),month:l.guide.month,guideVersion:l.guide.version,sourceDigest:l.guide.sourceDigest,totalCents:String(l.guide.totalCents),snapshot:l.guide.snapshot,clinicalIndication:l.guide.clinicalIndication,clinicalConfirmed:l.guide.clinicalConfirmed,items:l.guide.items.map(i=>({id:i.productionId,snapshot:i.snapshot}))});}});
  if(total>BigInt('9223372036854775807'))fail('Total excede capacidade em centavos; divida o lote.');
  for(const l of links){for(const i of l.guide.items){await tx.productionItem.update({where:{id:i.productionId},data:{state:'FECHADO',version:{increment:1}}});await recordProductionChange(tx,i.productionId,actorId,input.reason,randomUUID(),fingerprint);}await tx.billingGuide.update({where:{id:l.guideId},data:{state:'EM_LOTE',version:{increment:1}}});await recordGuideChange(tx,l.guideId,actorId,input.reason,randomUUID(),fingerprint);await tx.batchGuide.update({where:{id:l.id},data:{closedGuideVersion:l.guide.version+1}});}
  const xmlProfile=await tx.tissProfile.findFirst({where:{contractId:input.contractId},orderBy:{version:'desc'},select:{id:true,version:true,data:true}});

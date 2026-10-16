@@ -382,3 +382,17 @@ Roteiro de treinamento/correção e gates em [operação e validação](18-admin
 Homologação externa permanece **pendente por orientação de Bruno em 15/10/2026**.
 Código/validação local, publicação e aceite externo são estados separados; não encerrar
 #106/#95 como homologados nem liberar Production apenas com evidência local.
+
+Atualização consolidada em 15/10/2026: #96–#105 encerradas; #106 integrada pelos PRs
+#129/#130 e publicada em Preview no SHA cd6af5c, workflow 38819050146 aprovado.
+Os estados locais das entradas históricas acima não substituem essa posição consolidada.
+#106 e #95 permanecem abertas exclusivamente pelo aceite externo pendente.
+
+### ADM-11 (#131) — capacidade nos limites contratuais
+
+Massa sintética parametrizada para 100 guias/1.000 itens, dez lotes/10.000 itens para
+CSV e fonte integral de impressão, limite+1 e XML próximo de 2 MiB com XSD real.
+Otimização da revalidação com cache restrito à fase de leitura protegida por travas e
+bloqueio ordenado em conjunto, mantendo timeout, atomicidade e histórico. Roteiro em
+[capacidade administrativa](19-administrativo-capacidade.md). Execução e evidências locais;
+sem nova migração, envio externo ou liberação de Production.

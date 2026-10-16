@@ -1,6 +1,6 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
 
-import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -102,7 +102,7 @@ export function ChargeForm({
         />
 
         <div className="flex flex-col gap-2 sm:col-span-3">
-          <Label htmlFor="cobranca-description">Descrição *</Label>
+          <Label help="Identificação do serviço ou cobrança que aparecerá no registro financeiro." htmlFor="cobranca-description">Descrição *</Label>
           <Input
             {...a11y("cobranca-description", errors?.description, "cobranca-description-ajuda")}
             {...field("description")}
@@ -116,7 +116,7 @@ export function ChargeForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="cobranca-amount">Valor (R$) *</Label>
+          <Label help="Valor total da cobrança em reais." htmlFor="cobranca-amount">Valor (R$) *</Label>
           <Input
             {...a11y("cobranca-amount", errors?.amount, "cobranca-amount-ajuda")}
             {...field("amount")}
@@ -134,7 +134,7 @@ export function ChargeForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="cobranca-dueDate">Vencimento *</Label>
+          <Label help="Data civil em que o pagamento da cobrança vence." htmlFor="cobranca-dueDate">Vencimento *</Label>
           <Input {...a11y("cobranca-dueDate", errors?.dueDate)} {...field("dueDate")} type="date" required />
           <FieldError id="cobranca-dueDate-erro" messages={errors?.dueDate} />
         </div>
@@ -142,7 +142,7 @@ export function ChargeForm({
 
       {replacing && (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="cobranca-reason">Motivo do cancelamento da original *</Label>
+          <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="cobranca-reason">Motivo do cancelamento da original *</Label>
           <Textarea
             {...a11y("cobranca-reason", errors?.reason, "cobranca-reason-ajuda")}
             {...field("reason")}
@@ -158,12 +158,12 @@ export function ChargeForm({
       )}
 
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={pending}>
+        <Button help={chargeId ? 'Cancela a cobrança original e registra sua substituta com os dados informados.' : 'Registra uma nova cobrança para o paciente.'} type="submit" disabled={pending}>
           {pending ? "Salvando…" : submitLabel}
         </Button>
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>
           Voltar
-        </Link>
+        </ActionLink>
       </div>
     </form>
   );

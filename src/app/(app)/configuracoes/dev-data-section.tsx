@@ -114,7 +114,7 @@ export function DevDataSection({ preview, target }: { preview: DevDataPreview; t
         )}
 
         <Dialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
-          <DialogTrigger render={<Button variant="outline" className="self-start" disabled={blocked || pending} />}>
+          <DialogTrigger render={<Button help="Abre a confirmação para gerar dados fictícios no ambiente habilitado." variant="outline" className="self-start" disabled={blocked || pending} />}>
             {pending ? "Gerando…" : "Popular com dados fictícios"}
           </DialogTrigger>
           <DialogContent>
@@ -146,8 +146,8 @@ export function DevDataSection({ preview, target }: { preview: DevDataPreview; t
             </div>
             <form action={formAction}>
               <DialogFooter>
-                <DialogClose render={<Button type="button" variant="outline" disabled={pending} />}>Cancelar</DialogClose>
-                <Button type="submit" disabled={pending}>
+                <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" disabled={pending} />}>Cancelar</DialogClose>
+                <Button help="Gera os dados fictícios previstos para este ambiente após a confirmação." type="submit" disabled={pending}>
                   {pending ? "Gerando…" : "Gerar dados fictícios"}
                 </Button>
               </DialogFooter>

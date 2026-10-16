@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -40,9 +41,9 @@ export default async function PlanosPage({ params, searchParams }: PageProps<"/p
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-xl font-semibold tracking-tight">Planos terapêuticos</h2>
         {canManage && hasAssessment && (
-          <Link href={`${base}/novo`} className={buttonVariants()}>
+          <ActionLink help="Abre o formulário de um novo plano terapêutico." href={`${base}/novo`} className={buttonVariants()}>
             Novo plano
-          </Link>
+          </ActionLink>
         )}
       </div>
 
@@ -60,9 +61,9 @@ export default async function PlanosPage({ params, searchParams }: PageProps<"/p
           <p className="text-sm text-muted-foreground">
             O plano terapêutico decorre de uma avaliação inicial. Registre a avaliação deste paciente primeiro.
           </p>
-          <Link href={`/pacientes/${patient.id}/avaliacoes`} className={buttonVariants({ variant: "outline" })}>
+          <ActionLink help="Abre a lista de avaliações do paciente." href={`/pacientes/${patient.id}/avaliacoes`} className={buttonVariants({ variant: "outline" })}>
             Ir para Avaliações
-          </Link>
+          </ActionLink>
         </div>
       )}
 
@@ -99,17 +100,17 @@ export default async function PlanosPage({ params, searchParams }: PageProps<"/p
           </p>
           <div className="flex gap-2">
             {page > 1 && (
-              <Link
+              <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais."
                 href={pageHref(Math.min(page - 1, pageCount))}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Anterior
-              </Link>
+              </ActionLink>
             )}
             {page < pageCount && (
-              <Link href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 Próxima
-              </Link>
+              </ActionLink>
             )}
           </div>
         </nav>

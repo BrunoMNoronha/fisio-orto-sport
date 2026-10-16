@@ -112,6 +112,33 @@ Os limites estão em `settings.ts` e `validation.ts` e são repetidos em CHECKs 
   última versão salva, só no navegador. O aviso ao sair cobre recarregar e fechar a página, não a
   navegação interna do aplicativo.
 
+## Ajuda da interface (#137 e #138)
+
+A aba **Interface** contém o switch “Exibir tooltips nos botões de ação”.
+`actionTooltipsEnabled` é uma configuração global da clínica, inicialmente `false`,
+editável somente com `configuracoes:gerir`. Salvar inclui todas as abas, com a mesma
+validação, versão e auditoria; descartar restaura o último valor salvo. A alteração
+vale após salvar, inclusive na sessão atual pela revalidação do layout. Outras
+sessões recebem o valor na próxima navegação/recarregamento. Leituras sem linha
+persistida continuam usando os padrões, sem gravar.
+
+O layout autenticado compartilha somente esse booleano com `ActionHelpProvider`.
+O layout de impressão faz o mesmo após autenticar; a ajuda fica oculta no papel/PDF.
+Não há preferência privada da clínica na tela de login. Labels têm ajuda própria,
+independente do switch. Instruções essenciais e erros continuam visíveis.
+
+Novos campos devem declarar `help` em `Label`/`HelpLabel` ou acrescentar uma chave
+explícita a `src/lib/field-help.ts` quando o formulário usa campos dinâmicos.
+Botões declaram `help` em `Button`/`NativeActionButton`; links apresentados como
+botões usam `ActionLink`. Descrever o efeito real, distinguindo abrir uma tela ou
+confirmação de gravar/executar a operação. Não inferir descrições do texto do botão.
+O indicador de ajuda é separado do controle, com `type="button"`, para permitir
+consulta por toque sem executar a ação, inclusive quando ela está desabilitada.
+Hover/foco abrem a ajuda; Escape ou saída de foco fecham. O conteúdo pode ser
+alcançado pelo ponteiro sem desaparecer no trajeto.
+
+Matriz de cobertura: `docs/project/evidencias/137-138-cobertura.md`.
+
 ## Fora do escopo
 
 Editor de termos ou cláusulas, prazo de cancelamento e faltas, fuso editável, retenção e expurgo,

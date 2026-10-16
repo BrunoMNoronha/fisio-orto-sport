@@ -1,6 +1,7 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -148,7 +149,7 @@ export function AssessmentForm({
     const hint = HINTS[name];
     return (
       <div className={cn("flex flex-col gap-2", options.className)}>
-        <Label htmlFor={id}>
+        <Label help={fieldHelp(name)} htmlFor={id}>
           {ASSESSMENT_FIELD_LABELS[name]}
           {options.required ? " *" : " (opcional)"}
         </Label>
@@ -182,7 +183,7 @@ export function AssessmentForm({
       <Section id="avaliacao-secao-identificacao" title="Identificação">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="avaliacao-assessmentDate">{ASSESSMENT_FIELD_LABELS.assessmentDate} *</Label>
+            <Label help="Data civil em que a avaliação fisioterapêutica foi realizada." htmlFor="avaliacao-assessmentDate">{ASSESSMENT_FIELD_LABELS.assessmentDate} *</Label>
             <Input
               {...a11y("assessmentDate")}
               type="date"
@@ -194,7 +195,7 @@ export function AssessmentForm({
           </div>
           {anamnesisOptions && (
             <div className="flex flex-col gap-2">
-              <Label htmlFor="avaliacao-anamnesisId">Anamnese de referência *</Label>
+              <Label help="Anamnese do paciente utilizada como referência desta avaliação." htmlFor="avaliacao-anamnesisId">Anamnese de referência *</Label>
               <NativeSelect
                 {...a11y("anamnesisId")}
                 value={anamnesisId}
@@ -235,10 +236,10 @@ export function AssessmentForm({
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <p className="text-xs text-muted-foreground">* Campos obrigatórios.</p>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+          <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
             Cancelar
-          </Link>
-          <Button type="submit" size="lg" disabled={pending} aria-disabled={pending}>
+          </ActionLink>
+          <Button help="Valida e salva a avaliação fisioterapêutica do paciente." type="submit" size="lg" disabled={pending} aria-disabled={pending}>
             {pending ? "Salvando…" : submitLabel}
           </Button>
         </div>

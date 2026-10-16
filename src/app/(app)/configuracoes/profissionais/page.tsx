@@ -1,3 +1,4 @@
+import { NativeActionButton } from "@/components/informative-help";
 import Link from "next/link";
 import { listProfessionals } from "@/modules/administrativo/catalog-queries";
 import { PROFESSIONAL_PURPOSES } from "@/modules/administrativo/catalog-validation";
@@ -9,7 +10,7 @@ export default async function Professionals({ searchParams }: { searchParams: Pr
     <p className="text-sm">Solicitantes e executantes para o faturamento. Dados incompletos permanecem pendentes.</p>
     <Link className="underline" href="/configuracoes/profissionais/novo">Novo profissional</Link>
     <form className="flex gap-2"><input className="min-w-0 flex-1 rounded border p-2" name="q" aria-label="Buscar profissional" defaultValue={search.q} maxLength={120} />
-      <button className="underline" type="submit">Buscar</button></form>
+      <NativeActionButton help="Atualiza a consulta usando os filtros informados, sem alterar os registros." className="underline" type="submit">Buscar</NativeActionButton></form>
     {!result ? <p role="alert">Filtros inválidos.</p> : <><p>{result.total} profissional(is)</p>
       {result.items.map((item) => <Link key={item.id} href={`/configuracoes/profissionais/${item.id}`} className="rounded border p-3">
         <span className="break-words font-medium">{item.name}</span><span className="block text-sm">{PROFESSIONAL_PURPOSES[item.purpose as keyof typeof PROFESSIONAL_PURPOSES]} · {item.active ? "Ativo" : "Inativo"}</span>

@@ -1,5 +1,6 @@
 "use client"
 
+import { InformativeHelp } from "@/components/informative-help"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -143,10 +144,10 @@ export function AppSidebar({
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => logout()}>
+                <InformativeHelp action text="Encerra sua sessão e retorna à tela de entrada."><DropdownMenuItem variant="destructive" onClick={() => logout()}>
                   <LogOutIcon />
                   Sair
-                </DropdownMenuItem>
+                </DropdownMenuItem></InformativeHelp>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

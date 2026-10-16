@@ -1,5 +1,5 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClipboardListIcon, FileSignatureIcon, IdCardIcon, PrinterIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -67,14 +67,14 @@ export default async function DocumentosPacientePage({ params }: PageProps<"/pac
           {unavailable ? (
             <p className="mt-auto text-sm text-muted-foreground">{unavailable}</p>
           ) : (
-            <Link
+            <ActionLink help="Abre o documento em outra aba para impressão ou salvamento em PDF."
               href={`/impressao/pacientes/${patient.id}/${slug}`}
               target="_blank"
               className={buttonVariants({ variant: "outline", className: "mt-auto self-start" })}
             >
               <PrinterIcon />
               Abrir para imprimir
-            </Link>
+            </ActionLink>
           )}
         </li>
       ))}

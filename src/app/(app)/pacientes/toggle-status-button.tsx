@@ -49,7 +49,7 @@ export function ToggleStatusButton({
     return (
       <form action={formAction} className="flex flex-col items-start gap-1">
         {fields}
-        <Button type="submit" disabled={pending}>
+        <Button help="Reativa o cadastro do paciente para os fluxos que exigem paciente ativo." type="submit" disabled={pending}>
           {pending ? "Salvando…" : "Reativar"}
         </Button>
         {feedback}
@@ -60,7 +60,7 @@ export function ToggleStatusButton({
   return (
     <div className="flex flex-col items-start gap-1">
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<Button variant="outline" />}>Inativar</DialogTrigger>
+        <DialogTrigger render={<Button help="Abre a confirmação para inativar o cadastro do paciente." variant="outline" />}>Inativar</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Inativar paciente?</DialogTitle>
@@ -77,8 +77,8 @@ export function ToggleStatusButton({
               </p>
             )}
             <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-              <Button type="submit" variant="destructive" disabled={pending}>
+              <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+              <Button help="Inativa o cadastro após confirmação, preservando prontuário e histórico." type="submit" variant="destructive" disabled={pending}>
                 {pending ? "Salvando…" : "Inativar"}
               </Button>
             </DialogFooter>

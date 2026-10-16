@@ -1,4 +1,5 @@
 "use client";
+import { HelpLabel, NativeActionButton } from "@/components/informative-help";
 import { useState } from "react";
 import { PatientCombobox } from "../../agenda/patient-combobox";
 import { searchAdministrativeReportOptions } from "@/modules/administrativo/report-actions";
@@ -12,14 +13,14 @@ const searches = Object.fromEntries(fields.map(([key]) => [key, searchAdministra
 function Selection({ name, label, value }: { name: ReportOptionKey; label: string; value: { id: string; label: string } | null }) {
   const [selected, setSelected] = useState(value);
   return <div><PatientCombobox name={name} label={label} value={selected} onChange={setSelected} search={searches[name]} texts={{ noun: label.toLowerCase(), plural: label, listLabel: label }} />
-    {selected && <button className="text-sm underline" type="button" onClick={() => setSelected(null)}>Remover {label.toLowerCase()}</button>}</div>;
+    {selected && <NativeActionButton help="Limpa a seleção deste filtro; aplique os filtros para atualizar o resultado." className="text-sm underline" type="button" onClick={() => setSelected(null)}>Remover {label.toLowerCase()}</NativeActionButton>}</div>;
 }
 export function ReportFilters({ kind, values, labels }: { kind: AdministrativeReportKind; values: Record<string, string | undefined>; labels: Record<string, string> }) {
   return <form className="grid gap-4 rounded border p-4 sm:grid-cols-2 lg:grid-cols-3" method="get">
     {fields.filter(([key]) => kind === 'autorizacoes' ? key !== 'professionalId' : key !== 'authorizationId').map(([key, label]) => <Selection key={key + String(values[key])} name={key} label={label} value={values[key] ? { id: values[key]!, label: labels[key] ?? 'Filtro informado (revise a seleção)' } : null} />)}
-    <label>Data inicial<input className="block w-full rounded border p-2" type="date" name="start" defaultValue={values.start} min="2000-01-01" max="2100-12-31" /></label>
-    <label>Data final<input className="block w-full rounded border p-2" type="date" name="end" defaultValue={values.end} min="2000-01-01" max="2100-12-31" /></label>
-    <label>Estado<select className="block w-full rounded border p-2" name="state" defaultValue={values.state ?? ''}><option value="">Todos</option>{(kind === 'autorizacoes' ? AUTHORIZATION_STATES : PRODUCTION_STATES).map(s => <option key={s}>{s}</option>)}</select></label>
-    <div className="flex items-end gap-4"><button className="rounded border px-4 py-2" type="submit">Aplicar filtros</button><a className="underline" href={`/administrativo/relatorios/${kind}`}>Limpar filtros</a></div>
+    <HelpLabel help="Primeira data incluída na consulta do período.">Data inicial<input className="block w-full rounded border p-2" type="date" name="start" defaultValue={values.start} min="2000-01-01" max="2100-12-31" /></HelpLabel>
+    <HelpLabel help="Última data incluída na consulta do período.">Data final<input className="block w-full rounded border p-2" type="date" name="end" defaultValue={values.end} min="2000-01-01" max="2100-12-31" /></HelpLabel>
+    <HelpLabel help="Restringe ou define a situação ativa/inativa do registro; registros anteriores são preservados.">Estado<select className="block w-full rounded border p-2" name="state" defaultValue={values.state ?? ''}><option value="">Todos</option>{(kind === 'autorizacoes' ? AUTHORIZATION_STATES : PRODUCTION_STATES).map(s => <option key={s}>{s}</option>)}</select></HelpLabel>
+    <div className="flex items-end gap-4"><NativeActionButton help="Atualiza a consulta usando os filtros informados, sem alterar os registros." className="rounded border px-4 py-2" type="submit">Aplicar filtros</NativeActionButton><a className="underline" href={`/administrativo/relatorios/${kind}`}>Limpar filtros</a></div>
   </form>;
 }

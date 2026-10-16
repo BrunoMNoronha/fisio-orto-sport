@@ -23,7 +23,7 @@ export function ReversePaymentForm({ paymentId, requestId, receivedOn, today }: 
   return (
     <div>
       <Dialog>
-        <DialogTrigger render={<Button variant="outline" size="sm" />}>Estornar</DialogTrigger>
+        <DialogTrigger render={<Button help="Abre a confirmação de estorno deste recebimento." variant="outline" size="sm" />}>Estornar</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Estornar este pagamento?</DialogTitle>
@@ -33,14 +33,14 @@ export function ReversePaymentForm({ paymentId, requestId, receivedOn, today }: 
             <input type="hidden" name="paymentId" value={paymentId} />
             <input type="hidden" name="requestId" value={operationId} />
             <div className="flex flex-col gap-2">
-              <Label htmlFor={dateId}>Data do estorno *</Label>
+              <Label help="Data civil em que o recebimento original foi estornado." htmlFor={dateId}>Data do estorno *</Label>
               <Input id={dateId} name="reversedOn" type="date" min={receivedOn} max={today} required readOnly={pending}
                 value={values.reversedOn} onChange={(event) => setValues((current) => ({ ...current, reversedOn: event.target.value }))}
                 aria-invalid={errors?.reversedOn?.length ? true : undefined} aria-describedby={errors?.reversedOn?.length ? `${dateId}-erro` : undefined} />
               {errors?.reversedOn?.[0] && <p id={`${dateId}-erro`} aria-live="polite" className="text-sm text-destructive">{errors.reversedOn[0]}</p>}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={reasonId}>Motivo do estorno *</Label>
+              <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor={reasonId}>Motivo do estorno *</Label>
               <Textarea id={reasonId} name="reason" maxLength={REASON_MAX} rows={3} required readOnly={pending}
                 value={values.reason} onChange={(event) => setValues((current) => ({ ...current, reason: event.target.value }))}
                 aria-invalid={errors?.reason?.length ? true : undefined} aria-describedby={errors?.reason?.length ? `${reasonId}-erro` : undefined} />
@@ -48,8 +48,8 @@ export function ReversePaymentForm({ paymentId, requestId, receivedOn, today }: 
             </div>
             {genericError && <p role="alert" className="text-sm text-destructive">{genericError}</p>}
             <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-              <Button type="submit" variant="destructive" disabled={pending}>{pending ? "Estornando…" : "Confirmar estorno"}</Button>
+              <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+              <Button help="Estorna o recebimento com a data e o motivo informados, preservando o registro original." type="submit" variant="destructive" disabled={pending}>{pending ? "Estornando…" : "Confirmar estorno"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

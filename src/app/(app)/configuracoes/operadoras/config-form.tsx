@@ -1,6 +1,7 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { CONTRACT_DEFAULTS } from "@/modules/administrativo/contract-defaults";
 import { useActionState, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ export function ConfigForm({ kind, id, requestId, expectedVersion, operatorId, i
       {state?.error && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">{state.error}</p>}
       {fields.map((field) => (
         <div key={field.name} className="flex flex-col gap-2">
-          <Label htmlFor={field.name}>{field.label}{field.required ? " *" : ""}</Label>
+          <Label help={fieldHelp(field.name)} htmlFor={field.name}>{field.label}{field.required ? " *" : ""}</Label>
           <Input id={field.name} name={field.name} value={values[field.name] ?? ""} required={field.required}
             type={field.limit ? "number" : "text"} min={field.limit ? 1 : undefined} max={field.limit} step={field.limit ? 1 : undefined}
             maxLength={field.max} inputMode={field.numeric ? "numeric" : undefined}
@@ -62,7 +63,7 @@ export function ConfigForm({ kind, id, requestId, expectedVersion, operatorId, i
         </div>
       ))}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="active">Situação</Label>
+        <Label help="Restringe ou define a situação ativa/inativa do registro; registros anteriores são preservados." htmlFor="active">Situação</Label>
         <NativeSelect id="active" name="active" value={values.active ?? "true"}
           onChange={(event) => setValues((old) => ({ ...old, active: event.target.value }))}>
           <option value="true">Ativo</option><option value="false">Inativo</option>
@@ -70,15 +71,15 @@ export function ConfigForm({ kind, id, requestId, expectedVersion, operatorId, i
         {error("active")}
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="reason">Motivo do registro ou alteração *</Label>
+        <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="reason">Motivo do registro ou alteração *</Label>
         <Input id="reason" name="reason" required maxLength={300} value={values.reason ?? ""}
           aria-invalid={Boolean(errors?.reason)} aria-describedby={errors?.reason ? "reason-error" : undefined}
           onChange={(event) => setValues((old) => ({ ...old, reason: event.target.value }))} />
         {error("reason")}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button>
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</Link>
+        <Button help="Valida os campos e salva o cadastro com a justificativa informada." type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</ActionLink>
       </div>
     </form>
   );

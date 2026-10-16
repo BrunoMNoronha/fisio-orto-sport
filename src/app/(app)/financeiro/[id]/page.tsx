@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -61,9 +62,9 @@ export default async function CobrancaPage({ params, searchParams }: PageProps<"
           </div>
           {canManage && active && (
             <div className="flex flex-wrap items-center gap-2">
-              {balanceCents > 0 && <Link href={`/financeiro/${charge.id}/pagamentos/novo`} className={buttonVariants()}>Registrar recebimento</Link>}
+              {balanceCents > 0 && <ActionLink help="Abre o formulário para registrar um pagamento desta cobrança." href={`/financeiro/${charge.id}/pagamentos/novo`} className={buttonVariants()}>Registrar recebimento</ActionLink>}
               {receivedCents === 0 && <>
-                <Link href={`/financeiro/${charge.id}/substituir`} className={buttonVariants({ variant: "outline" })}>Substituir</Link>
+                <ActionLink help="Abre o formulário de substituição da cobrança; o cancelamento da original só ocorre ao confirmar." href={`/financeiro/${charge.id}/substituir`} className={buttonVariants({ variant: "outline" })}>Substituir</ActionLink>
                 <CancelChargeForm id={charge.id} />
               </>}
             </div>
@@ -122,10 +123,10 @@ export default async function CobrancaPage({ params, searchParams }: PageProps<"
                 </dl>
                 {canManage && active && <div className="flex flex-wrap gap-2">
                   {!payment.reversal ? <>
-                    <Link href={`/financeiro/${charge.id}/pagamentos/${payment.id}/corrigir`} className={buttonVariants({ variant: "outline", size: "sm" })}>Corrigir</Link>
+                    <ActionLink help="Abre o formulário de correção do recebimento, que exige justificativa." href={`/financeiro/${charge.id}/pagamentos/${payment.id}/corrigir`} className={buttonVariants({ variant: "outline", size: "sm" })}>Corrigir</ActionLink>
                     <ReversePaymentForm paymentId={payment.id} requestId={crypto.randomUUID()} receivedOn={toDateInput(payment.receivedOn)} today={today} />
                   </> : !payment.replacedBy && balanceCents > 0 && (
-                    <Link href={`/financeiro/${charge.id}/pagamentos/novo?replacesPaymentId=${payment.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Registrar substituto</Link>
+                    <ActionLink help="Abre o formulário para registrar o substituto do recebimento estornado." href={`/financeiro/${charge.id}/pagamentos/novo?replacesPaymentId=${payment.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>Registrar substituto</ActionLink>
                   )}
                 </div>}
               </li>
@@ -133,9 +134,9 @@ export default async function CobrancaPage({ params, searchParams }: PageProps<"
           </ol>
         )}
         {pageCount > 1 && <nav aria-label="Paginação dos pagamentos" className="flex flex-wrap items-center justify-between gap-3">
-          {page > 1 ? <Link href={`/financeiro/${id}?page=${page - 1}#pagamentos`} className={buttonVariants({ variant: "outline" })}>Anterior</Link> : <span />}
+          {page > 1 ? <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais." href={`/financeiro/${id}?page=${page - 1}#pagamentos`} className={buttonVariants({ variant: "outline" })}>Anterior</ActionLink> : <span />}
           <p className="text-sm text-muted-foreground">Página {page} de {pageCount}</p>
-          {page < pageCount ? <Link href={`/financeiro/${id}?page=${page + 1}#pagamentos`} className={buttonVariants({ variant: "outline" })}>Próxima</Link> : <span />}
+          {page < pageCount ? <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={`/financeiro/${id}?page=${page + 1}#pagamentos`} className={buttonVariants({ variant: "outline" })}>Próxima</ActionLink> : <span />}
         </nav>}
       </section>
 

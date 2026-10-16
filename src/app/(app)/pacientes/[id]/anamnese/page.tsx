@@ -1,5 +1,5 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
@@ -30,14 +30,14 @@ export default async function AnamnesePage({ params }: PageProps<"/pacientes/[id
           <h2 className="text-xl font-semibold tracking-tight">Anamnese</h2>
           <div className="flex gap-3">
             {anamnesis && (
-              <Link href={`${base}/historico`} className={buttonVariants({ variant: "outline" })}>
+              <ActionLink help="Exibe as versões anteriores da anamnese, preservadas no histórico." href={`${base}/historico`} className={buttonVariants({ variant: "outline" })}>
                 Histórico de versões
-              </Link>
+              </ActionLink>
             )}
             {canRegister && anamnesis && (
-              <Link href={`${base}/nova`} className={buttonVariants()}>
+              <ActionLink help="Abre o formulário de uma nova anamnese do paciente." href={`${base}/nova`} className={buttonVariants()}>
                 Nova versão
-              </Link>
+              </ActionLink>
             )}
           </div>
         </div>
@@ -58,9 +58,9 @@ export default async function AnamnesePage({ params }: PageProps<"/pacientes/[id
         <div className="flex flex-col items-start gap-4 rounded-xl border border-dashed p-6">
           <p className="text-sm text-muted-foreground">Nenhuma anamnese registrada para este paciente.</p>
           {canRegister && (
-            <Link href={`${base}/nova`} className={buttonVariants()}>
+            <ActionLink help="Abre o formulário de uma nova anamnese do paciente." href={`${base}/nova`} className={buttonVariants()}>
               Registrar anamnese
-            </Link>
+            </ActionLink>
           )}
         </div>
       )}

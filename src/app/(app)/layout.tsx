@@ -1,3 +1,4 @@
+import { ActionHelpProvider } from "@/components/informative-help";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { AppSidebar, type NavKey } from "@/components/app-sidebar";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -5,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { requireUser } from "@/modules/auth/dal";
 import { ROLE_LABELS, can } from "@/modules/auth/permissions";
-import { getClinicDisplayName } from "@/modules/configuracoes/queries";
+import { getClinicDisplayName, getActionTooltipsEnabled } from "@/modules/configuracoes/queries";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
@@ -17,10 +18,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (can(user.role, "administrativo:ler")) allowed.push("administrativo");
   if (can(user.role, "usuarios:ler")) allowed.push("usuarios");
   if (can(user.role, "configuracoes:ler")) allowed.push("configuracoes");
-  const clinicName = await getClinicDisplayName();
+  const [clinicName, actionTooltipsEnabled] = await Promise.all([getClinicDisplayName(), getActionTooltipsEnabled()]);
 
   return (
-    <SidebarProvider>
+    <ActionHelpProvider enabled={actionTooltipsEnabled}><SidebarProvider>
       <AppSidebar
         allowed={allowed}
         user={{ name: user.name, email: user.email, roleLabel: ROLE_LABELS[user.role] }}
@@ -37,6 +38,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </header>
         <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 md:p-6">{children}</div>
       </SidebarInset>
-    </SidebarProvider>
+    </SidebarProvider></ActionHelpProvider>
   );
 }

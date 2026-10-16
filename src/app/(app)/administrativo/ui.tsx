@@ -1,9 +1,10 @@
+import { NativeActionButton } from "@/components/informative-help";
 import Link from "next/link";
 export { CatalogPagination as Pagination, dateLabel } from "../configuracoes/catalog-ui";
 export function Search({ label, q, hidden = {} }: { label: string; q?: string; hidden?: Record<string,string> }) {
   return <form className="flex flex-wrap gap-2">{Object.entries(hidden).map(([k,v]) => <input type="hidden" key={k} name={k} value={v} />)}
     <input className="min-w-0 flex-1 rounded border p-2" name="q" maxLength={120} defaultValue={q} aria-label={label} />
-    <button className="underline" type="submit">Buscar</button></form>;
+    <NativeActionButton help="Atualiza a consulta usando os filtros informados, sem alterar os registros." className="underline" type="submit">Buscar</NativeActionButton></form>;
 }
 export const dateValue = (v: Date | null) => v?.toISOString().slice(0,10) ?? "";
 export function Notice() { return <p className="rounded border p-3 text-sm">Cobertura e autorização são registros para faturamento. Pendências não bloqueiam atendimento clínico. Operadora piloto e volume permanecem pendentes.</p>; }

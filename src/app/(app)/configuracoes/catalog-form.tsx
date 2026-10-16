@@ -1,5 +1,6 @@
 "use client";
-import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 import { useActionState, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +33,7 @@ export function CatalogForm({ kind, id, requestId, version, parentId, initial, c
   const update = (key: string, value: string) => setValues((old) => ({ ...old, [key]: value }));
   function feedback(key: string) { return errors?.[key] && <p id={`${key}-error`} className="text-sm text-destructive">{errors[key][0]}</p>; }
   function select(key: string, label: string, options: [string, string][]) {
-    return <div className="flex flex-col gap-2"><Label htmlFor={key}>{label}</Label>
+    return <div className="flex flex-col gap-2"><Label help={fieldHelp(key)} htmlFor={key}>{label}</Label>
       <NativeSelect id={key} name={key} value={values[key] ?? ""} onChange={(e) => update(key, e.target.value)}
         aria-invalid={Boolean(errors?.[key])} aria-describedby={errors?.[key] ? `${key}-error` : undefined}>
         {options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
@@ -51,7 +52,7 @@ export function CatalogForm({ kind, id, requestId, version, parentId, initial, c
       {select("userId", "Usuário fisioterapeuta (opcional)", [["", "Sem vínculo"], ...users.map((u): [string,string] => [u.id, u.name])])}
     </>}
     {fields[kind].map((field) => <div key={field.name} className="flex flex-col gap-2">
-      <Label htmlFor={field.name}>{field.label}{field.required ? " *" : ""}</Label>
+      <Label help={fieldHelp(field.name)} htmlFor={field.name}>{field.label}{field.required ? " *" : ""}</Label>
       <Input id={field.name} name={field.name} type={field.type ?? "text"} maxLength={field.max} required={field.required}
         readOnly={Boolean(version && field.immutable)} value={values[field.name] ?? ""}
         min={field.type === "date" ? "2000-01-01" : undefined} max={field.type === "date" ? "2100-12-31" : undefined}
@@ -61,10 +62,10 @@ export function CatalogForm({ kind, id, requestId, version, parentId, initial, c
     </div>)}
     {kind === "professional" && select("councilState", "UF do conselho", [["","Pendente"], ...STATES.map((s): [string,string] => [s,s])])}
     {select("active", "Situação", [["true","Ativo"],["false","Inativo"]])}
-    <div className="flex flex-col gap-2"><Label htmlFor="reason">Motivo do registro ou alteração *</Label>
+    <div className="flex flex-col gap-2"><Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="reason">Motivo do registro ou alteração *</Label>
       <Input id="reason" name="reason" value={values.reason ?? ""} required maxLength={300} onChange={(e) => update("reason",e.target.value)}
         aria-invalid={Boolean(errors?.reason)} aria-describedby={errors?.reason ? "reason-error" : undefined} />{feedback("reason")}</div>
-    <div className="flex flex-wrap gap-2"><Button disabled={pending} type="submit">{pending ? "Salvando…" : "Salvar"}</Button>
-      <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</Link></div>
+    <div className="flex flex-wrap gap-2"><Button help="Valida os campos e salva o cadastro com a justificativa informada." disabled={pending} type="submit">{pending ? "Salvando…" : "Salvar"}</Button>
+      <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</ActionLink></div>
   </form>;
 }

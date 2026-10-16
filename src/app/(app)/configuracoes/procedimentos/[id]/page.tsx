@@ -1,3 +1,4 @@
+import { HelpLabel, NativeActionButton } from "@/components/informative-help";
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -31,8 +32,8 @@ export default async function Procedure({ params, searchParams }: {
       <CatalogPagination page={item.page} pages={item.pages} href={`/configuracoes/procedimentos/${id}`} />
     </section>
     <section className="flex flex-col gap-3"><h2 className="text-lg font-semibold">Consultar valor na data de execução</h2>
-      <form className="flex flex-wrap gap-3"><label htmlFor="data">Data de execução</label><input id="data" name="data" type="date" required defaultValue={search.data}
-        min="2000-01-01" max="2100-12-31" className="rounded border p-2" /><button className="underline" type="submit">Consultar</button></form>
+      <form className="flex flex-wrap gap-3"><HelpLabel help="Data em que o procedimento será executado, usada para consultar vigência e elegibilidade." htmlFor="data">Data de execução</HelpLabel><input id="data" name="data" type="date" required defaultValue={search.data}
+        min="2000-01-01" max="2100-12-31" className="rounded border p-2" /><NativeActionButton help="Consulta a elegibilidade com os parâmetros informados, sem registrar uma execução." className="underline" type="submit">Consultar</NativeActionButton></form>
       {result && <p role="status" className="rounded border p-3 text-sm">{result.status === "OK"
         ? `${money(result.snapshot.amountCents)} · Tarifa versão ${result.snapshot.tariffVersion}. Consulta sem geração de cobrança.` : statuses[result.status]}</p>}
     </section>

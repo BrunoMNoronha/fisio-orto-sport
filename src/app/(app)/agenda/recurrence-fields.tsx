@@ -1,4 +1,5 @@
 "use client";
+import { HelpLabel } from "@/components/informative-help";
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -40,15 +41,15 @@ export function RecurrenceFields({ date, startTime, endTime, value, onChange, er
   return (
     <fieldset disabled={disabled} className="flex flex-col gap-3 rounded-xl border p-4">
       <legend className="px-1 text-sm font-medium">Recorrência</legend>
-      <label className="flex items-center gap-2 text-sm">
+      <HelpLabel help="Cria várias sessões nos dias da semana selecionados, a partir do primeiro agendamento." className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={value.enabled} onChange={(event) => {
           onChange({ ...value, enabled: event.target.checked });
           if (event.target.checked) showDays(event.target);
         }} />
         Agendamento recorrente
-      </label>
+      </HelpLabel>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="sessionCount">Quantidade de sessões</Label>
+        <Label help="Total de sessões da série, incluindo a primeira, respeitando o limite configurado pela clínica." htmlFor="sessionCount">Quantidade de sessões</Label>
         <Input id="sessionCount" name="sessionCount" type="number" min={1} max={maxSessions} step={1}
           disabled={!value.enabled || disabled} value={value.sessionCount}
           aria-invalid={countError ? true : undefined} aria-describedby="sessionCount-help sessionCount-error"
@@ -62,7 +63,7 @@ export function RecurrenceFields({ date, startTime, endTime, value, onChange, er
         {value.weekdays.map((day) => <input key={day} type="hidden" name="weekdays" value={day} />)}
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <span>Dias: {value.weekdays.map((day) => WEEKDAYS[day - 1]).join(", ") || "Selecione os dias"}</span>
-          <Button type="button" variant="outline" onClick={(event) => showDays(event.currentTarget)} aria-describedby="weekdays-error">Alterar dias</Button>
+          <Button help="Abre a seleção dos dias da semana usados na recorrência." type="button" variant="outline" onClick={(event) => showDays(event.currentTarget)} aria-describedby="weekdays-error">Alterar dias</Button>
         </div>
         <p id="weekdays-error" className="text-sm text-destructive" role={weekdaysError ? "alert" : undefined}>{weekdaysError}</p>
         <div aria-live="polite" className="text-sm">
@@ -84,18 +85,18 @@ export function RecurrenceFields({ date, startTime, endTime, value, onChange, er
           <div className="grid grid-cols-2 gap-3">
             {WEEKDAYS.map((label, index) => {
               const day = index + 1;
-              return <label key={day} className="flex items-center gap-2">
+              return <HelpLabel help="Inclui ou retira este dia da semana da distribuição das sessões recorrentes." key={day} className="flex items-center gap-2">
                 <input ref={index === 0 ? firstDay : undefined} type="checkbox" checked={draft.includes(day)}
                   onChange={(event) => setDraft((days) => event.target.checked ? [...days, day].sort() : days.filter((item) => item !== day))} />
                 {label}
-              </label>;
+              </HelpLabel>;
             })}
           </div>
           {!draft.length && <p className="text-sm text-destructive">Selecione ao menos um dia.</p>}
           {currentDay && !draft.includes(currentDay) && <p className="text-sm text-destructive">Inclua {WEEKDAYS[currentDay - 1]}, dia da data inicial.</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>
-            <Button type="button" disabled={!draft.length || !currentDay || !draft.includes(currentDay)} onClick={() => {
+            <Button help="Fecha a seleção de dias e descarta as mudanças ainda não confirmadas." type="button" variant="outline" onClick={cancel}>Cancelar</Button>
+            <Button help="Aplica os dias selecionados à recorrência no formulário; ainda é necessário salvar o agendamento." type="button" disabled={!draft.length || !currentDay || !draft.includes(currentDay)} onClick={() => {
               onChange({ ...value, weekdays: draft });
               setOpen(false);
             }}>Confirmar dias</Button>

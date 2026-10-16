@@ -1,7 +1,9 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { NativeActionButton } from "@/components/informative-help";
+import { fieldHelp } from "@/lib/field-help";
 
 import { AlertCircle, Check, ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -223,7 +225,7 @@ export function AnamnesisForm({
     const id = `anamnese-${name}`;
     return (
       <div className={cn("flex flex-col gap-2", options.className)}>
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <Textarea
           {...a11y(id, errors?.[name])}
           {...field(name)}
@@ -271,7 +273,7 @@ export function AnamnesisForm({
               const filled = !active && !hasError && isFilled(item);
               return (
                 <li key={item.id} className="shrink-0">
-                  <button
+                  <NativeActionButton help="Abre esta etapa da anamnese sem salvar nem descartar os dados preenchidos."
                     type="button"
                     onClick={() => goTo(index)}
                     aria-current={active ? "step" : undefined}
@@ -303,7 +305,7 @@ export function AnamnesisForm({
                     </span>
                     {item.title}
                     {hasError && <span className="sr-only"> (com erro)</span>}
-                  </button>
+                  </NativeActionButton>
                 </li>
               );
             })}
@@ -314,7 +316,7 @@ export function AnamnesisForm({
           <StepSection step={ANAMNESIS_STEPS[0]} index={0} active={step === 0} headingRef={headingRef}>
             <div className="grid gap-4 md:grid-cols-3">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="anamnese-assessmentDate">Data da avaliação *</Label>
+                <Label help="Data civil em que a avaliação de anamnese foi realizada." htmlFor="anamnese-assessmentDate">Data da avaliação *</Label>
                 <Input
                   {...a11y("anamnese-assessmentDate", errors?.assessmentDate)}
                   {...field("assessmentDate")}
@@ -349,7 +351,7 @@ export function AnamnesisForm({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="anamnese-painLocation">Localização</Label>
+                <Label help="Região do corpo em que o paciente relata dor." htmlFor="anamnese-painLocation">Localização</Label>
                 <Input
                   {...a11y("anamnese-painLocation", errors?.painLocation)}
                   {...field("painLocation")}
@@ -423,20 +425,20 @@ export function AnamnesisForm({
           <span className="hidden sm:inline"> · Salvar cria uma nova versão; as anteriores ficam no histórico.</span>
         </p>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+          <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
             Cancelar
-          </Link>
+          </ActionLink>
           {step > 0 && (
-            <Button type="button" variant="outline" size="lg" onClick={() => goTo(step - 1)}>
+            <Button help="Volta à etapa anterior da anamnese sem perder os dados preenchidos." type="button" variant="outline" size="lg" onClick={() => goTo(step - 1)}>
               <ChevronLeft data-icon="inline-start" />
               Anterior
             </Button>
           )}
-          <Button type="submit" variant={step === LAST_STEP ? "default" : "outline"} size="lg" disabled={pending}>
+          <Button help="Valida e salva os dados da anamnese de todas as etapas." type="submit" variant={step === LAST_STEP ? "default" : "outline"} size="lg" disabled={pending}>
             {pending ? "Salvando…" : "Salvar anamnese"}
           </Button>
           {next && (
-            <Button type="button" size="lg" onClick={() => goTo(step + 1)}>
+            <Button help="Avança à próxima etapa da anamnese sem salvar o formulário." type="button" size="lg" onClick={() => goTo(step + 1)}>
               <span className="hidden sm:inline">Próxima etapa: </span>
               {next.title}
               <ChevronRight data-icon="inline-end" />

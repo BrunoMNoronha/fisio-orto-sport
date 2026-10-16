@@ -72,3 +72,8 @@ export async function getPrintIdentity(): Promise<ClinicIdentity | null> {
   const identity = { displayName, legalName, cnpj, phone, email, address };
   return Object.values(identity).some(Boolean) ? identity : null;
 }
+
+// Only this presentation preference is shared with authenticated consumers.
+export async function getActionTooltipsEnabled(): Promise<boolean> {
+  return (await loadSettings()).actionTooltipsEnabled;
+}

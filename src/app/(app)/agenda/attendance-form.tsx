@@ -23,7 +23,7 @@ export function AttendanceForm({ id, current }: { id: string; current: Appointme
       <input type="hidden" name="id" value={id} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-56 flex-col gap-2">
-          <Label htmlFor="presenca">Presença</Label>
+          <Label help="Registra comparecimento ou modalidade de falta; deixar sem registro remove a presença informada." htmlFor="presenca">Presença</Label>
           <NativeSelect
             id="presenca"
             name="attendance"
@@ -40,7 +40,7 @@ export function AttendanceForm({ id, current }: { id: string; current: Appointme
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit" variant="outline" disabled={pending || value === (current ?? "")}>
+        <Button help="Salva a presença selecionada para este agendamento." type="submit" variant="outline" disabled={pending || value === (current ?? "")}>
           {pending ? "Salvando…" : "Salvar presença"}
         </Button>
       </div>

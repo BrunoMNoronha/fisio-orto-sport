@@ -25,7 +25,7 @@ export function CancelAppointmentForm({ id }: { id: string }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card shadow-xs p-4">
       <Dialog>
-        <DialogTrigger render={<Button variant="destructive" />}>Cancelar agendamento</DialogTrigger>
+        <DialogTrigger render={<Button help="Abre a confirmação de cancelamento do agendamento." variant="destructive" />}>Cancelar agendamento</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancelar este agendamento?</DialogTitle>
@@ -36,7 +36,7 @@ export function CancelAppointmentForm({ id }: { id: string }) {
           <form action={formAction} className="flex flex-col gap-4">
             <input type="hidden" name="id" value={id} />
             <div className="flex flex-col gap-2">
-              <Label htmlFor="cancelar-motivo">Motivo do cancelamento (opcional)</Label>
+              <Label help="Justificativa administrativa do cancelamento, quando houver." htmlFor="cancelar-motivo">Motivo do cancelamento (opcional)</Label>
               <Input
                 id="cancelar-motivo"
                 name="reason"
@@ -56,8 +56,8 @@ export function CancelAppointmentForm({ id }: { id: string }) {
               </p>
             )}
             <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-              <Button type="submit" variant="destructive" disabled={pending}>
+              <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+              <Button help="Confirma o cancelamento deste agendamento, preservando o registro no histórico." type="submit" variant="destructive" disabled={pending}>
                 {pending ? "Cancelando…" : "Confirmar cancelamento"}
               </Button>
             </DialogFooter>

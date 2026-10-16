@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatBRL, isPlausibleId, patientLabel } from "@/modules/financeiro/validation";
@@ -43,9 +43,9 @@ export function filterFormValues(raw: Raw, filters: Filters | null, patient: Pat
 export function ReportNavigation({ active, filters }: { active: "receivables" | "receipts"; filters: Filters | null }) {
   return (
     <nav aria-label="Navegação financeira" className="flex flex-wrap gap-2">
-      <Link href="/financeiro" className={buttonVariants({ variant: "outline", size: "sm" })}>Cobranças</Link>
-      <Link href={reportHref(RECEIVABLES_PATH, filters)} aria-current={active === "receivables" ? "page" : undefined} className={buttonVariants({ variant: active === "receivables" ? "secondary" : "outline", size: "sm" })}>Contas a receber</Link>
-      <Link href={reportHref(RECEIPTS_PATH, filters)} aria-current={active === "receipts" ? "page" : undefined} className={buttonVariants({ variant: active === "receipts" ? "secondary" : "outline", size: "sm" })}>Recebimentos</Link>
+      <ActionLink help="Abre a consulta de cobranças dos pacientes." href="/financeiro" className={buttonVariants({ variant: "outline", size: "sm" })}>Cobranças</ActionLink>
+      <ActionLink help="Abre o relatório de contas a receber com os filtros correspondentes." href={reportHref(RECEIVABLES_PATH, filters)} aria-current={active === "receivables" ? "page" : undefined} className={buttonVariants({ variant: active === "receivables" ? "secondary" : "outline", size: "sm" })}>Contas a receber</ActionLink>
+      <ActionLink help="Abre o relatório dos recebimentos registrados." href={reportHref(RECEIPTS_PATH, filters)} aria-current={active === "receipts" ? "page" : undefined} className={buttonVariants({ variant: active === "receipts" ? "secondary" : "outline", size: "sm" })}>Recebimentos</ActionLink>
     </nav>
   );
 }
@@ -85,8 +85,8 @@ export function ReportPagination({ path, filters, page, pageCount, total, noun }
     <nav aria-label="Paginação do relatório" className="flex flex-wrap items-center justify-between gap-3 text-sm">
       <p className="text-muted-foreground">{total} {noun[total === 1 ? 0 : 1]} · página {page} de {pageCount}</p>
       <div className="flex flex-wrap gap-2">
-        {page > 1 && <Link href={reportHref(path, filters, page - 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>Anterior</Link>}
-        {page < pageCount && <Link href={reportHref(path, filters, page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>Próxima</Link>}
+        {page > 1 && <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais." href={reportHref(path, filters, page - 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>Anterior</ActionLink>}
+        {page < pageCount && <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={reportHref(path, filters, page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>Próxima</ActionLink>}
       </div>
     </nav>
   );

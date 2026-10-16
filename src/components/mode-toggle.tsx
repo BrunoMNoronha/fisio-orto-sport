@@ -8,7 +8,7 @@ export function ModeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
 
   return (
-    <Button
+    <Button help="Alterna entre os temas claro e escuro da interface."
       variant="ghost"
       size="icon"
       aria-label="Alternar tema"

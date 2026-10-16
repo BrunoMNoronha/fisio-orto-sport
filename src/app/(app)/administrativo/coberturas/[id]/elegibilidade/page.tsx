@@ -1,3 +1,4 @@
+import { HelpLabel, NativeActionButton } from "@/components/informative-help";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCoverage,getAuthorizationProcedure,listAuthorizationProcedures,checkEligibility } from "@/modules/administrativo/beneficiary-queries";
@@ -17,9 +18,9 @@ export default async function CoverageEligibility({params,searchParams}:{params:
       <Pagination page={options.page} pages={options.pages} href={`${base}?q=${encodeURIComponent(search.q??"")}`}/></>}</>:<>
       <p>{procedure.code} · {procedure.name}</p>
       <form className="flex flex-wrap gap-3"><input type="hidden" name="procedimento" value={procedure.id}/>
-        <label htmlFor="data">Data de execução</label><input id="data" name="data" type="date" required defaultValue={search.data} className="rounded border p-2"/>
-        <label htmlFor="quantidade">Quantidade</label><input id="quantidade" name="quantidade" type="number" required min={1} max={2147483647} step={1} defaultValue={search.quantidade??"1"} className="w-24 rounded border p-2"/>
-        <button type="submit" className="underline">Consultar</button></form>
+        <HelpLabel help="Data em que o procedimento será executado, usada para consultar vigência e elegibilidade." htmlFor="data">Data de execução</HelpLabel><input id="data" name="data" type="date" required defaultValue={search.data} className="rounded border p-2"/>
+        <HelpLabel help="Número de unidades do procedimento para a consulta de elegibilidade." htmlFor="quantidade">Quantidade</HelpLabel><input id="quantidade" name="quantidade" type="number" required min={1} max={2147483647} step={1} defaultValue={search.quantidade??"1"} className="w-24 rounded border p-2"/>
+        <NativeActionButton help="Consulta a elegibilidade com os parâmetros informados, sem registrar uma execução." type="submit" className="underline">Consultar</NativeActionButton></form>
       {result&&<p role="status" className="rounded border p-3 text-sm">{eligibilityLabels[result.status]} Nenhum saldo foi consumido.</p>}
       <p className="text-sm">Se a autorização for exigida, abra o item da autorização recebida para consultar seu saldo e vigência.</p></>}
   </div>;

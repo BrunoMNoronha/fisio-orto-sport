@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 // A impressão do navegador também permite "Salvar como PDF".
 export function PrintButton() {
   return (
-    <Button onClick={() => window.print()}>
+    <Button help="Abre o diálogo de impressão do navegador, onde também é possível salvar em PDF." onClick={() => window.print()}>
       <PrinterIcon />
       Imprimir / Salvar em PDF
     </Button>

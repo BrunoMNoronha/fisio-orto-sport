@@ -12,7 +12,7 @@ export default function NotFound() {
       <p className="text-sm font-medium text-muted-foreground">Erro 404</p>
       <h1 className="text-2xl font-semibold tracking-tight">Página não encontrada</h1>
       <p className="text-muted-foreground">O endereço não existe. Confira o link ou volte ao início.</p>
-      <Button nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
+      <Button help="Abre a página inicial do sistema." nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
     </main>
   );
 }

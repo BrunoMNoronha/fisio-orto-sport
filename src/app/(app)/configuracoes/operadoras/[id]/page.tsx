@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
@@ -17,7 +18,7 @@ export default async function OperadoraPage({ params, searchParams }: { params: 
       initial={{ name: operator.name, registrationAns: operator.registrationAns ?? "", active: String(operator.active), reason: "" }} cancelHref="/configuracoes/operadoras" />
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold">Contratos</h2>
-      <div><Link href={`/configuracoes/operadoras/${id}/contratos/novo`} className={buttonVariants({ variant: "outline" })}>Novo contrato</Link></div>
+      <div><ActionLink help="Abre o cadastro de um contrato para esta operadora." href={`/configuracoes/operadoras/${id}/contratos/novo`} className={buttonVariants({ variant: "outline" })}>Novo contrato</ActionLink></div>
       {operator.contracts.length === 0 && <p className="text-sm">Nenhum contrato cadastrado.</p>}
       <ul className="flex flex-col gap-2">{operator.contracts.map((contract) => <li key={contract.id} className="rounded-lg border p-3">
         <Link href={`/configuracoes/operadoras/${id}/contratos/${contract.id}`} className="break-words underline">{contract.name}</Link>

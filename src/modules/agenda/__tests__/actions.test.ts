@@ -94,8 +94,8 @@ const STARTS = new Date("2026-09-21T12:00:00.000Z");
 const ENDS = new Date("2026-09-21T13:00:00.000Z");
 const PAST = new Date("2026-09-01T12:00:00.000Z");
 const FUTURE = new Date("2999-01-01T12:00:00.000Z");
-const lockedRow = (row: Partial<{ status: string; startsAt: Date; attendance: string | null }> = {}) => [
-  { status: "AGENDADO", startsAt: PAST, attendance: null, ...row },
+const lockedRow = (row: Partial<{ status: string; startsAt: Date; endsAt: Date; attendance: string | null }> = {}) => [
+  { status: "AGENDADO", startsAt: PAST, endsAt: new Date(PAST.getTime() + 3_600_000), attendance: null, ...row },
 ];
 
 // Erro que o Prisma lança quando a constraint de exclusão do banco barra uma corrida.
@@ -305,6 +305,12 @@ describe("expediente no servidor", () => {
 });
 
 describe("rescheduleAppointment", () => {
+  it.each(["f1", "f2"])("sem mudança de horário não marca reagendamento, profissional %s", async (professionalId) => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ startsAt: STARTS, endsAt: ENDS }));
+    await expectRedirect(rescheduleAppointment(undefined, form({ id: "a1", ...slot, professionalId })), "/agenda/a1");
+    expect(prismaMock.appointment.update.mock.calls[0][0].data).not.toHaveProperty("lastRescheduledAt");
+  });
+
   it("reagenda e ignora o próprio agendamento na checagem de conflito", async () => {
     await expectRedirect(
       rescheduleAppointment(undefined, form({ id: "a1", ...slot, startTime: "14:00", endTime: "15:00" })),
@@ -319,6 +325,7 @@ describe("rescheduleAppointment", () => {
         professionalId: "f1",
         startsAt: new Date("2026-09-21T17:00:00.000Z"),
         endsAt: new Date("2026-09-21T18:00:00.000Z"),
+        lastRescheduledAt: expect.any(Date),
         updatedById: "u-RECEPCAO",
       },
       select: { id: true },

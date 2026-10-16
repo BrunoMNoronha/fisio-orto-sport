@@ -185,6 +185,7 @@ enum AppointmentAttendance {
 // Presença (MEL-01): `attendance` com quem/quando marcou (só o último); CHECK manual
 // "Appointment_attendance_consistent": os três campos vêm juntos e só em agendamento AGENDADO.
 model Appointment {
+  lastRescheduledAt    DateTime?              @db.Timestamptz(3)
   id                   String                 @id @default(cuid())
   patientId            String
   professionalId       String

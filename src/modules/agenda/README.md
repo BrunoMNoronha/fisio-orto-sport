@@ -15,6 +15,12 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 
 ## Regras
 
+- **Agendamento recorrente (#132):** só na criação. Checkbox habilita quantidade e modal Seg/Ter/Qua/Qui/Sex/Sáb/Dom. A quantidade inclui a primeira sessão; o dia da data inicial precisa estar selecionado. Cancelar a primeira abertura desmarca a recorrência; cancelar uma edição preserva os dias. A prévia calcula datas civis, inclusive viradas de mês/ano, em `America/Sao_Paulo`.
+- **Limite de recorrência:** `ClinicSettings.maxRecurringSessions`, padrão **10**, parametrizado pelo Administrador em Configurações → Agenda e expediente (inteiro de 1 a 100; 100 é o teto técnico do lote). O servidor relê o limite vigente sob o lock compartilhado de configuração. Redução não altera lotes existentes nem impede devolver o resultado de uma tentativa já concluída.
+- **Lote atômico e reenvio:** `AppointmentBatch` associa os registros e guarda hash do conteúdo normalizado, autor, chave UUID e IDs do resultado original. Repetir a mesma chave/autor/conteúdo retorna os mesmos IDs e quantidade, mesmo após alterações individuais; dados diferentes com uma chave já usada são recusados. A interface troca a chave ao editar. Locks preservam a ordem configuração → profissional → tentativa; isolamento READ COMMITTED, validação e escrita na mesma transação. Falha reverte lote, chave e agendamentos; nenhuma data é pulada ou movida automaticamente. As datas com impedimentos são listadas. Conflitos do paciente são agregados antes de gravar e podem ser confirmados sem liberar expediente, bloqueios ou capacidade. Cancelar, reagendar e marcar presença continuam individuais; não gera atendimento clínico ou cobrança.
+
+- **Situação na visão Lista (#133):** badge com texto e ícone: Compareceu (verde), Faltou (vermelho, preservando avisou/sem aviso), Reagendada (azul), Cancelada (cinza) e Agendada (neutra). Prioridade: cancelamento, presença, reagendamento, agendada. Não há falta automática por passagem do tempo. `lastRescheduledAt` é gravado na mesma transação do reagendamento apenas quando início/fim mudam; troca exclusiva de profissional e envio idêntico não alteram a marca. Presença e cancelamento preservam a marca. Registros anteriores à migração ficam nulos, pois `updatedAt` não comprova reagendamento. Aplicar a migração antes de publicar a aplicação.
+
 - **Profissional** = usuário (`User`) **ativo** com perfil `FISIOTERAPEUTA`. Não há tabela própria de profissionais; o módulo `profissionais` segue sem implementação.
 - **Paciente** deve existir e estar `ATIVO` para ser agendado.
 - **Horário**: data, início e fim informados explicitamente (não há duração padrão). O fim deve ser posterior ao início, no mesmo dia, com no máximo 12 h (limite técnico contra erro de digitação, não regra de negócio). No banco há também `CHECK ("endsAt" > "startsAt")`.
@@ -62,6 +68,6 @@ Itens da DEC-01 (#43) entregues: presença e vínculo com o atendimento (MEL-01,
 
 **Posteriores ao MVP:** visão mensal. O expediente foi entregue na #78 (global e semanal); expediente por profissional e lista própria de feriados não fazem parte dele.
 
-**Também fora do escopo:** edição de bloqueio, bloqueio recorrente, histórico de bloqueios removidos na tela, recorrência, notificações e lembretes, busca de pacientes no formulário (substituir a lista quando o volume crescer).
+**Também fora do escopo:** edição de bloqueio, bloqueio recorrente, histórico de bloqueios removidos na tela, edição/cancelamento de séries inteiras, recorrência sem fim/quinzenal/mensal, notificações e lembretes.
 
 A suíte `pnpm test:integration` executa os arquivos sequencialmente (`--test-concurrency=1`), pois os testes de capacidade/configurações alteram a linha global de `ClinicSettings`. As corridas internas continuam usando múltiplas conexões/instâncias reais.

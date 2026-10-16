@@ -24,6 +24,7 @@ const prismaMock = {
   // Trava da linha do agendamento (SELECT ... FOR UPDATE): status, início e presença.
   $queryRaw: jest.fn(),
   treatmentSession: { findFirst: jest.fn() },
+  appointmentBatch: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
   patient: { findUnique: jest.fn(), findMany: jest.fn() },
   user: { findUnique: jest.fn() },
   appointment: {
@@ -94,8 +95,8 @@ const STARTS = new Date("2026-09-21T12:00:00.000Z");
 const ENDS = new Date("2026-09-21T13:00:00.000Z");
 const PAST = new Date("2026-09-01T12:00:00.000Z");
 const FUTURE = new Date("2999-01-01T12:00:00.000Z");
-const lockedRow = (row: Partial<{ status: string; startsAt: Date; attendance: string | null }> = {}) => [
-  { status: "AGENDADO", startsAt: PAST, attendance: null, ...row },
+const lockedRow = (row: Partial<{ status: string; startsAt: Date; endsAt: Date; attendance: string | null }> = {}) => [
+  { status: "AGENDADO", startsAt: PAST, endsAt: new Date(PAST.getTime() + 3_600_000), attendance: null, ...row },
 ];
 
 // Erro que o Prisma lança quando a constraint de exclusão do banco barra uma corrida.
@@ -127,6 +128,52 @@ beforeEach(() => {
   prismaMock.appointment.updateMany.mockResolvedValue({ count: 1 });
   prismaMock.$queryRaw.mockResolvedValue(lockedRow());
   prismaMock.treatmentSession.findFirst.mockResolvedValue(null);
+  prismaMock.appointmentBatch.findUnique.mockResolvedValue(null);
+  prismaMock.appointmentBatch.create.mockResolvedValue({ id: "batch1" });
+  prismaMock.appointmentBatch.update.mockResolvedValue({ id: "batch1" });
+});
+
+describe("createAppointment — recorrência (#132)", () => {
+  const recurrence = { ...newAppointment, recurring: "1", sessionCount: "5", requestKey: "4f762301-c38a-4a94-8bb5-d0508e82e582" };
+  function batchForm(overrides: Record<string, string> = {}, days = [1, 3, 5]) {
+    const data = form({ ...recurrence, ...overrides });
+    days.forEach((day) => data.append("weekdays", String(day)));
+    return data;
+  }
+  it("valida quantidade e dias no servidor", async () => {
+    expect((await createAppointment(undefined, batchForm({ sessionCount: "0" })))?.fieldErrors?.sessionCount).toBeDefined();
+    expect((await createAppointment(undefined, batchForm({}, [])))?.fieldErrors?.weekdays).toBeDefined();
+    expect(prismaMock.appointmentBatch.create).not.toHaveBeenCalled();
+  });
+  it("exige chave e autorização antes de gravar", async () => {
+    expect((await createAppointment(undefined, batchForm({ requestKey: "" })))?.error).toMatch(/Tentativa inválida/);
+    as(null);
+    expect(await createAppointment(undefined, batchForm())).toEqual({ error: "Acesso negado." });
+    expect(prismaMock.appointmentBatch.create).not.toHaveBeenCalled();
+  });
+  it("cria o lote, ignora autor forjado e redireciona para o primeiro agendamento", async () => {
+    await expectRedirect(createAppointment(undefined, batchForm({ actorId: "forjado" })), "/agenda/a1");
+    expect(prismaMock.appointment.create).toHaveBeenCalledTimes(5);
+    expect(prismaMock.appointmentBatch.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ createdById: "u-RECEPCAO" }),
+    }));
+  });
+  it("informa a data da ocorrência impedida e não cria lote", async () => {
+    prismaMock.scheduleBlock.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "b1" });
+    const result = await createAppointment(undefined, batchForm());
+    expect(result?.occurrenceErrors?.[0].date).toBe("2026-09-23");
+    expect(prismaMock.appointmentBatch.create).not.toHaveBeenCalled();
+    expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+  });
+  it("falha inesperada preserva o formulário com mensagem sem dados internos", async () => {
+    prismaMock.appointmentBatch.create.mockRejectedValueOnce(new Error("segredo interno"));
+    const log = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await createAppointment(undefined, batchForm());
+      expect(result?.error).toMatch(/Tente novamente sem alterar os dados/);
+      expect(result?.error).not.toContain("segredo");
+    } finally { log.mockRestore(); }
+  });
 });
 
 afterEach(() => {
@@ -305,6 +352,12 @@ describe("expediente no servidor", () => {
 });
 
 describe("rescheduleAppointment", () => {
+  it.each(["f1", "f2"])("sem mudança de horário não marca reagendamento, profissional %s", async (professionalId) => {
+    prismaMock.$queryRaw.mockResolvedValue(lockedRow({ startsAt: STARTS, endsAt: ENDS }));
+    await expectRedirect(rescheduleAppointment(undefined, form({ id: "a1", ...slot, professionalId })), "/agenda/a1");
+    expect(prismaMock.appointment.update.mock.calls[0][0].data).not.toHaveProperty("lastRescheduledAt");
+  });
+
   it("reagenda e ignora o próprio agendamento na checagem de conflito", async () => {
     await expectRedirect(
       rescheduleAppointment(undefined, form({ id: "a1", ...slot, startTime: "14:00", endTime: "15:00" })),
@@ -319,6 +372,7 @@ describe("rescheduleAppointment", () => {
         professionalId: "f1",
         startsAt: new Date("2026-09-21T17:00:00.000Z"),
         endsAt: new Date("2026-09-21T18:00:00.000Z"),
+        lastRescheduledAt: expect.any(Date),
         updatedById: "u-RECEPCAO",
       },
       select: { id: true },

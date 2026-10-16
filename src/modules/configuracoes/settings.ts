@@ -3,6 +3,7 @@
 // agenda vêm de lá (uma definição só); o catálogo completo, com o que é só referência ou constante
 // técnica, está no README do módulo.
 import { CLOSED_WEEK } from "@/modules/agenda/business-hours";
+import { DEFAULT_MAX_RECURRING_SESSIONS } from "@/modules/agenda/recurrence";
 import { AGENDA_VIEWS, MAX_DURATION_MINUTES, type AgendaView } from "@/modules/agenda/validation";
 
 export type ClinicSettingsValues = {
@@ -15,6 +16,7 @@ export type ClinicSettingsValues = {
   agendaDayStartHour: number;
   agendaDayEndHour: number;
   maxSimultaneousAppointments: number;
+  maxRecurringSessions: number;
   suggestedDurationMinutes: number | null;
   agendaDefaultView: AgendaView;
   printShowClinicInfo: boolean;
@@ -45,6 +47,7 @@ export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   agendaDayStartHour: 7,
   agendaDayEndHour: 20,
   maxSimultaneousAppointments: 3,
+  maxRecurringSessions: DEFAULT_MAX_RECURRING_SESSIONS,
   suggestedDurationMinutes: null,
   agendaDefaultView: "dia",
   printShowClinicInfo: false,
@@ -79,6 +82,7 @@ export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
   agendaDayStartHour: "Início da faixa do dia",
   agendaDayEndHour: "Fim da faixa do dia",
   maxSimultaneousAppointments: "Agendamentos simultâneos por fisioterapeuta",
+  maxRecurringSessions: "Máximo de sessões por agendamento recorrente",
   suggestedDurationMinutes: "Duração sugerida",
   agendaDefaultView: "Visão inicial da agenda",
   printShowClinicInfo: "Identificação nas impressões",

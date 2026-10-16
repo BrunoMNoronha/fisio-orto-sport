@@ -21,6 +21,7 @@ describe("padrões", () => {
       agendaDayStartHour: 7,
       agendaDayEndHour: 20,
       maxSimultaneousAppointments: 3,
+      maxRecurringSessions: 10,
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
       printShowClinicInfo: false,

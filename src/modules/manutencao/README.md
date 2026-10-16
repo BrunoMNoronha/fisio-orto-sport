@@ -25,6 +25,8 @@ histórico financeiro, que não tem expurgo automático.
 
 ### Proteções
 
+Desde a #132, `AppointmentBatch` também integra o escopo de limpeza junto de `Appointment`: as chaves de criação recorrente e seus resultados são removidos com os agendamentos. Configurações, incluindo o limite de sessões, continuam preservadas. A inspeção de schema reconhece essa tabela explicitamente.
+
 - **Simulação por padrão:** sem `--executar`, só mostra o alvo (host e banco, nunca a URL), o
   escopo e as contagens.
 - **Confirmação dupla:** com `--executar`, pede o nome exato do banco e depois a palavra `LIMPAR`.

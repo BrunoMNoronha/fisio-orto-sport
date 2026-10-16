@@ -61,6 +61,12 @@ export default async function AgendamentoPage({ params }: PageProps<"/agenda/[id
   return (
     <div className="mx-auto w-full max-w-3xl flex flex-col gap-8">
       <div className="flex flex-col gap-3">
+        {appointment.batch && (
+          <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
+            Agendamento recorrente: lote com {appointment.batch._count.appointments} sessões registradas na agenda.
+            Cada agendamento pode ser alterado ou cancelado individualmente.
+          </p>
+        )}
         <Link href="/agenda" className="text-sm text-muted-foreground hover:text-foreground">
           ← Agenda
         </Link>

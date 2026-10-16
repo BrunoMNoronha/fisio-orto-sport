@@ -18,6 +18,7 @@ enum Role {
 }
 
 model User {
+  appointmentBatches AppointmentBatch[]
  operatorSettlements OperatorSettlement[]
  tissProfiles TissProfile[]
   batchChanges BatchChange[]
@@ -185,6 +186,9 @@ enum AppointmentAttendance {
 // Presença (MEL-01): `attendance` com quem/quando marcou (só o último); CHECK manual
 // "Appointment_attendance_consistent": os três campos vêm juntos e só em agendamento AGENDADO.
 model Appointment {
+  batchId              String?
+  batch                AppointmentBatch? @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  lastRescheduledAt    DateTime?              @db.Timestamptz(3)
   id                   String                 @id @default(cuid())
   patientId            String
   professionalId       String
@@ -213,9 +217,24 @@ model Appointment {
 
   // Alvo da FK composta do atendimento vinculado (mesmo paciente garantido no banco).
   @@unique([id, patientId])
+  @@index([batchId])
   @@index([professionalId, startsAt])
   @@index([patientId, startsAt])
   @@index([attendanceMarkedById])
+}
+
+// Tentativa lógica de criação recorrente. A chave pertence ao autor e ao conteúdo normalizado.
+model AppointmentBatch {
+  id           String @id @default(cuid())
+  requestKey   String @db.Uuid
+  requestHash  String @db.VarChar(64)
+  appointmentIds String[] @default([])
+  createdById  String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  createdBy    User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+
+  @@unique([createdById, requestKey])
 }
 
 // Bloqueio de horário de um profissional (MEL-02, #45): férias, ausências. Intervalo [início, fim),
@@ -710,6 +729,7 @@ model ClinicSettings {
   agendaDayEndHour         Int      @default(20)
   // Duração sugerida para novos agendamentos; null = desligada.
   maxSimultaneousAppointments Int @default(3)
+  maxRecurringSessions Int @default(10)
   suggestedDurationMinutes Int?
   // Visão que /agenda abre sem `view` na URL (#69): "dia", "semana" ou "lista" (CHECK manual).
   agendaDefaultView        String   @default("dia") @db.VarChar(10)

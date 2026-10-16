@@ -11,12 +11,15 @@ export const APPOINTMENT_LIST_SELECT = {
   startsAt: true,
   endsAt: true,
   status: true,
+  attendance: true,
+  lastRescheduledAt: true,
   patient: { select: { id: true, fullName: true } },
   professional: PERSON,
 } as const;
 
 export const APPOINTMENT_DETAIL_SELECT = {
   ...APPOINTMENT_LIST_SELECT,
+  batch: { select: { _count: { select: { appointments: true } } } },
   notes: true,
   cancelledAt: true,
   cancelReason: true,

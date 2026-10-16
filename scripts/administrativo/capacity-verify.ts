@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {PrismaPg} from '@prisma/adapter-pg';
 import {PrismaClient} from '../../src/generated/prisma/client';
 import {verifyCapacityReports,addCapacityItem,verifyExportRefusal,verifyXmlPersistenceRefusal} from '../../test/integration/capacity-report-scenarios';
@@ -15,12 +16,13 @@ async function main(){
   const db=new PrismaClient({adapter:new PrismaPg({connectionString:url.toString()})});
   const write=(name:string,data:unknown)=>writeFileSync(`${folder}/${name}.json`,JSON.stringify(data,null,2)+'\n');
   try{
-    const full=await verifyCapacityReports(db,cycles);
+    const full=await verifyCapacityReports(db,cycles,10000,{},(type,csv)=>writeFileSync(`${folder}/${type}.csv`,csv));
     write('exports',{revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),...full});
     const boundary=findXmlBoundary(),xsd=await validateTissXsd(boundary.result.bytes);
+    writeFileSync(`${folder}/xml-boundary.xml`,boundary.result.bytes);
     assert.throws(()=>serializeTiss(capacityXmlBatch(boundary.descriptionLength+1)),/limite de bytes/);
     const persistence=await verifyXmlPersistenceRefusal(db,cycles[0]);
-    write('xml-boundary',{bytes:boundary.result.bytes.length,limit:XML_HARD_LIMIT,descriptionLength:boundary.descriptionLength,...xsd,persistence});
+    write('xml-boundary',{bytes:boundary.result.bytes.length,sha256:createHash('sha256').update(boundary.result.bytes).digest('hex'),limit:XML_HARD_LIMIT,descriptionLength:boundary.descriptionLength,...xsd,persistence});
     const extra=await addCapacityItem(db,cycles[0]);write('extra',extra);
     write('refusal',await verifyExportRefusal(db));
     console.log('PASS: 10.000 linhas completas; 10.001 recusadas; XML >=99% de 2 MiB validado; originais preservados.');

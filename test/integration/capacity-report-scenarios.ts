@@ -38,7 +38,7 @@ export async function addCapacityItem(db:PrismaClient,cycle:Cycle){
   return {productionId:p.id,batchId:batch.id};
 }
 
-export async function verifyCapacityReports(db:PrismaClient,cycles:Cycle[],expected=10000,scope:{contractId?:string}={}){
+export async function verifyCapacityReports(db:PrismaClient,cycles:Cycle[],expected=10000,scope:{contractId?:string}={},onCsv:(type:string,csv:string)=>void=()=>{}){
   const started=performance.now(),results=[];
   assert.equal(cycles.reduce((n,c)=>n+c.itemCount,0),expected);
   for(const type of ['producao','conciliacao'] as const){
@@ -50,6 +50,7 @@ export async function verifyCapacityReports(db:PrismaClient,cycles:Cycle[],expec
     const csv=type==='producao'?administrativeReportCsv(full as Awaited<ReturnType<typeof readAdministrativeReport>>):financialReportCsv(full as Awaited<ReturnType<typeof readFinancialReport>>);
     assert.equal(csv.split('\r\n').filter(row=>row.startsWith('"ITEM";')).length,expected);
     assert(!csv.includes('DADO CLINICO'));assert(!csv.includes('SEGREDO CLINICO'));assert(!csv.includes('000SENHA'));
+    onCsv(type,csv);
     const last=type==='producao'?await readAdministrativeReport(db,'producao',{...scope,page:Math.ceil(expected/20),state:'ENVIADO'}):await readFinancialReport(db,'conciliacao',{...scope,axis:'envio',page:Math.ceil(expected/20)});
     assert.equal(last.items.length,expected===0?0:(expected-1)%20+1);assert.deepEqual(last.totals,full.totals);
     results.push({type,rows:full.items.length,totalCents:String(total),csvBytes:Buffer.byteLength(csv),csvSha256:createHash('sha256').update(csv).digest('hex'),readAndCsvMs:performance.now()-start});

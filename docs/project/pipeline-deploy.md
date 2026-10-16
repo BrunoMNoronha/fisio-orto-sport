@@ -125,7 +125,11 @@ a atribuição dos domínios e preserva o deployment anterior.
 O gate confere três contextos: URLs do runner, overrides devolvidos por
 `vercel pull` e conexão da aplicação em execução. A configuração baixada é
 validada antes das migrações Production, para impedir que um override Preview
-avance até o build. Secrets que a Vercel não devolve ao pull continuam sujeitos
+avance até o build. Chaves de conexão vazias, ausentes ou com o marcador exato `[SENSITIVE]` no pull
+não substituem os secrets validados do runner. As linhas indisponíveis são removidas
+do arquivo local antes do build, sem copiar credenciais. Outros valores divergentes
+continuam bloqueados.
+Secrets que a Vercel não devolve ao pull continuam sujeitos
 à prova obrigatória do runtime; a configuração do runner isoladamente não
 autoriza promoção.
 

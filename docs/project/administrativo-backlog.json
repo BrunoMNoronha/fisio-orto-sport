@@ -2,7 +2,7 @@
   "date": "2026-10-14",
   "repository": "BrunoMNoronha/fisio-orto-sport",
   "baseline": "4f35fdb",
-  "status": "ADM-00–ADM-10 implementadas e integradas em Preview; #106/#95 abertas por homologação externa pendente. ADM-11 (#131) em execução local para validar limites contratuais.",
+  "status": "ADM-00–ADM-10 implementadas e integradas em Preview; #106/#95 abertas por homologação externa pendente. ADM-11 (#131) implementada e validada localmente para validar limites contratuais.",
   "issues": [
     {
       "id": "ADM-00",
@@ -452,7 +452,7 @@
     "next": {
       "id": "ADM-11",
       "number": 131,
-      "status": "execução local"
+      "status": "validada localmente; PR/Preview pendentes"
     }
   }
 }

@@ -1,0 +1,367 @@
+{
+  "version": 1,
+  "issue": 131,
+  "clientDate": "2026-10-15",
+  "timezone": "America/Sao_Paulo",
+  "recordedAt": "2026-10-16T01:46:04.470Z",
+  "implementationRevision": "4363ff1c0c3247f376677e72bfd2a0d6fe82e12b",
+  "environment": {
+    "os": "Windows",
+    "node": "v24.20.0",
+    "postgres": "18",
+    "container": "fisio-adm99-test",
+    "scope": "LOCAL EXCLUSIVAMENTE SINTETICO"
+  },
+  "externalHomologation": "PENDENTE",
+  "newMigration": false,
+  "baseline": {
+    "revision": "1307d87896d9ede16e6778ecc8b095ea79c2235a",
+    "workingTreeModified": true,
+    "cycle": {
+      "batchId": "a75d98a4-73f9-4932-87c1-4d29b0f097dd",
+      "guideCount": 100,
+      "itemCount": 1000,
+      "consumed": 2000,
+      "billedCents": "10000000",
+      "receivedCents": "6000",
+      "analysisCents": "2000",
+      "openCents": "9992000",
+      "queries": 105817,
+      "timings": {
+        "prepareMs": 71074.1755,
+        "closeMs": 52398.56080000001,
+        "xmlMs": 569.2816000000021,
+        "reportsMs": 257.64690000002156,
+        "totalMs": 149237.7058
+      },
+      "xmlBytes": 778537,
+      "xmlSha256": "cb9c6b86d333dbc5ee4a6529f5b0289829ccbd61aa528926ca4e7f94e5026269"
+    }
+  },
+  "corpus": {
+    "revisionAtStart": "1307d87896d9ede16e6778ecc8b095ea79c2235a",
+    "workingTreeModifiedAtStart": true,
+    "batches": 10,
+    "items": 10000,
+    "units": 20000,
+    "cycles": [
+      {
+        "batchId": "cb61909c-1868-44d1-811b-69657eb053c2",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 70520.0886,
+          "closeMs": 28901.853300000002,
+          "xmlMs": 521.3977999999915,
+          "reportsMs": 219.37049999999,
+          "totalMs": 121540.9375
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "11347db666f4af66b1bff8ba6ba903f2f30ceae464a7758a9b7cc869f1d9b72d"
+      },
+      {
+        "batchId": "a8e1a467-a3a0-4d8c-a9fe-fd33b05d08d1",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 88911.4638,
+          "closeMs": 27525.314500000008,
+          "xmlMs": 464.6774999999907,
+          "reportsMs": 306.93839999998454,
+          "totalMs": 139454.81240000002
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "013aea2a11e74967b0af0be2b74444dec61ff0a52a411e2d60bde912c884e5f0"
+      },
+      {
+        "batchId": "02d9ffee-793a-477d-ab37-e064bbad5a12",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 98147.43790000002,
+          "closeMs": 51744.72779999999,
+          "xmlMs": 1421.6608000000124,
+          "reportsMs": 429.04899999999907,
+          "totalMs": 189236.0162
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "7e5598224cf63af063464e0150ef5af41df6574e78b8e3898ea74e68079b2a35"
+      },
+      {
+        "batchId": "4ae56c7a-d6ce-453b-a411-26c670560814",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 251423.24910000002,
+          "closeMs": 35047.602900000056,
+          "xmlMs": 861.9977000000654,
+          "reportsMs": 281.66680000000633,
+          "totalMs": 307787.8835
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "8f04cf4b167e287d396c71c56cd339cb60184f700b4e8606169244e0292f6540"
+      },
+      {
+        "batchId": "d405b36b-d37a-4333-97a4-18bb5b4c6011",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 75819.0405,
+          "closeMs": 31277.46399999992,
+          "xmlMs": 764.5013000000035,
+          "reportsMs": 400.85389999998733,
+          "totalMs": 131439.0921
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "1c8281eaf778943b0a61b5c5483dcb68fcb8128a3bc9aa468d9797152ea38a86"
+      },
+      {
+        "batchId": "c3a61b22-a082-4795-a111-06f8f4026b04",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 115305.20010000002,
+          "closeMs": 44321.03189999994,
+          "xmlMs": 759.8866000000853,
+          "reportsMs": 374.5864999999758,
+          "totalMs": 186263.54950000008
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "e8e0e940dc36fafb0ee3585f1df88f400e335b4368a14ce250fe6eb2919edd96"
+      },
+      {
+        "batchId": "8b0ff3bf-fc14-40c2-88f0-f1a51a2acfb6",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 75696.05960000004,
+          "closeMs": 30917.647299999837,
+          "xmlMs": 717.3928999998607,
+          "reportsMs": 290.50190000003204,
+          "totalMs": 127189.44480000017
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "d93461a75b2e0a413885817e2cf6f283344a66d6c75129a16ec21b8158e00c08"
+      },
+      {
+        "batchId": "4c2678b9-e966-4677-b11a-fbaa359d57d7",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 71442.95580000011,
+          "closeMs": 28793.717599999858,
+          "xmlMs": 758.3186000001151,
+          "reportsMs": 291.7671000000555,
+          "totalMs": 120212.78940000013
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "170cccad13608856639bd2da0833fceddc297adf0818c6d60534a35067f712d1"
+      },
+      {
+        "batchId": "1699a455-ed6a-4a7b-988c-d4cf0bec2e26",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 66087.23600000003,
+          "closeMs": 29822.352399999974,
+          "xmlMs": 695.5271000000648,
+          "reportsMs": 303.1211000001058,
+          "totalMs": 115088.93940000003
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "975996afe53b5e7b0271d9291096fced588478da843a8d266a0362069143862f"
+      },
+      {
+        "batchId": "bc7a9293-63b9-4023-85ab-3b203deb1eba",
+        "guideCount": 100,
+        "itemCount": 1000,
+        "consumed": 2000,
+        "billedCents": "10000000",
+        "receivedCents": "6000",
+        "analysisCents": "2000",
+        "openCents": "9992000",
+        "queries": 71653,
+        "timings": {
+          "prepareMs": 67812.08730000001,
+          "closeMs": 31275.85480000009,
+          "xmlMs": 722.7347999999765,
+          "reportsMs": 334.59129999997094,
+          "totalMs": 119014.05740000005
+        },
+        "xmlBytes": 778537,
+        "xmlSha256": "1db1c197d70b519ca8a093f180e000ddcbd6862634a41dc96241b9d2ad318608"
+      }
+    ],
+    "load": "Durante parte da execução houve Jest, lint e regressão PostgreSQL em outro banco do mesmo container."
+  },
+  "cleanCheck": {
+    "revision": "4363ff1c0c3247f376677e72bfd2a0d6fe82e12b",
+    "workingTreeModified": false,
+    "inheritedDatabaseUrlsOverridden": true,
+    "cycle": {
+      "batchId": "64b86a2e-73a4-42c8-86b7-2b670c75dffa",
+      "guideCount": 100,
+      "itemCount": 1000,
+      "consumed": 2000,
+      "billedCents": "10000000",
+      "receivedCents": "6000",
+      "analysisCents": "2000",
+      "openCents": "9992000",
+      "queries": 71653,
+      "timings": {
+        "prepareMs": 61439.6966,
+        "closeMs": 27415.683300000004,
+        "xmlMs": 826.870900000009,
+        "reportsMs": 207.9447000000073,
+        "totalMs": 108088.81929999999
+      },
+      "xmlBytes": 778537,
+      "xmlSha256": "d2287a91d92285403fc8edc17626369cd70b6d03a2d7f3b5f666c0537bd3e847"
+    }
+  },
+  "exports": {
+    "revision": "4363ff1c0c3247f376677e72bfd2a0d6fe82e12b",
+    "results": [
+      {
+        "type": "producao",
+        "rows": 10000,
+        "totalCents": "100000000",
+        "csvBytes": 2112707,
+        "csvSha256": "34f045d49acae6e384d1148a537de910591b35164f852aefc9151a5ad44a36cd",
+        "readAndCsvMs": 540.4384
+      },
+      {
+        "type": "conciliacao",
+        "rows": 10000,
+        "totalCents": "100000000",
+        "csvBytes": 4073085,
+        "csvSha256": "aa67e7f8094d4696523533b3482955c1daf648e69c4dbff38f4619bc5dc9191b",
+        "readAndCsvMs": 1132.1171
+      }
+    ],
+    "batchRows": 10,
+    "printSourceRows": 10000,
+    "totalMs": 2282.4895
+  },
+  "refusal": {
+    "rows": 10001,
+    "refused": true,
+    "pageRows": 20
+  },
+  "xmlBoundary": {
+    "bytes": 2096737,
+    "sha256": "2ba53f5ba8ba6c55e41a88dc252410eb46db387d15212919218b59e5d3ff03da",
+    "limit": 2097152,
+    "descriptionLength": 84,
+    "schemaDigest": "667f822947cdaacf47af4991566b64c07103d365171083a9b33aa1feb5388fe6",
+    "persistence": {
+      "limit": 778536,
+      "refused": true,
+      "artifacts": 1,
+      "sends": 1,
+      "originalPreserved": true
+    }
+  },
+  "batchBoundaries": {
+    "revision": "4363ff1c0c3247f376677e72bfd2a0d6fe82e12b",
+    "results": [
+      {
+        "kind": "guides",
+        "guides": 101,
+        "items": 101,
+        "refused": true,
+        "batchRows": 0,
+        "historyRows": 0,
+        "elapsedMs": 15012.699
+      },
+      {
+        "kind": "items",
+        "guides": 100,
+        "items": 1001,
+        "refused": true,
+        "batchRows": 0,
+        "historyRows": 0,
+        "elapsedMs": 94209.9769
+      }
+    ]
+  },
+  "checks": {
+    "jest": {
+      "suites": 124,
+      "tests": 1358,
+      "passed": true
+    },
+    "postgres": {
+      "suites": 45,
+      "tests": 293,
+      "passed": true
+    },
+    "pipeline": {
+      "tests": 10,
+      "passed": true
+    },
+    "typescript": true,
+    "eslint": true,
+    "webpackBuild": true,
+    "tissPhysicalPackage": true
+  },
+  "limits": [
+    "Sem SLA remoto ou homologação de operadora.",
+    "Impressão validada pela fonte mode=all; não foi gerado PDF físico de 10.000 linhas.",
+    "Benchmark de faturamento representa dez lotes e 10.000 itens; não dez mil lotes."
+  ]
+}

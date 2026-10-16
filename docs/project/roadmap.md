@@ -396,3 +396,8 @@ Otimização da revalidação com cache restrito à fase de leitura protegida po
 bloqueio ordenado em conjunto, mantendo timeout, atomicidade e histórico. Roteiro em
 [capacidade administrativa](19-administrativo-capacidade.md). Execução e evidências locais;
 sem nova migração, envio externo ou liberação de Production.
+
+Validação local concluída: dez lotes/10.000 itens, recusa de 101 guias/1.001 itens e
+10.001 linhas, XML de 2.096.737 bytes aprovado no XSD e preservação dos originais.
+Checks: 1.358 testes unitários, 293 PostgreSQL, dez de pipeline, tipos/lint/build/TISS
+aprovados. Evidências em [131-capacidade](evidencias/131-capacidade.md).

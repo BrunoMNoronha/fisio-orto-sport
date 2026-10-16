@@ -1,4 +1,6 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
 import Link from "next/link";
 import { useActionState, useState, useSyncExternalStore } from "react";
@@ -143,7 +145,7 @@ export function AppointmentForm({
     const id = `agendamento-${name}`;
     return (
       <div className="flex flex-col gap-2 sm:col-span-3">
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <NativeSelect {...a11y(id, errors?.[name])} {...field(name)} required className="w-full">
           <NativeSelectOption value="">{empty}</NativeSelectOption>
           {options.map((option) => (
@@ -172,7 +174,7 @@ export function AppointmentForm({
       const current = values[name];
       return (
         <div className="flex flex-col gap-2">
-          <Label htmlFor={id}>{label}</Label>
+          <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
           <NativeSelect
             {...a11y(id, errors?.[name])}
             {...field(name)}
@@ -194,7 +196,7 @@ export function AppointmentForm({
     }
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <Input {...a11y(id, errors?.[name])} {...field(name)} type={type} required />
         <FieldError id={`${id}-erro`} messages={errors?.[name]} />
       </div>
@@ -299,7 +301,7 @@ export function AppointmentForm({
 
       {patientPicker && (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="agendamento-notes">Observação administrativa (opcional)</Label>
+          <Label help="Informação administrativa de apoio; não inclua evolução clínica neste campo." htmlFor="agendamento-notes">Observação administrativa (opcional)</Label>
           <Textarea
             {...a11y("agendamento-notes", errors?.notes)}
             {...field("notes")}
@@ -313,17 +315,17 @@ export function AppointmentForm({
 
       <div className="flex gap-3">
         {patientConflicts?.length ? (
-          <Button type="submit" name="confirmPatientConflict" value="1" disabled={pending}>
+          <Button help="Confirma o agendamento apesar do conflito de horário do paciente; outras validações continuam sendo aplicadas." type="submit" name="confirmPatientConflict" value="1" disabled={pending}>
             {pending ? "Salvando…" : "Confirmar mesmo assim"}
           </Button>
         ) : (
-          <Button type="submit" disabled={pending}>
+          <Button help={appointmentId ? 'Salva o novo horário e profissional deste agendamento.' : 'Valida e cria o agendamento ou a série recorrente informada.'} type="submit" disabled={pending}>
             {pending ? "Salvando…" : submitLabel}
           </Button>
         )}
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>
           Voltar
-        </Link>
+        </ActionLink>
       </div>
     </form>
   );

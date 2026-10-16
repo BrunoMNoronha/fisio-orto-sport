@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -61,13 +62,13 @@ export default async function NovaSessaoPage({ params, searchParams }: PageProps
         </Alert>
         <div className="flex flex-wrap gap-2">
           {appointment && (
-            <Link href={`/agenda/${appointment.id}`} className={buttonVariants({ variant: "outline" })}>
+            <ActionLink help="Exibe os detalhes do agendamento vinculado." href={`/agenda/${appointment.id}`} className={buttonVariants({ variant: "outline" })}>
               Voltar ao agendamento
-            </Link>
+            </ActionLink>
           )}
-          <Link href={`${base}/nova`} className={buttonVariants({ variant: "ghost" })}>
+          <ActionLink help="Abre o formulário de atendimento sem vínculo com um agendamento." href={`${base}/nova`} className={buttonVariants({ variant: "ghost" })}>
             Registrar sem agendamento
-          </Link>
+          </ActionLink>
         </div>
       </div>
     );

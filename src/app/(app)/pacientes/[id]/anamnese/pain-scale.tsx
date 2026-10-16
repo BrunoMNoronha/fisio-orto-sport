@@ -1,4 +1,5 @@
 "use client";
+import { InformativeHelp } from "@/components/informative-help";
 
 import { cn } from "cn";
 
@@ -29,9 +30,9 @@ export function PainScale({
       aria-invalid={invalid || undefined}
       className="flex flex-col gap-2"
     >
-      <span id={`${id}-rotulo`} className="text-sm font-medium">
+      <InformativeHelp text="Selecione a intensidade relatada: zero é ausência de dor e dez é a maior intensidade da escala. Não informado deixa a intensidade sem registro."><span id={`${id}-rotulo`} className="text-sm font-medium">
         Intensidade da dor (EVA)
-      </span>
+      </span></InformativeHelp>
       <div className="flex flex-wrap gap-1.5">
         {LEVELS.map((level) => (
           <label key={level} className="relative">

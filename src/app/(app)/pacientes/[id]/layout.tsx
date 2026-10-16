@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { notFound } from "next/navigation";
 import { CalendarPlusIcon, PencilIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -68,17 +68,17 @@ export default async function PacienteLayout({ children, params }: LayoutProps<"
         {(canManage || canSchedule) && (
           <div className="flex flex-wrap items-start gap-2">
             {canSchedule && (
-              <Link href={`/agenda/novo?patientId=${patient.id}`} className={buttonVariants()}>
+              <ActionLink help="Abre o formulário para criar um agendamento; a marcação só ocorre ao confirmar." href={`/agenda/novo?patientId=${patient.id}`} className={buttonVariants()}>
                 <CalendarPlusIcon />
                 Agendar
-              </Link>
+              </ActionLink>
             )}
             {canManage && (
               <>
-                <Link href={`/pacientes/${patient.id}/editar`} className={buttonVariants({ variant: "outline" })}>
+                <ActionLink help="Abre o formulário de edição dos dados cadastrais do paciente." href={`/pacientes/${patient.id}/editar`} className={buttonVariants({ variant: "outline" })}>
                   <PencilIcon />
                   Editar
-                </Link>
+                </ActionLink>
                 <ToggleStatusButton id={patient.id} status={patient.status} patientName={patient.fullName} />
               </>
             )}

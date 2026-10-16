@@ -14,7 +14,7 @@ export default function AcessoNegadoPage() {
         Seu perfil não tem permissão para acessar esta página. Se precisar desse acesso, fale com o
         Administrador.
       </p>
-      <Button nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
+      <Button help="Abre a página inicial do sistema." nativeButton={false} render={<Link href="/" />}>Voltar ao início</Button>
     </main>
   );
 }

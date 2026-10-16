@@ -19,7 +19,7 @@ export function LoginForm({ next }: { next: string }) {
         </Alert>
       )}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">E-mail</Label>
+        <Label help="Endereço de e-mail utilizado para acessar a conta." htmlFor="email">E-mail</Label>
         <Input
           // Remonta ao receber o e-mail devolvido pela action (campo não controlado).
           key={state?.email ?? ""}
@@ -33,10 +33,10 @@ export function LoginForm({ next }: { next: string }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Senha</Label>
+        <Label help="Senha da conta; o conteúdo não é exibido durante a digitação." htmlFor="password">Senha</Label>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
-      <Button type="submit" size="lg" disabled={pending}>
+      <Button help="Valida as credenciais e inicia uma sessão no sistema." type="submit" size="lg" disabled={pending}>
         {pending ? "Entrando…" : "Entrar"}
       </Button>
     </form>

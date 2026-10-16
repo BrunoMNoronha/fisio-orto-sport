@@ -120,7 +120,7 @@ export function PatientCombobox({
 
   return (
     <div className="flex flex-col gap-2 sm:col-span-3">
-      <Label htmlFor={inputId}>{label}</Label>
+      <Label help="Digite parte do nome e selecione um resultado da lista; digitar sozinho não confirma a seleção." htmlFor={inputId}>{label}</Label>
       <input type="hidden" name={name} value={value?.id ?? ""} />
       <p id={`${id}-ajuda`} className="text-sm">
         {value ? (

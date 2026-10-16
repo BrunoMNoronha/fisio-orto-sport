@@ -1,6 +1,8 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { HelpLabel } from "@/components/informative-help";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -149,7 +151,7 @@ export function PlanForm({
     const hint = HINTS[name];
     return (
       <div className={cn("flex flex-col gap-2", className)}>
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         {hint && (
           <p id={`${id}-dica`} className="text-xs text-muted-foreground">
             {hint}
@@ -191,7 +193,7 @@ export function PlanForm({
       {mode.kind === "create" ? (
         <Section id="plano-secao-origem" title="Origem">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="plano-assessmentId">Avaliação de origem *</Label>
+            <Label help="Avaliação fisioterapêutica que fundamenta o planejamento terapêutico." htmlFor="plano-assessmentId">Avaliação de origem *</Label>
             <NativeSelect
               {...a11y("assessmentId")}
               value={assessmentId}
@@ -220,7 +222,7 @@ export function PlanForm({
                 <dt className="text-muted-foreground">Objetivos terapêuticos da avaliação</dt>
                 <dd className="whitespace-pre-line">{origin.therapeuticGoals ?? "Não informado"}</dd>
                 {origin.therapeuticGoals && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => set("goals", origin.therapeuticGoals ?? "")}>
+                  <Button help="Copia os objetivos da avaliação para o formulário do plano; revise antes de salvar." type="button" variant="outline" size="sm" onClick={() => set("goals", origin.therapeuticGoals ?? "")}>
                     Usar estes objetivos no plano
                   </Button>
                 )}
@@ -243,7 +245,7 @@ export function PlanForm({
             >
               <legend className="mb-1 text-sm font-medium">Tipo de revisão *</legend>
               {REVISION_KINDS.map((option) => (
-                <label key={option} className="flex items-center gap-2 text-sm">
+                <HelpLabel help="Distingue uma correção documental de uma mudança clínica no planejamento." key={option} className="flex items-center gap-2 text-sm">
                   <input
                     type="radio"
                     name="kind"
@@ -253,13 +255,13 @@ export function PlanForm({
                     className="size-4 accent-primary"
                   />
                   {REVISION_KIND_LABELS[option]}
-                </label>
+                </HelpLabel>
               ))}
               <FieldError id="plano-kind-erro" messages={errors?.kind} />
             </fieldset>
           )}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="plano-reason">Motivo da revisão *</Label>
+            <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="plano-reason">Motivo da revisão *</Label>
             <Textarea
               id="plano-reason"
               name="reason"
@@ -328,10 +330,10 @@ export function PlanForm({
           {mode.kind === "revise" && <span className="hidden sm:inline"> Salvar cria uma nova revisão; as anteriores são preservadas.</span>}
         </p>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+          <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
             Cancelar
-          </Link>
-          <Button type="submit" size="lg" disabled={pending}>
+          </ActionLink>
+          <Button help="Salva o plano terapêutico ou sua nova revisão com os dados informados." type="submit" size="lg" disabled={pending}>
             {pending ? "Salvando…" : submitLabel}
           </Button>
         </div>

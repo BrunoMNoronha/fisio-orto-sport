@@ -1,5 +1,5 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,7 +76,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
 
       <form role="search" method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">
         <div className="flex min-w-48 flex-col gap-2">
-          <Label htmlFor="auditoria-usuario">Usuário</Label>
+          <Label help="Limita a auditoria aos eventos do usuário selecionado." htmlFor="auditoria-usuario">Usuário</Label>
           <NativeSelect id="auditoria-usuario" name="userId" defaultValue={filters.userId ?? ""}>
             <NativeSelectOption value="">Todos</NativeSelectOption>
             {users.map((user) => (
@@ -87,7 +87,7 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
           </NativeSelect>
         </div>
         <div className="flex min-w-48 flex-col gap-2">
-          <Label htmlFor="auditoria-acao">Ação</Label>
+          <Label help="Limita a auditoria ao tipo de ação selecionado." htmlFor="auditoria-acao">Ação</Label>
           <NativeSelect id="auditoria-acao" name="action" defaultValue={filters.action ?? ""}>
             <NativeSelectOption value="">Todas</NativeSelectOption>
             {AUDIT_ACTIONS.map((action) => (
@@ -98,14 +98,14 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
           </NativeSelect>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="auditoria-de">De</Label>
+          <Label help="Primeira data incluída na consulta do período." htmlFor="auditoria-de">De</Label>
           <Input id="auditoria-de" name="from" type="date" defaultValue={filters.from ?? ""} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="auditoria-ate">Até</Label>
+          <Label help="Última data incluída na consulta do período." htmlFor="auditoria-ate">Até</Label>
           <Input id="auditoria-ate" name="to" type="date" defaultValue={filters.to ?? ""} />
         </div>
-        <Button type="submit" variant="secondary">
+        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
           Filtrar
         </Button>
       </form>
@@ -170,14 +170,14 @@ export default async function AuditoriaPage({ searchParams }: PageProps<"/usuari
         </span>
         <div className="flex gap-2">
           {page > 1 && (
-            <Link href={pageHref(Math.min(page - 1, pageCount))} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais." href={pageHref(Math.min(page - 1, pageCount))} className={buttonVariants({ variant: "outline", size: "sm" })}>
               Anterior
-            </Link>
+            </ActionLink>
           )}
           {page < pageCount && (
-            <Link href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
               Próxima
-            </Link>
+            </ActionLink>
           )}
         </div>
       </nav>

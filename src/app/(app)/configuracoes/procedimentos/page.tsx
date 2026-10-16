@@ -1,3 +1,4 @@
+import { NativeActionButton } from "@/components/informative-help";
 import Link from "next/link";
 import { getContractConfiguration } from "@/modules/administrativo/queries";
 import { listProcedures } from "@/modules/administrativo/catalog-queries";
@@ -18,7 +19,7 @@ export default async function ProceduresPage({ searchParams }: { searchParams: P
     <Link className="underline" href={`/configuracoes/operadoras/${contract.operatorId}/contratos/${contract.id}`}>Voltar ao contrato</Link>
     <Link className="underline" href={`/configuracoes/procedimentos/novo?contrato=${contract.id}`}>Novo procedimento</Link>
     <form className="flex gap-2"><input type="hidden" name="contrato" value={contract.id} />
-      <input className="min-w-0 flex-1 rounded border p-2" name="q" aria-label="Buscar por nome ou código" defaultValue={search.q} maxLength={120} /><button type="submit" className="underline">Buscar</button></form>
+      <input className="min-w-0 flex-1 rounded border p-2" name="q" aria-label="Buscar por nome ou código" defaultValue={search.q} maxLength={120} /><NativeActionButton help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" className="underline">Buscar</NativeActionButton></form>
     {!result ? <p role="alert">Filtros inválidos.</p> : <><p>{result.total} procedimento(s)</p>
       {result.items.map((item) => <Link className="rounded border p-3" key={item.id} href={`/configuracoes/procedimentos/${item.id}`}>
         <span className="break-words font-medium">{item.name}</span><span className="block text-sm">Tabela {item.tableCode} · Código {item.code} · {item.active ? "Ativo" : "Inativo"}</span></Link>)}

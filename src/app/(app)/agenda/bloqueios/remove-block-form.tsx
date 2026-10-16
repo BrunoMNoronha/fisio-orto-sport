@@ -20,7 +20,7 @@ export function RemoveBlockForm({ id, label }: { id: string; label: string }) {
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>Remover</DialogTrigger>
+      <DialogTrigger render={<Button help="Abre a confirmação para remover este bloqueio de horário." variant="outline" size="sm" />}>Remover</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Remover este bloqueio?</DialogTitle>
@@ -36,8 +36,8 @@ export function RemoveBlockForm({ id, label }: { id: string; label: string }) {
             </p>
           )}
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-            <Button type="submit" variant="destructive" disabled={pending}>
+            <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+            <Button help="Remove o bloqueio após a confirmação, liberando o período para novos agendamentos." type="submit" variant="destructive" disabled={pending}>
               {pending ? "Removendo…" : "Remover bloqueio"}
             </Button>
           </DialogFooter>

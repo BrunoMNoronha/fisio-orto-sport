@@ -1,5 +1,5 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -40,9 +40,9 @@ export default async function UsuariosPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {canAudit && (
-            <Link href="/usuarios/auditoria" className={buttonVariants({ variant: "outline" })}>
+            <ActionLink help="Abre a consulta dos eventos registrados na auditoria." href="/usuarios/auditoria" className={buttonVariants({ variant: "outline" })}>
               Auditoria
-            </Link>
+            </ActionLink>
           )}
           {canManage && <CreateUserDialog />}
         </div>

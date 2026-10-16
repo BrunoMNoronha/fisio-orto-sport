@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ActionLink } from "@/components/action-link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,10 +17,10 @@ export default async function ImpressaoPacienteLayout({ children, params }: Layo
   return (
     <div className="flex min-h-screen flex-col bg-muted print:bg-white">
       <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b bg-background/95 px-4 py-2 backdrop-blur print:hidden">
-        <Link href={`/pacientes/${patient.id}/documentos`} className={buttonVariants({ variant: "ghost" })}>
+        <ActionLink help="Volta à área de documentos na ficha do paciente." href={`/pacientes/${patient.id}/documentos`} className={buttonVariants({ variant: "ghost" })}>
           <ArrowLeftIcon />
           Voltar à ficha
-        </Link>
+        </ActionLink>
         <PrintButton />
       </div>
       <main className="flex-1 overflow-x-auto py-8 print:overflow-visible print:p-0">{children}</main>

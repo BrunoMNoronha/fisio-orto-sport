@@ -1,6 +1,7 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -154,7 +155,7 @@ export function SessionForm({
     const hint = HINTS[name];
     return (
       <div className={cn("flex flex-col gap-2", options.className)}>
-        <Label htmlFor={id}>
+        <Label help={fieldHelp(name)} htmlFor={id}>
           {SESSION_FIELD_LABELS[name]}
           {options.required ? " *" : " (opcional)"}
         </Label>
@@ -191,7 +192,7 @@ export function SessionForm({
         <Section id="sessao-secao-plano" title="Plano">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="sessao-planId">Plano terapêutico *</Label>
+              <Label help="Plano terapêutico do paciente ao qual este registro ficará vinculado." htmlFor="sessao-planId">Plano terapêutico *</Label>
               <NativeSelect {...a11y("planId")} value={planId} onChange={(event) => choosePlan(event.target.value)} className="w-full">
                 <NativeSelectOption value="" disabled>
                   Selecione
@@ -205,7 +206,7 @@ export function SessionForm({
               <FieldError id="sessao-planId-erro" messages={errors?.planId} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="sessao-planRevisionId">Revisão do plano aplicada *</Label>
+              <Label help="Versão do plano que orientou este atendimento; preserva a referência aplicada." htmlFor="sessao-planRevisionId">Revisão do plano aplicada *</Label>
               <NativeSelect
                 {...a11y("planRevisionId")}
                 value={revisionId}
@@ -239,7 +240,7 @@ export function SessionForm({
       {mode.kind === "edit" && (
         <Section id="sessao-secao-correcao" title="Correção">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sessao-reason">Motivo da correção *</Label>
+            <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="sessao-reason">Motivo da correção *</Label>
             <Textarea
               id="sessao-reason"
               name="reason"
@@ -259,7 +260,7 @@ export function SessionForm({
       <Section id="sessao-secao-atendimento" title="Atendimento">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sessao-occurredDate">Data *</Label>
+            <Label help="Dia em que o atendimento foi efetivamente realizado." htmlFor="sessao-occurredDate">Data *</Label>
             <Input
               {...a11y("occurredDate")}
               type="date"
@@ -270,7 +271,7 @@ export function SessionForm({
             <FieldError id="sessao-occurredDate-erro" messages={errors?.occurredDate} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sessao-occurredTime">Hora *</Label>
+            <Label help="Horário local em que o atendimento foi realizado." htmlFor="sessao-occurredTime">Hora *</Label>
             <Input
               {...a11y("occurredTime")}
               type="time"
@@ -281,7 +282,7 @@ export function SessionForm({
             <FieldError id="sessao-occurredTime-erro" messages={errors?.occurredTime} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sessao-professionalId">Profissional responsável *</Label>
+            <Label help="Fisioterapeuta responsável pela execução do atendimento." htmlFor="sessao-professionalId">Profissional responsável *</Label>
             {fixedProfessional ? (
               <>
                 <input type="hidden" name="professionalId" value={fixedProfessional.id} />
@@ -319,10 +320,10 @@ export function SessionForm({
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <p className="text-xs text-muted-foreground">* Campos obrigatórios.</p>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+          <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
             Cancelar
-          </Link>
-          <Button type="submit" size="lg" disabled={pending}>
+          </ActionLink>
+          <Button help="Valida e salva o atendimento e sua evolução clínica." type="submit" size="lg" disabled={pending}>
             {pending ? "Salvando…" : submitLabel}
           </Button>
         </div>

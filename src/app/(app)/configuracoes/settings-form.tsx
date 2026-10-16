@@ -1,4 +1,6 @@
 "use client";
+import { HelpLabel } from "@/components/informative-help";
+import { fieldHelp } from "@/lib/field-help";
 
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
@@ -44,6 +46,7 @@ type FormValues = {
   maxRecurringSessions: string;
   suggestedDurationMinutes: string;
   agendaDefaultView: string;
+  actionTooltipsEnabled: boolean;
   printShowClinicInfo: boolean;
   businessHoursEnabled: boolean;
   // Formato canônico semanal (agenda/business-hours.ts), montado pelo editor abaixo.
@@ -64,6 +67,7 @@ function toForm(values: ClinicSettingsValues): FormValues {
     maxSimultaneousAppointments: String(values.maxSimultaneousAppointments),
     maxRecurringSessions: String(values.maxRecurringSessions),
     agendaDefaultView: values.agendaDefaultView,
+    actionTooltipsEnabled: values.actionTooltipsEnabled,
     printShowClinicInfo: values.printShowClinicInfo,
     businessHoursEnabled: values.businessHoursEnabled,
     businessHours: values.businessHours,
@@ -86,6 +90,7 @@ function fromFormData(formData: FormData): FormValues {
     maxSimultaneousAppointments: get("maxSimultaneousAppointments"),
     maxRecurringSessions: get("maxRecurringSessions"),
     agendaDefaultView: get("agendaDefaultView"),
+    actionTooltipsEnabled: formData.get("actionTooltipsEnabled") === "on",
     printShowClinicInfo: formData.get("printShowClinicInfo") === "on",
     businessHoursEnabled: formData.get("businessHoursEnabled") === "on",
     businessHours: get("businessHours"),
@@ -103,8 +108,8 @@ const pad = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
 // painéis ficam montados (keepMounted), então trocar de aba não perde nada nem salva sozinho, e a
 // gravação continua atômica, com a versão lida protegendo contra sobrescrita de qualquer campo.
 // Administração e Desenvolvimento ficam fora do formulário.
-type TabId = "clinica" | "agenda" | "impressoes" | "administracao" | "desenvolvimento";
-const FORM_TABS: TabId[] = ["clinica", "agenda", "impressoes"];
+type TabId = "interface" | "clinica" | "agenda" | "impressoes" | "administracao" | "desenvolvimento";
+const FORM_TABS: TabId[] = ["clinica", "agenda", "impressoes", "interface"];
 const FIELD_TAB: Record<keyof FormValues, TabId> = {
   displayName: "clinica",
   legalName: "clinica",
@@ -120,6 +125,7 @@ const FIELD_TAB: Record<keyof FormValues, TabId> = {
   agendaDefaultView: "agenda",
   businessHoursEnabled: "agenda",
   businessHours: "agenda",
+  actionTooltipsEnabled: "interface",
   printShowClinicInfo: "impressoes",
 };
 const FIELD_ORDER = Object.keys(FIELD_TAB) as (keyof FormValues)[];
@@ -240,7 +246,7 @@ export function SettingsForm({
     const id = `config-${name}`;
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <Input
           {...a11y(id, errors?.[name], Boolean(options.hint))}
           name={name}
@@ -317,11 +323,12 @@ export function SettingsForm({
         {tabLabel("clinica", "Clínica")}
         {tabLabel("agenda", "Agenda e expediente")}
         {tabLabel("impressoes", "Impressões")}
+        {tabLabel("interface", "Interface")}
         {tabLabel("administracao", "Administração")}
         {devPanel ? tabLabel("desenvolvimento", "Desenvolvimento") : null}
       </TabsList>
 
-      <form action={formAction} className="flex flex-col gap-6" noValidate>
+      <form action={formAction} onReset={(event) => event.preventDefault()} className="flex flex-col gap-6" noValidate>
         <input type="hidden" name="expectedVersion" value={version} />
         <input type="hidden" name="businessHours" value={values.businessHours} />
 
@@ -332,7 +339,7 @@ export function SettingsForm({
             <AlertDescription className="flex flex-wrap items-center gap-3">
               {state.error}
               {state.conflict && (
-                <Button type="button" variant="outline" size="sm" onClick={() => window.location.reload()}>
+                <Button help="Recarrega a página com a versão atual das configurações; alterações locais não salvas serão perdidas." type="button" variant="outline" size="sm" onClick={() => window.location.reload()}>
                   Recarregar
                 </Button>
               )}
@@ -366,7 +373,7 @@ export function SettingsForm({
                 {text("legalName", "Razão social", { max: SETTINGS_LIMITS.legalName })}
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="config-cnpj">CNPJ</Label>
+                <Label help="CNPJ da clínica, com 14 dígitos e verificadores válidos; a formatação é aplicada na exibição." htmlFor="config-cnpj">CNPJ</Label>
                 <Input
                   {...a11y("config-cnpj", errors?.cnpj)}
                   name="cnpj"
@@ -379,7 +386,7 @@ export function SettingsForm({
                 <FieldError id="config-cnpj-erro" messages={errors?.cnpj} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="config-phone">Telefone</Label>
+                <Label help="Telefone da clínica com DDD, usado na identificação e nas impressões configuradas." htmlFor="config-phone">Telefone</Label>
                 <Input
                   {...a11y("config-phone", errors?.phone)}
                   name="phone"
@@ -413,7 +420,7 @@ export function SettingsForm({
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="config-agendaDayStartHour">Início da faixa do dia</Label>
+                <Label help="Primeira hora exibida na grade; não define o expediente nem bloqueia horários." htmlFor="config-agendaDayStartHour">Início da faixa do dia</Label>
                 <NativeSelect
                   {...a11y("config-agendaDayStartHour", errors?.agendaDayStartHour)}
                   name="agendaDayStartHour"
@@ -431,7 +438,7 @@ export function SettingsForm({
                 <FieldError id="config-agendaDayStartHour-erro" messages={errors?.agendaDayStartHour} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="config-agendaDayEndHour">Fim da faixa do dia</Label>
+                <Label help="Última hora preferida da grade; agendamentos fora da faixa continuam visíveis." htmlFor="config-agendaDayEndHour">Fim da faixa do dia</Label>
                 <NativeSelect
                   {...a11y("config-agendaDayEndHour", errors?.agendaDayEndHour)}
                   name="agendaDayEndHour"
@@ -454,7 +461,7 @@ export function SettingsForm({
                 para mostrá-los.
               </p>
               <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="config-suggestedDurationMinutes">Duração sugerida (minutos)</Label>
+                <Label help="Sugere o término de novos agendamentos a partir do início; não sobrescreve um término editado." htmlFor="config-suggestedDurationMinutes">Duração sugerida (minutos)</Label>
                 <Input
                   {...a11y("config-suggestedDurationMinutes", errors?.suggestedDurationMinutes, true)}
                   name="suggestedDurationMinutes"
@@ -476,7 +483,7 @@ export function SettingsForm({
                 />
               </div>
               <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="config-maxSimultaneousAppointments">Agendamentos simultâneos por fisioterapeuta</Label>
+                <Label help="Capacidade de agendamentos simultâneos por profissional durante todo o intervalo." htmlFor="config-maxSimultaneousAppointments">Agendamentos simultâneos por fisioterapeuta</Label>
                 <Input
                   {...a11y("config-maxSimultaneousAppointments", errors?.maxSimultaneousAppointments, true)}
                   name="maxSimultaneousAppointments"
@@ -492,7 +499,7 @@ export function SettingsForm({
                 <FieldError id="config-maxSimultaneousAppointments-erro" messages={errors?.maxSimultaneousAppointments} />
               </div>
               <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="config-maxRecurringSessions">Máximo de sessões por agendamento recorrente</Label>
+                <Label help="Limite de sessões em uma nova série recorrente, contando a primeira sessão." htmlFor="config-maxRecurringSessions">Máximo de sessões por agendamento recorrente</Label>
                 <Input {...a11y("config-maxRecurringSessions", errors?.maxRecurringSessions, true)}
                   name="maxRecurringSessions" type="number" min={1} max={MAX_RECURRING_SESSIONS} step={1}
                   value={values.maxRecurringSessions} disabled={!canManage}
@@ -504,7 +511,7 @@ export function SettingsForm({
                 <FieldError id="config-maxRecurringSessions-erro" messages={errors?.maxRecurringSessions} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="config-agendaDefaultView">Visão inicial da agenda</Label>
+                <Label help="Visão aberta por padrão ao acessar a agenda sem escolher outra visão." htmlFor="config-agendaDefaultView">Visão inicial da agenda</Label>
                 <NativeSelect
                   {...a11y("config-agendaDefaultView", errors?.agendaDefaultView, true)}
                   name="agendaDefaultView"
@@ -547,7 +554,7 @@ export function SettingsForm({
                   const name = WEEKDAY_LABELS[weekday];
                   return (
                     <div key={weekday} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2">
-                      <label className="flex w-28 items-center gap-2 text-sm font-medium">
+                      <HelpLabel help="Habilita o atendimento neste dia da semana e permite definir os intervalos do expediente." className="flex w-28 items-center gap-2 text-sm font-medium">
                         <input
                           id={weekday === 1 ? "config-businessHours" : undefined}
                           type="checkbox"
@@ -557,7 +564,7 @@ export function SettingsForm({
                           onChange={(event) => setDay(weekday, (d) => ({ ...d, open: event.target.checked }))}
                         />
                         {name}
-                      </label>
+                      </HelpLabel>
                       {day.open ? (
                         <>
                           <span className="flex items-center gap-1 text-sm">
@@ -578,7 +585,7 @@ export function SettingsForm({
                               {timeInput(`${prefix}-2-fim`, `${name}: fim do 2º intervalo`, day.second[1], (v) =>
                                 setDay(weekday, (d) => ({ ...d, second: [d.second![0], v] })),
                               )}
-                              <Button
+                              <Button help="Remove o segundo intervalo do dia no formulário; salve as configurações para aplicar."
                                 type="button"
                                 variant="ghost"
                                 size="sm"
@@ -589,7 +596,7 @@ export function SettingsForm({
                               </Button>
                             </span>
                           ) : (
-                            <Button
+                            <Button help="Adiciona um segundo intervalo para representar a pausa do expediente; salve para aplicar."
                               type="button"
                               variant="ghost"
                               size="sm"
@@ -625,7 +632,7 @@ export function SettingsForm({
                   aria-invalid={errors?.businessHoursEnabled ? true : undefined}
                 />
                 <div className="grid gap-1">
-                  <Label htmlFor="config-businessHoursEnabled">Aplicar o expediente à agenda</Label>
+                  <Label help="Restringe novas marcações e reagendamentos aos intervalos do expediente configurado." htmlFor="config-businessHoursEnabled">Aplicar o expediente à agenda</Label>
                   <p id="config-businessHoursEnabled-ajuda" className="text-xs text-muted-foreground">
                     Padrão: desligado (sem restrição). Ligado, o formulário de agendamento só oferece horários dentro do
                     expediente, e o servidor recusa o que estiver fora.
@@ -659,7 +666,7 @@ export function SettingsForm({
                   aria-describedby="config-printShowClinicInfo-ajuda"
                 />
                 <div className="grid gap-1">
-                  <Label htmlFor="config-printShowClinicInfo">Mostrar a identificação da clínica nas impressões</Label>
+                  <Label help="Inclui os dados preenchidos da clínica nos documentos gerados para impressão." htmlFor="config-printShowClinicInfo">Mostrar a identificação da clínica nas impressões</Label>
                   <p id="config-printShowClinicInfo-ajuda" className="text-xs text-muted-foreground">
                     Campos vazios são omitidos. O cartão de frequência mostra só o nome e o telefone.
                   </p>
@@ -686,12 +693,35 @@ export function SettingsForm({
           </Card>
         </TabsPanel>
 
+        <TabsPanel value="interface" keepMounted>
+          <Card>
+            <CardHeader><CardTitle>Interface</CardTitle><CardDescription>Ajuda durante o uso do sistema.</CardDescription></CardHeader>
+            <CardContent>
+              <div className="flex items-start gap-3">
+                <input type="hidden" name="actionTooltipsEnabled" value={values.actionTooltipsEnabled ? "on" : "false"} />
+                <button type="button" role="switch" id="config-actionTooltipsEnabled"
+                  aria-checked={values.actionTooltipsEnabled} disabled={!canManage || pending}
+                  onClick={() => set("actionTooltipsEnabled", !values.actionTooltipsEnabled)}
+                  aria-describedby="config-actionTooltipsEnabled-ajuda config-actionTooltipsEnabled-erro"
+                  aria-invalid={errors?.actionTooltipsEnabled ? true : undefined}
+                  className="mt-1 h-5 w-9 cursor-pointer appearance-none rounded-full bg-muted border before:block before:size-4 before:rounded-full before:bg-white before:transition-transform aria-checked:bg-primary aria-checked:before:translate-x-4 focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50" />
+                <div className="grid gap-2">
+                  <Label htmlFor="config-actionTooltipsEnabled" help="Controla a ajuda dos botões para todos os usuários da clínica após salvar.">Exibir tooltips nos botões de ação</Label>
+                  <p id="config-actionTooltipsEnabled-ajuda" className="text-xs text-muted-foreground">Vale para toda a clínica após salvar. Desligado por padrão. A ajuda das labels continua disponível.</p>
+                  <span className="text-xs">{values.actionTooltipsEnabled ? "Ligado" : "Desligado"}</span>
+                  <FieldError id="config-actionTooltipsEnabled-erro" messages={errors?.actionTooltipsEnabled} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsPanel>
+
         {canManage && (onFormTab || dirty) && (
           <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
-            <Button type="submit" disabled={pending || !dirty}>
+            <Button help="Salva as alterações de todas as abas para uso pela clínica." type="submit" disabled={pending || !dirty}>
               {pending ? "Salvando…" : "Salvar configurações"}
             </Button>
-            <Button type="button" variant="outline" disabled={pending || !dirty} onClick={() => setValues(baseline)}>
+            <Button help="Restaura os valores da última configuração salva, descartando as alterações locais de todas as abas." type="button" variant="outline" disabled={pending || !dirty} onClick={() => setValues(baseline)}>
               Descartar alterações
             </Button>
             {dirty && (

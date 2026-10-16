@@ -33,7 +33,7 @@ export function PlanStatusDialog({ action, status }: { action: Action; status: P
   return (
     <div className="flex flex-col items-start gap-1">
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<Button variant="outline" />}>{closing ? "Encerrar plano" : "Reabrir plano"}</DialogTrigger>
+        <DialogTrigger render={<Button help="Abre a confirmação para encerrar ou reabrir o plano terapêutico." variant="outline" />}>{closing ? "Encerrar plano" : "Reabrir plano"}</DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{closing ? "Encerrar este plano?" : "Reabrir este plano?"}</DialogTitle>
@@ -46,7 +46,7 @@ export function PlanStatusDialog({ action, status }: { action: Action; status: P
           <form action={formAction} className="flex flex-col gap-4">
             <input type="hidden" name="toStatus" value={closing ? "ENCERRADO" : "ATIVO"} />
             <div className="flex flex-col gap-2">
-              <Label htmlFor="plano-status-motivo">Motivo *</Label>
+              <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="plano-status-motivo">Motivo *</Label>
               <Textarea
                 id="plano-status-motivo"
                 name="reason"
@@ -68,8 +68,8 @@ export function PlanStatusDialog({ action, status }: { action: Action; status: P
               </p>
             )}
             <DialogFooter>
-              <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-              <Button type="submit" variant={closing ? "destructive" : "default"} disabled={pending}>
+              <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+              <Button help={closing ? 'Encerra o plano preservando suas revisões e atendimentos.' : 'Reabre o plano terapêutico para continuidade do tratamento.'} type="submit" variant={closing ? "destructive" : "default"} disabled={pending}>
                 {pending ? "Salvando…" : closing ? "Encerrar" : "Reabrir"}
               </Button>
             </DialogFooter>

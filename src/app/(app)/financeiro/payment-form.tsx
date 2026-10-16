@@ -1,6 +1,6 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
 
-import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -71,14 +71,14 @@ export function PaymentForm({
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="pagamento-amount">Valor recebido (R$) *</Label>
+          <Label help="Quantia efetivamente recebida, em reais, respeitando o saldo da cobrança." htmlFor="pagamento-amount">Valor recebido (R$) *</Label>
           <Input {...a11y("pagamento-amount", errors?.amount, "pagamento-amount-ajuda")} {...field("amount")}
             onBlur={normalizeAmount} inputMode="decimal" autoComplete="off" placeholder="0,00" maxLength={16} required />
           <p id="pagamento-amount-ajuda" className="text-xs text-muted-foreground">Use vírgula para os centavos.</p>
           <FieldError id="pagamento-amount-erro" messages={errors?.amount} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="pagamento-receivedOn">Data do recebimento *</Label>
+          <Label help="Data em que o pagamento foi efetivamente recebido." htmlFor="pagamento-receivedOn">Data do recebimento *</Label>
           <Input {...a11y("pagamento-receivedOn", errors?.receivedOn, "pagamento-receivedOn-ajuda")} {...field("receivedOn")}
             type="date" min="2000-01-01" max={today} required />
           <p id="pagamento-receivedOn-ajuda" className="text-xs text-muted-foreground">Pode ser anterior à cobrança; não pode ser futura.</p>
@@ -88,13 +88,13 @@ export function PaymentForm({
       {correcting && (
         <>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pagamento-reversedOn">Data do estorno da original *</Label>
+            <Label help="Data civil em que o recebimento original foi estornado." htmlFor="pagamento-reversedOn">Data do estorno da original *</Label>
             <Input {...a11y("pagamento-reversedOn", errors?.reversedOn)} {...field("reversedOn")}
               type="date" min={originalReceivedOn || "2000-01-01"} max={today} required />
             <FieldError id="pagamento-reversedOn-erro" messages={errors?.reversedOn} />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pagamento-reason">Motivo da correção *</Label>
+            <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="pagamento-reason">Motivo da correção *</Label>
             <Textarea {...a11y("pagamento-reason", errors?.reason, "pagamento-reason-ajuda")} {...field("reason")}
               maxLength={REASON_MAX} rows={3} required />
             <p id="pagamento-reason-ajuda" className="text-xs text-muted-foreground">
@@ -105,8 +105,8 @@ export function PaymentForm({
         </>
       )}
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={pending}>{pending ? "Salvando…" : correcting ? "Estornar original e registrar substituto" : "Registrar recebimento"}</Button>
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</Link>
+        <Button help={correcting ? 'Estorna o recebimento original e registra o substituto com os dados informados.' : 'Registra o pagamento recebido e atualiza o saldo da cobrança.'} type="submit" disabled={pending}>{pending ? "Salvando…" : correcting ? "Estornar original e registrar substituto" : "Registrar recebimento"}</Button>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>Voltar</ActionLink>
       </div>
     </form>
   );

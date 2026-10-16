@@ -1,4 +1,5 @@
 "use client";
+import { fieldHelp } from "@/lib/field-help";
 
 import { useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -64,7 +65,7 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label help={fieldHelp(label)} htmlFor={id}>{label}</Label>
       {children}
       <FieldError id={`${id}-erro`} messages={errors} />
     </div>
@@ -163,7 +164,7 @@ export function CreateUserDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>Novo usuário</DialogTrigger>
+      <DialogTrigger render={<Button help="Abre o formulário de criação de um usuário." />}>Novo usuário</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo usuário</DialogTitle>
@@ -191,7 +192,7 @@ export function CreateUserDialog() {
             />
           </Field>
           <DialogFooter>
-            <Button type="submit" disabled={pending}>
+            <Button help="Cria o usuário com os dados e o perfil informados." type="submit" disabled={pending}>
               {pending ? "Salvando…" : "Criar usuário"}
             </Button>
           </DialogFooter>
@@ -208,7 +209,7 @@ export function EditUserDialog({ user }: { user: UserRow }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+      <DialogTrigger render={<Button help="Abre o formulário para editar os dados deste usuário." variant="outline" size="sm" />}>
         Editar<span className="sr-only"> {user.name}</span>
       </DialogTrigger>
       <DialogContent>
@@ -249,7 +250,7 @@ export function EditUserDialog({ user }: { user: UserRow }) {
             errors={errors}
           />
           <DialogFooter>
-            <Button type="submit" disabled={pending}>
+            <Button help="Salva as alterações dos dados e do perfil deste usuário." type="submit" disabled={pending}>
               {pending ? "Salvando…" : "Salvar"}
             </Button>
           </DialogFooter>
@@ -266,7 +267,7 @@ export function ResetPasswordDialog({ user }: { user: UserRow }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+      <DialogTrigger render={<Button help="Abre o formulário de redefinição da senha deste usuário." variant="outline" size="sm" />}>
         Redefinir senha<span className="sr-only"> de {user.name}</span>
       </DialogTrigger>
       <DialogContent>
@@ -290,7 +291,7 @@ export function ResetPasswordDialog({ user }: { user: UserRow }) {
             />
           </Field>
           <DialogFooter>
-            <Button type="submit" disabled={pending}>
+            <Button help="Substitui a senha de acesso deste usuário pela nova senha informada." type="submit" disabled={pending}>
               {pending ? "Salvando…" : "Redefinir senha"}
             </Button>
           </DialogFooter>
@@ -307,7 +308,7 @@ export function ToggleActiveButton({ user, disabled }: { user: UserRow; disabled
     <form action={formAction} className="flex flex-col items-end gap-1">
       <input type="hidden" name="id" value={user.id} />
       <input type="hidden" name="active" value={user.active ? "false" : "true"} />
-      <Button
+      <Button help={user.active ? 'Desativa o acesso deste usuário sem apagar seus registros.' : 'Reativa o acesso deste usuário ao sistema.'}
         type="submit"
         variant={user.active ? "destructive" : "outline"}
         size="sm"
@@ -334,7 +335,7 @@ export function DeleteUserDialog({ user }: { user: UserRow }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="destructive" size="sm" />}>
+      <DialogTrigger render={<Button help="Abre a confirmação para excluir definitivamente este usuário." variant="destructive" size="sm" />}>
         Excluir<span className="sr-only"> {user.name}</span>
       </DialogTrigger>
       <DialogContent>
@@ -350,8 +351,8 @@ export function DeleteUserDialog({ user }: { user: UserRow }) {
           <input type="hidden" name="id" value={user.id} />
           <FormError state={state} />
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Cancelar</DialogClose>
-            <Button type="submit" variant="destructive" disabled={pending}>
+            <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Cancelar</DialogClose>
+            <Button help="Exclui definitivamente o usuário após a confirmação, conforme as restrições do sistema." type="submit" variant="destructive" disabled={pending}>
               {pending ? "Excluindo…" : "Excluir definitivamente"}
             </Button>
           </DialogFooter>

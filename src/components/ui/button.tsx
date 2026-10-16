@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
+import { InformativeHelp } from "@/components/informative-help"
 import { cn } from "cn"
 
 const buttonVariants = cva(
@@ -41,17 +42,19 @@ const buttonVariants = cva(
 
 function Button({
   className,
+  help,
   variant = "default",
   size = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return (
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { help?: string }) {
+  const button = (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   )
+  return help ? <InformativeHelp text={help} action>{button}</InformativeHelp> : button
 }
 
 export { Button, buttonVariants }

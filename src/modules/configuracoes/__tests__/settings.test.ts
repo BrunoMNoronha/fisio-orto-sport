@@ -24,6 +24,7 @@ describe("padrões", () => {
       maxRecurringSessions: 10,
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
+      actionTooltipsEnabled: false,
       printShowClinicInfo: false,
       businessHoursEnabled: false,
       businessHours: ";;;;;;",

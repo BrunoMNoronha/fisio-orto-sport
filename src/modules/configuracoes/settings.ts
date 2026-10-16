@@ -19,6 +19,7 @@ export type ClinicSettingsValues = {
   maxRecurringSessions: number;
   suggestedDurationMinutes: number | null;
   agendaDefaultView: AgendaView;
+  actionTooltipsEnabled: boolean;
   printShowClinicInfo: boolean;
   // Expediente (#78): texto canônico semanal (agenda/business-hours.ts) e chave que o aplica.
   businessHoursEnabled: boolean;
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: ClinicSettingsValues = {
   maxRecurringSessions: DEFAULT_MAX_RECURRING_SESSIONS,
   suggestedDurationMinutes: null,
   agendaDefaultView: "dia",
+  actionTooltipsEnabled: false,
   printShowClinicInfo: false,
   // Sem expediente e sem restrição: parametrizar precede ativar.
   businessHoursEnabled: false,
@@ -85,6 +87,7 @@ export const SETTINGS_FIELD_LABELS: Record<SettingsField, string> = {
   maxRecurringSessions: "Máximo de sessões por agendamento recorrente",
   suggestedDurationMinutes: "Duração sugerida",
   agendaDefaultView: "Visão inicial da agenda",
+  actionTooltipsEnabled: "Tooltips nos botões de ação",
   printShowClinicInfo: "Identificação nas impressões",
   businessHoursEnabled: "Aplicar expediente",
   businessHours: "Expediente",

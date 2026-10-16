@@ -1,6 +1,8 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { HelpLabel } from "@/components/informative-help";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -136,7 +138,7 @@ export function ReassessmentForm({
     const id = `reavaliacao-${name}`;
     return (
       <div className={cn("flex flex-col gap-2", options.className)}>
-        <Label htmlFor={id}>
+        <Label help={fieldHelp(name)} htmlFor={id}>
           {REASSESSMENT_FIELD_LABELS[name]}
           {options.required ? " *" : " (opcional)"}
         </Label>
@@ -172,7 +174,7 @@ export function ReassessmentForm({
           </p>
         )}
         {options.map((option) => (
-          <label key={option} className="flex items-center gap-2 text-sm">
+          <HelpLabel help="Registra a situação dos objetivos ou a conclusão clínica; indicação de alta não encerra o plano automaticamente." key={option} className="flex items-center gap-2 text-sm">
             <input
               type="radio"
               name={name}
@@ -182,7 +184,7 @@ export function ReassessmentForm({
               className="size-4 accent-primary"
             />
             {labels[option]}
-          </label>
+          </HelpLabel>
         ))}
         <FieldError id={`${id}-erro`} messages={errors?.[name]} />
       </fieldset>
@@ -192,7 +194,7 @@ export function ReassessmentForm({
   function dateField() {
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor="reavaliacao-reassessmentDate">{REASSESSMENT_FIELD_LABELS.reassessmentDate} *</Label>
+        <Label help="Data civil em que a reavaliação foi realizada." htmlFor="reavaliacao-reassessmentDate">{REASSESSMENT_FIELD_LABELS.reassessmentDate} *</Label>
         <Input
           id="reavaliacao-reassessmentDate"
           name="reassessmentDate"
@@ -221,7 +223,7 @@ export function ReassessmentForm({
         <Section id="reavaliacao-secao-referencia" title="Plano e referência">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="reavaliacao-planId">Plano terapêutico *</Label>
+              <Label help="Plano terapêutico do paciente ao qual este registro ficará vinculado." htmlFor="reavaliacao-planId">Plano terapêutico *</Label>
               <NativeSelect
                 id="reavaliacao-planId"
                 name="planId"
@@ -271,7 +273,7 @@ export function ReassessmentForm({
         <Section id="reavaliacao-secao-correcao" title="Correção">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="reavaliacao-reason">Motivo da correção *</Label>
+              <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="reavaliacao-reason">Motivo da correção *</Label>
               <Textarea
                 id="reavaliacao-reason"
                 name="reason"
@@ -323,10 +325,10 @@ export function ReassessmentForm({
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
         <p className="text-xs text-muted-foreground">* Campos obrigatórios.</p>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
+          <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "ghost", size: "lg" })}>
             Cancelar
-          </Link>
-          <Button type="submit" size="lg" disabled={pending}>
+          </ActionLink>
+          <Button help="Valida e salva a reavaliação clínica do paciente." type="submit" size="lg" disabled={pending}>
             {pending ? "Salvando…" : submitLabel}
           </Button>
         </div>

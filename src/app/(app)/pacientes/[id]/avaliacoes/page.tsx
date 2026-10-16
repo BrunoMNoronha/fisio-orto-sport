@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -39,9 +40,9 @@ export default async function AvaliacoesPage({ params, searchParams }: PageProps
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-xl font-semibold tracking-tight">Avaliações</h2>
         {canManage && anamnesis && (
-          <Link href={`${base}/nova`} className={buttonVariants()}>
+          <ActionLink help="Abre o formulário de avaliação fisioterapêutica inicial." href={`${base}/nova`} className={buttonVariants()}>
             Nova avaliação inicial
-          </Link>
+          </ActionLink>
         )}
       </div>
 
@@ -59,9 +60,9 @@ export default async function AvaliacoesPage({ params, searchParams }: PageProps
           <p className="text-sm text-muted-foreground">
             A avaliação inicial usa uma anamnese como referência. Registre a anamnese deste paciente primeiro.
           </p>
-          <Link href={`/pacientes/${patient.id}/anamnese/nova`} className={buttonVariants({ variant: "outline" })}>
+          <ActionLink help="Abre o formulário de uma nova anamnese do paciente." href={`/pacientes/${patient.id}/anamnese/nova`} className={buttonVariants({ variant: "outline" })}>
             Registrar anamnese
-          </Link>
+          </ActionLink>
         </div>
       )}
 
@@ -97,17 +98,17 @@ export default async function AvaliacoesPage({ params, searchParams }: PageProps
           </p>
           <div className="flex gap-2">
             {page > 1 && (
-              <Link
+              <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais."
                 href={pageHref(Math.min(page - 1, pageCount))}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Anterior
-              </Link>
+              </ActionLink>
             )}
             {page < pageCount && (
-              <Link href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 Próxima
-              </Link>
+              </ActionLink>
             )}
           </div>
         </nav>

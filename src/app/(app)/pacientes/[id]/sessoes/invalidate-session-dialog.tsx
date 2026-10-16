@@ -31,7 +31,7 @@ export function InvalidateSessionDialog({ action }: { action: Action }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>Invalidar</DialogTrigger>
+      <DialogTrigger render={<Button help="Abre a confirmação para invalidar o atendimento clínico." variant="outline" />}>Invalidar</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invalidar este atendimento?</DialogTitle>
@@ -42,7 +42,7 @@ export function InvalidateSessionDialog({ action }: { action: Action }) {
         </DialogHeader>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="sessao-invalidar-motivo">Motivo *</Label>
+            <Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor="sessao-invalidar-motivo">Motivo *</Label>
             <Textarea
               id="sessao-invalidar-motivo"
               name="reason"
@@ -64,8 +64,8 @@ export function InvalidateSessionDialog({ action }: { action: Action }) {
             </p>
           )}
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Voltar</DialogClose>
-            <Button type="submit" variant="destructive" disabled={pending}>
+            <DialogClose render={<Button help="Fecha a confirmação sem executar a operação." type="button" variant="outline" />}>Voltar</DialogClose>
+            <Button help="Invalida este atendimento com justificativa, mantendo o registro no histórico." type="submit" variant="destructive" disabled={pending}>
               {pending ? "Salvando…" : "Invalidar"}
             </Button>
           </DialogFooter>

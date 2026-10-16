@@ -158,6 +158,7 @@ export const settingsSchema = z
       return limit;
     }),
     agendaDefaultView: agendaView,
+    actionTooltipsEnabled: z.enum(["on", "true", "false"]).optional().transform(value => value === "on" || value === "true"),
     printShowClinicInfo: checkbox,
     businessHoursEnabled: checkbox,
     businessHours,

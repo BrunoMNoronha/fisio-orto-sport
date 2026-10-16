@@ -1,6 +1,7 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 
-import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export function PatientForm({
     const id = `paciente-${name}`;
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label help={fieldHelp(name)} htmlFor={id}>{label}</Label>
         <Input {...a11y(id, errors?.[name])} {...field(name)} autoComplete="off" {...props} />
         <FieldError id={`${id}-erro`} messages={errors?.[name]} />
       </div>
@@ -146,7 +147,7 @@ export function PatientForm({
         <div className="sm:col-span-2">{text("fullName", "Nome completo *", { required: true, maxLength: 120 })}</div>
         {text("birthDate", "Data de nascimento *", { type: "date", required: true })}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="paciente-sex">Sexo *</Label>
+          <Label help="Sexo informado para o cadastro do paciente." htmlFor="paciente-sex">Sexo *</Label>
           <NativeSelect {...a11y("paciente-sex", errors?.sex)} {...field("sex")} required className="w-full">
             <NativeSelectOption value="" disabled>
               Selecione
@@ -168,7 +169,7 @@ export function PatientForm({
         {text("phone", "Telefone *", { type: "tel", inputMode: "tel", required: true, placeholder: "(00) 00000-0000", maxLength: 15 })}
         {text("email", "E-mail (opcional)", { type: "email" })}
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="paciente-address">Endereço (opcional)</Label>
+          <Label help="Endereço de contato do paciente, com até 300 caracteres." htmlFor="paciente-address">Endereço (opcional)</Label>
           <Textarea
             {...a11y("paciente-address", errors?.address)}
             {...field("address")}
@@ -207,7 +208,7 @@ export function PatientForm({
       </fieldset>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="paciente-notes">Observações administrativas (opcional)</Label>
+        <Label help="Informação administrativa de apoio; não inclua evolução clínica neste campo." htmlFor="paciente-notes">Observações administrativas (opcional)</Label>
         <Textarea
           {...a11y("paciente-notes", errors?.notes)}
           {...field("notes")}
@@ -219,12 +220,12 @@ export function PatientForm({
       </div>
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={pending}>
+        <Button help="Valida e salva os dados cadastrais do paciente." type="submit" disabled={pending}>
           {pending ? "Salvando…" : submitLabel}
         </Button>
-        <Link href={cancelHref} className={buttonVariants({ variant: "outline" })}>
+        <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." href={cancelHref} className={buttonVariants({ variant: "outline" })}>
           Cancelar
-        </Link>
+        </ActionLink>
       </div>
     </form>
   );

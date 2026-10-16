@@ -165,5 +165,21 @@ describe("configurações no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_
     );
     const row = await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
     assert.equal(row.agendaDefaultView, "dia");
+    assert.equal(row.actionTooltipsEnabled, false);
+  });
+
+  it("tooltips: persiste, audita, preserva outros campos e recusa versão antiga", async () => {
+    const first = await saveClinicSettings(prisma, { values: values({ actionTooltipsEnabled: true, displayName: "TOOLTIPS" }), expectedVersion: 0, actor: actor() });
+    assert.equal(first.version, 1);
+    const row = await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+    assert.equal(row.actionTooltipsEnabled, true);
+    assert.equal(row.displayName, "TOOLTIPS");
+    assert.match((await auditsOf(adminId)).at(-1)?.details ?? "", /Tooltips nos botões de ação/);
+    await assert.rejects(saveClinicSettings(prisma, { values: values({ actionTooltipsEnabled: false }), expectedVersion: 0, actor: actor() }), SettingsConflictError);
+    assert.equal((await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } })).actionTooltipsEnabled, true);
+    await saveClinicSettings(prisma, { values: values({ actionTooltipsEnabled: false, displayName: "TOOLTIPS" }), expectedVersion: 1, actor: actor() });
+    const updated = await prisma.clinicSettings.findUniqueOrThrow({ where: { id: SETTINGS_ID } });
+    assert.equal(updated.actionTooltipsEnabled, false);
+    assert.equal(updated.displayName, "TOOLTIPS");
   });
 });

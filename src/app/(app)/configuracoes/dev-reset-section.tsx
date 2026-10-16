@@ -110,7 +110,7 @@ export function DevResetSection({
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="limpeza-banco">Digite o nome do banco ({database})</Label>
+                <Label help="Repita o nome do banco exibido para confirmar o alvo da limpeza." htmlFor="limpeza-banco">Digite o nome do banco ({database})</Label>
                 <Input
                   id="limpeza-banco"
                   name="database"
@@ -120,7 +120,7 @@ export function DevResetSection({
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="limpeza-palavra">Digite LIMPAR</Label>
+                <Label help="Digite a palavra LIMPAR em maiúsculas para confirmar a limpeza da base." htmlFor="limpeza-palavra">Digite LIMPAR</Label>
                 <Input
                   id="limpeza-palavra"
                   name="word"
@@ -130,7 +130,7 @@ export function DevResetSection({
                 />
               </div>
             </div>
-            <Button type="submit" variant="destructive" className="self-start" disabled={!confirmed || pending}>
+            <Button help="Executa a limpeza da base selecionada após as confirmações exigidas." type="submit" variant="destructive" className="self-start" disabled={!confirmed || pending}>
               {pending ? "Limpando…" : "Limpar a base"}
             </Button>
           </form>

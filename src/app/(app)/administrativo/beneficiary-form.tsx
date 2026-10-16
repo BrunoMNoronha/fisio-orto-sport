@@ -1,6 +1,7 @@
 "use client";
+import { ActionLink } from "@/components/action-link";
+import { fieldHelp } from "@/lib/field-help";
 import { useActionState, useState } from "react";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -32,23 +33,23 @@ export function BeneficiaryForm({ kind, id, version, requestId, hidden, initial,
     <input type="hidden" name="id" value={id} /><input type="hidden" name="requestId" value={requestId} /><input type="hidden" name="expectedVersion" value={version} />
     {Object.entries(hidden).map(([name,value]) => <input key={name} type="hidden" name={name} value={value} />)}
     {state?.error && <p role="alert" className="rounded border border-destructive p-3 text-sm">{state.error}</p>}
-    {kind === "rule" && <div className="flex flex-col gap-2"><Label htmlFor={domId("mode")}>Exigência de autorização</Label>
+    {kind === "rule" && <div className="flex flex-col gap-2"><Label help="Define quando a cobertura exige autorização prévia para executar procedimentos." htmlFor={domId("mode")}>Exigência de autorização</Label>
       <NativeSelect id={domId("mode")} name="mode" value={values.mode ?? "PENDENTE"} onInput={(e) => update("mode",e.currentTarget.value)} onChange={(e) => update("mode",e.target.value)}>
         <option value="PENDENTE">Pendente de confirmação</option><option value="EXIGIDA">Exigida</option><option value="DISPENSADA">Dispensada expressamente</option>
       </NativeSelect>{feedback("mode")}</div>}
-    {(fields[kind] as Field[]).map((f) => <div key={f.name} className="flex flex-col gap-2"><Label htmlFor={domId(f.name)}>{f.label}{f.required ? " *" : ""}</Label>
+    {(fields[kind] as Field[]).map((f) => <div key={f.name} className="flex flex-col gap-2"><Label help={fieldHelp(f.name)} htmlFor={domId(f.name)}>{f.label}{f.required ? " *" : ""}</Label>
       <Input id={domId(f.name)} name={f.name} value={values[f.name] ?? ""} required={f.required} maxLength={f.max} type={f.date ? "date" : f.number ? "number" : "text"}
         min={f.date ? "2000-01-01" : f.number ? 1 : undefined} max={f.date ? "2100-12-31" : f.number ? 2147483647 : undefined} step={f.number ? 1 : undefined}
         aria-invalid={Boolean(errors?.[f.name])} aria-describedby={errors?.[f.name] ? `${domId(f.name)}-error` : undefined}
         onInput={f.date ? (e) => update(f.name,e.currentTarget.value) : undefined} onChange={(e) => update(f.name,e.target.value)} />{feedback(f.name)}</div>)}
-    {kind !== "rule" && <div className="flex flex-col gap-2"><Label htmlFor={domId("active")}>Situação</Label>
+    {kind !== "rule" && <div className="flex flex-col gap-2"><Label help="Restringe ou define a situação ativa/inativa do registro; registros anteriores são preservados." htmlFor={domId("active")}>Situação</Label>
       <NativeSelect id={domId("active")} name="active" value={values.active ?? "true"} onInput={(e) => update("active",e.currentTarget.value)} onChange={(e) => update("active",e.target.value)}>
         <option value="true">{kind === "authorization" ? "Recebida / ativa" : "Ativo"}</option><option value="false">{kind === "authorization" ? "Cancelada" : "Inativo"}</option>
       </NativeSelect>{feedback("active")}</div>}
-    <div className="flex flex-col gap-2"><Label htmlFor={domId("reason")}>Motivo do registro ou alteração *</Label>
+    <div className="flex flex-col gap-2"><Label help="Descreva a justificativa deste registro ou alteração para manter sua rastreabilidade." htmlFor={domId("reason")}>Motivo do registro ou alteração *</Label>
       <Input id={domId("reason")} name="reason" value={values.reason ?? ""} required maxLength={300} aria-invalid={Boolean(errors?.reason)}
         aria-describedby={errors?.reason ? `${domId("reason")}-error` : undefined} onChange={(e) => update("reason",e.target.value)} />{feedback("reason")}</div>
-    <div className="flex flex-wrap gap-2"><Button type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button>
-      <Link className={buttonVariants({variant:"outline"})} href={cancelHref}>Voltar</Link></div>
+    <div className="flex flex-wrap gap-2"><Button help="Valida os campos e salva o cadastro com a justificativa informada." type="submit" disabled={pending}>{pending ? "Salvando…" : "Salvar"}</Button>
+      <ActionLink help="Sai do formulário sem salvar as alterações e retorna à tela de origem." className={buttonVariants({variant:"outline"})} href={cancelHref}>Voltar</ActionLink></div>
   </form>;
 }

@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -57,19 +58,19 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
           <p className="text-sm text-muted-foreground">Cadastro e contato dos pacientes da clínica.</p>
         </div>
         {canManage && (
-          <Link href="/pacientes/novo" className={buttonVariants()}>
+          <ActionLink help="Abre o formulário para cadastrar um paciente." href="/pacientes/novo" className={buttonVariants()}>
             Novo paciente
-          </Link>
+          </ActionLink>
         )}
       </div>
 
       <form role="search" method="get" className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">
         <div className="flex min-w-56 flex-1 flex-col gap-2">
-          <Label htmlFor="busca-nome">Buscar por nome</Label>
+          <Label help="Digite parte do nome do paciente para limitar os resultados da consulta." htmlFor="busca-nome">Buscar por nome</Label>
           <Input id="busca-nome" name="q" type="search" defaultValue={params.q ?? ""} maxLength={100} />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="busca-status">Situação</Label>
+          <Label help="Restringe ou define a situação ativa/inativa do registro; registros anteriores são preservados." htmlFor="busca-status">Situação</Label>
           <NativeSelect id="busca-status" name="status" defaultValue={params.status ?? ""}>
             <NativeSelectOption value="">Todas</NativeSelectOption>
             {PATIENT_STATUSES.map((status) => (
@@ -79,7 +80,7 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit" variant="secondary">
+        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
           Filtrar
         </Button>
       </form>
@@ -129,14 +130,14 @@ export default async function PacientesPage({ searchParams }: PageProps<"/pacien
         </span>
         <div className="flex gap-2">
           {page > 1 && (
-            <Link href={pageHref(Math.min(page - 1, pageCount))} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <ActionLink help="Exibe a página anterior dos resultados, mantendo os filtros atuais." href={pageHref(Math.min(page - 1, pageCount))} className={buttonVariants({ variant: "outline", size: "sm" })}>
               Anterior
-            </Link>
+            </ActionLink>
           )}
           {page < pageCount && (
-            <Link href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <ActionLink help="Exibe a próxima página dos resultados, mantendo os filtros atuais." href={pageHref(page + 1)} className={buttonVariants({ variant: "outline", size: "sm" })}>
               Próxima
-            </Link>
+            </ActionLink>
           )}
         </div>
       </nav>

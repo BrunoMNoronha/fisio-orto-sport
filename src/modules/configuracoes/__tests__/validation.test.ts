@@ -20,6 +20,12 @@ function errorsOf(input: Record<string, unknown>) {
 }
 
 describe("settingsSchema", () => {
+  it.each([[undefined, false], ["on", true], ["true", true], ["false", false]])("valida switch %s como %s", (value, expected) => {
+    expect(settingsSchema.parse({ ...base, actionTooltipsEnabled: value }).actionTooltipsEnabled).toBe(expected);
+  });
+  it.each(["yes", "1", "", true, 1])("recusa switch inválido %s", (value) => {
+    expect(errorsOf({ actionTooltipsEnabled: value }).actionTooltipsEnabled).toBeDefined();
+  });
   it.each(["", "0", "-1", "1.5", "101", "abc"])("recusa limite de recorrência inválido %s", (maxRecurringSessions) => {
     expect(errorsOf({ maxRecurringSessions }).maxRecurringSessions).toBeDefined();
   });
@@ -40,6 +46,7 @@ describe("settingsSchema", () => {
       maxRecurringSessions: 10,
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
+      actionTooltipsEnabled: false,
       printShowClinicInfo: false,
       businessHoursEnabled: false,
       businessHours: ";;;;;;",

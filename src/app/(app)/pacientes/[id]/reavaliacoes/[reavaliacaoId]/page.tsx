@@ -1,3 +1,4 @@
+import { ActionLink } from "@/components/action-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -38,13 +39,13 @@ export default async function ReavaliacaoPage({ params }: PageProps<"/pacientes/
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">Reavaliação de {formatDate(reassessment.reassessmentDate)}</h2>
           <div className="flex flex-wrap gap-2">
-            <Link href={planHref} className={buttonVariants({ variant: "ghost" })}>
+            <ActionLink help="Exibe o plano terapêutico de referência deste registro." href={planHref} className={buttonVariants({ variant: "ghost" })}>
               Ver plano
-            </Link>
+            </ActionLink>
             {canManage && (
-              <Link href={`${base}/${reassessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
+              <ActionLink help="Abre a correção desta reavaliação, preservando seu histórico." href={`${base}/${reassessment.id}/editar`} className={buttonVariants({ variant: "outline" })}>
                 Corrigir
-              </Link>
+              </ActionLink>
             )}
           </div>
         </div>
@@ -58,12 +59,12 @@ export default async function ReavaliacaoPage({ params }: PageProps<"/pacientes/
               {reassessment.plan.status !== "ATIVO" ? " O plano está encerrado: reabra-o para revisar." : ""}
             </span>
             {canRevise && (
-              <Link
+              <ActionLink help="Abre uma revisão do plano usando esta reavaliação como referência."
                 href={`${planHref}/revisar?reavaliacao=${reassessment.id}`}
                 className={buttonVariants({ size: "sm" })}
               >
                 Revisar plano a partir desta reavaliação
-              </Link>
+              </ActionLink>
             )}
           </AlertDescription>
         </Alert>

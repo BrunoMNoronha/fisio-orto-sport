@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { WEEKDAY_LABELS, describeWeek, parseBusinessHours } from "@/modules/agenda/business-hours";
+import { MAX_RECURRING_SESSIONS } from "@/modules/agenda/recurrence";
 import {
   DEFAULT_RANGE_DAYS,
   MAX_BLOCK_DAYS,
@@ -40,6 +41,7 @@ type FormValues = {
   agendaDayStartHour: string;
   agendaDayEndHour: string;
   maxSimultaneousAppointments: string;
+  maxRecurringSessions: string;
   suggestedDurationMinutes: string;
   agendaDefaultView: string;
   printShowClinicInfo: boolean;
@@ -60,6 +62,7 @@ function toForm(values: ClinicSettingsValues): FormValues {
     agendaDayEndHour: String(values.agendaDayEndHour),
     suggestedDurationMinutes: values.suggestedDurationMinutes ? String(values.suggestedDurationMinutes) : "",
     maxSimultaneousAppointments: String(values.maxSimultaneousAppointments),
+    maxRecurringSessions: String(values.maxRecurringSessions),
     agendaDefaultView: values.agendaDefaultView,
     printShowClinicInfo: values.printShowClinicInfo,
     businessHoursEnabled: values.businessHoursEnabled,
@@ -81,6 +84,7 @@ function fromFormData(formData: FormData): FormValues {
     agendaDayEndHour: get("agendaDayEndHour"),
     suggestedDurationMinutes: get("suggestedDurationMinutes"),
     maxSimultaneousAppointments: get("maxSimultaneousAppointments"),
+    maxRecurringSessions: get("maxRecurringSessions"),
     agendaDefaultView: get("agendaDefaultView"),
     printShowClinicInfo: formData.get("printShowClinicInfo") === "on",
     businessHoursEnabled: formData.get("businessHoursEnabled") === "on",
@@ -112,6 +116,7 @@ const FIELD_TAB: Record<keyof FormValues, TabId> = {
   agendaDayEndHour: "agenda",
   suggestedDurationMinutes: "agenda",
   maxSimultaneousAppointments: "agenda",
+  maxRecurringSessions: "agenda",
   agendaDefaultView: "agenda",
   businessHoursEnabled: "agenda",
   businessHours: "agenda",
@@ -485,6 +490,18 @@ export function SettingsForm({
                   Reduzir o limite preserva os agendamentos existentes.
                 </p>
                 <FieldError id="config-maxSimultaneousAppointments-erro" messages={errors?.maxSimultaneousAppointments} />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="config-maxRecurringSessions">Máximo de sessões por agendamento recorrente</Label>
+                <Input {...a11y("config-maxRecurringSessions", errors?.maxRecurringSessions, true)}
+                  name="maxRecurringSessions" type="number" min={1} max={MAX_RECURRING_SESSIONS} step={1}
+                  value={values.maxRecurringSessions} disabled={!canManage}
+                  onChange={(event) => set("maxRecurringSessions", event.target.value)} />
+                <p id="config-maxRecurringSessions-ajuda" className="text-xs text-muted-foreground">
+                  Padrão: 10 sessões, incluindo a primeira. Limite técnico de {MAX_RECURRING_SESSIONS} por lote.
+                  Reduzir preserva os agendamentos existentes e vale para novas criações.
+                </p>
+                <FieldError id="config-maxRecurringSessions-erro" messages={errors?.maxRecurringSessions} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="config-agendaDefaultView">Visão inicial da agenda</Label>

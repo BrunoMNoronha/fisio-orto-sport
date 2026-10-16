@@ -19,6 +19,7 @@ export const APPOINTMENT_LIST_SELECT = {
 
 export const APPOINTMENT_DETAIL_SELECT = {
   ...APPOINTMENT_LIST_SELECT,
+  batch: { select: { _count: { select: { appointments: true } } } },
   notes: true,
   cancelledAt: true,
   cancelReason: true,

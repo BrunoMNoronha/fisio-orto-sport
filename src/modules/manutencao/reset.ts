@@ -21,6 +21,7 @@ export const CLEARED_TABLES = [
   "AuthRateLimit",
   "Patient",
   "Appointment",
+  "AppointmentBatch",
   "ScheduleBlock",
   "Anamnesis",
   "Assessment",

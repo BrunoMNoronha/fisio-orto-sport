@@ -40,6 +40,7 @@ export default async function NovoAgendamentoPage({ searchParams }: PageProps<"/
         }}
         patientPicker={{ initial: patient }}
         suggestedDurationMinutes={duration}
+        maxRecurringSessions={preferences.maxRecurringSessions}
         businessHours={preferences.businessHours}
         professionals={professionals.map((p) => ({ id: p.id, label: p.name }))}
         cancelHref="/agenda"

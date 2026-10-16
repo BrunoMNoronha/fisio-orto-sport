@@ -36,6 +36,7 @@ export async function getClinicDisplayName(): Promise<string | null> {
 
 export type AgendaPreferences = {
   maxSimultaneousAppointments: number;
+  maxRecurringSessions: number;
   dayStartHour: number;
   dayEndHour: number;
   suggestedDurationMinutes: number | null;
@@ -54,6 +55,7 @@ export async function getAgendaPreferences(): Promise<AgendaPreferences> {
   const settings = await loadSettings();
   return {
     maxSimultaneousAppointments: settings.maxSimultaneousAppointments,
+    maxRecurringSessions: settings.maxRecurringSessions,
     dayStartHour: settings.agendaDayStartHour,
     dayEndHour: settings.agendaDayEndHour,
     suggestedDurationMinutes: settings.suggestedDurationMinutes,

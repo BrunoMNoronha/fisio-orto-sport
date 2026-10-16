@@ -13,6 +13,9 @@ import { describeWeek, endOptions, parseBusinessHours, startOptions } from "@/mo
 import { startsInPast } from "@/modules/agenda/validation";
 import { suggestEndTime } from "@/modules/configuracoes/settings";
 import { PatientCombobox } from "./patient-combobox";
+import { EMPTY_RECURRENCE, RecurrenceFields, type RecurrenceValues } from "./recurrence-fields";
+import { displayDate } from "@/modules/agenda/recurrence";
+import { DEFAULT_MAX_RECURRING_SESSIONS } from "@/modules/agenda/recurrence";
 
 type Action = (prev: AppointmentActionState, formData: FormData) => Promise<AppointmentActionState>;
 type Option = { id: string; label: string };
@@ -64,6 +67,7 @@ export function AppointmentForm({
   patientName,
   appointmentId,
   suggestedDurationMinutes = null,
+  maxRecurringSessions = DEFAULT_MAX_RECURRING_SESSIONS,
   businessHours = null,
   cancelHref,
   submitLabel,
@@ -78,6 +82,7 @@ export function AppointmentForm({
   // Duração sugerida da configuração (issue #63), só na criação: preenche o fim a partir do início
   // enquanto o fim não for editado à mão. Não altera agendamentos existentes nem a regra de conflito.
   suggestedDurationMinutes?: number | null;
+  maxRecurringSessions?: number;
   // Expediente em vigor (#78, formato canônico) ou null (sem restrição). Com ele, início e fim viram
   // listas só com horários válidos do dia; o servidor valida de novo no envio.
   businessHours?: string | null;
@@ -85,6 +90,7 @@ export function AppointmentForm({
   submitLabel: string;
 }) {
   const [values, setValues] = useState(initial);
+  const [recurrence, setRecurrence] = useState<RecurrenceValues>(EMPTY_RECURRENCE);
   // Fim digitado pela pessoa: a sugestão nunca o sobrescreve.
   const [endTouched, setEndTouched] = useState(false);
   const [patient, setPatient] = useState<Option | null>(patientPicker?.initial ?? null);
@@ -93,6 +99,10 @@ export function AppointmentForm({
   // esconde o aviso, e o próximo envio checa de novo.
   const [editedSinceSubmit, setEditedSinceSubmit] = useState(false);
   const patientConflicts = editedSinceSubmit ? undefined : state?.patientConflicts;
+  function edited() {
+    setEditedSinceSubmit(true);
+    setRecurrence((current) => ({ ...current, requestKey: crypto.randomUUID() }));
+  }
   const errors = state?.fieldErrors;
   const minute = useClientMinute();
   const past = minute !== null && startsInPast(values.date, values.startTime, new Date(minute));
@@ -108,7 +118,7 @@ export function AppointmentForm({
       value: values[name],
       onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const value = event.target.value;
-        setEditedSinceSubmit(true);
+        edited();
         if (name === "endTime") setEndTouched(true);
         setValues((current) => {
           const next = { ...current, [name]: value };
@@ -194,6 +204,16 @@ export function AppointmentForm({
   return (
     <form action={formAction} onSubmit={() => setEditedSinceSubmit(false)} className="flex flex-col gap-6" noValidate>
       {appointmentId && <input type="hidden" name="id" value={appointmentId} />}
+      {!editedSinceSubmit && state?.occurrenceErrors?.length ? (
+        <Alert variant="destructive" aria-live="polite">
+          <AlertDescription>
+            <p>{state.error}</p>
+            <ul className="list-disc pl-5">
+              {state.occurrenceErrors.map((item) => <li key={item.date}>{displayDate(item.date)} {item.startTime}–{item.endTime}: {item.message}</li>)}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {patientConflicts?.length ? (
         <Alert aria-live="polite">
           <AlertDescription className="flex flex-col gap-2">
@@ -212,7 +232,7 @@ export function AppointmentForm({
             <p>Se for um encaixe intencional, confirme abaixo; caso contrário, ajuste o horário.</p>
           </AlertDescription>
         </Alert>
-      ) : state?.error && !state.patientConflicts && (
+      ) : state?.error && !state.patientConflicts && !state.occurrenceErrors && (
         <Alert variant="destructive" aria-live="polite">
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
@@ -225,7 +245,7 @@ export function AppointmentForm({
             value={patient}
             errors={errors?.patientId}
             onChange={(option) => {
-              setEditedSinceSubmit(true);
+              edited();
               setPatient(option);
               setValues((current) => ({ ...current, patientId: option.id }));
             }}
@@ -241,6 +261,15 @@ export function AppointmentForm({
         {input("startTime", "Início *", "time")}
         {input("endTime", "Fim *", "time")}
       </div>
+
+      {!appointmentId && patientPicker && <RecurrenceFields
+        date={values.date} startTime={values.startTime} endTime={values.endTime}
+        value={recurrence} disabled={pending} errors={errors} maxSessions={maxRecurringSessions}
+        onChange={(next) => {
+          setEditedSinceSubmit(true);
+          setRecurrence({ ...next, requestKey: crypto.randomUUID() });
+        }}
+      />}
 
       {week && (
         <p className="-mt-3 text-xs text-muted-foreground" aria-live="polite">

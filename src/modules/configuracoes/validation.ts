@@ -1,6 +1,7 @@
 // Validação do painel de configurações (issue #63). Tudo é revalidado no servidor; o formulário
 // só repete as regras para o feedback imediato.
 import { z } from "zod";
+import { MAX_RECURRING_SESSIONS } from "@/modules/agenda/recurrence";
 import { normalizeName } from "@/lib/names";
 import { onlyDigits } from "@/modules/pacientes/validation";
 import { formatBusinessHours, isClosedWeek, parseBusinessHours } from "@/modules/agenda/business-hours";
@@ -147,6 +148,15 @@ export const settingsSchema = z
       return limit;
     }),
     suggestedDurationMinutes: duration,
+    maxRecurringSessions: z.string().optional().transform((value, ctx) => {
+      if (value === undefined) return DEFAULT_SETTINGS.maxRecurringSessions;
+      const limit = Number(value);
+      if (!/^\d+$/.test(value.trim()) || !Number.isInteger(limit) || limit < 1 || limit > MAX_RECURRING_SESSIONS) {
+        ctx.addIssue({ code: "custom", message: `Informe um limite inteiro de 1 a ${MAX_RECURRING_SESSIONS} sessões.` });
+        return z.NEVER;
+      }
+      return limit;
+    }),
     agendaDefaultView: agendaView,
     printShowClinicInfo: checkbox,
     businessHoursEnabled: checkbox,

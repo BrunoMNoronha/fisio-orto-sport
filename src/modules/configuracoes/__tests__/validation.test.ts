@@ -20,6 +20,12 @@ function errorsOf(input: Record<string, unknown>) {
 }
 
 describe("settingsSchema", () => {
+  it.each(["", "0", "-1", "1.5", "101", "abc"])("recusa limite de recorrência inválido %s", (maxRecurringSessions) => {
+    expect(errorsOf({ maxRecurringSessions }).maxRecurringSessions).toBeDefined();
+  });
+  it("permite parametrizar o limite de sessões", () => {
+    expect(settingsSchema.parse({ ...base, maxRecurringSessions: "25" }).maxRecurringSessions).toBe(25);
+  });
   it("formulário vazio vira os padrões, com opcionais nulos", () => {
     expect(settingsSchema.parse(base)).toEqual({
       displayName: null,
@@ -31,6 +37,7 @@ describe("settingsSchema", () => {
       agendaDayStartHour: 7,
       agendaDayEndHour: 20,
       maxSimultaneousAppointments: 3,
+      maxRecurringSessions: 10,
       suggestedDurationMinutes: null,
       agendaDefaultView: "dia",
       printShowClinicInfo: false,

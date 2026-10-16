@@ -104,6 +104,12 @@ export function verifyBuildEnvironment(env = process.env, directory = ".vercel")
   const file = `${directory}/.env.${env.RELEASE_ENV.toLowerCase()}.local`;
   assert(existsSync(file), "Configuração Vercel não carregada.");
   const loaded = parse(readFileSync(file));
+  // A CLI não exporta valores Sensitive/Secret: pode deixar as chaves vazias.
+  // O build mantém os secrets já validados do runner. O runtime ainda precisa
+  // comprovar a conexão real por HMAC antes de qualquer promoção.
+  for (const name of ["DATABASE_URL", "DATABASE_URL_UNPOOLED"]) {
+    if (typeof loaded[name] === "string" && !loaded[name].trim()) delete loaded[name];
+  }
   assert(!loaded.RELEASE_ENV || loaded.RELEASE_ENV === env.RELEASE_ENV, "Ambiente de release sobrescrito no build.");
   const effective = { ...env, ...loaded };
   // Detecta overrides baixados pela CLI, além das URLs já conferidas no runner.

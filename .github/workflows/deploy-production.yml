@@ -66,6 +66,10 @@ jobs:
         run: node scripts/pipeline/release.mjs candidate
       - name: Conferir secrets e projetos
         run: node scripts/pipeline/release.mjs preflight
+      - name: Carregar configuração Vercel Production
+        run: pnpm dlx vercel@62.2.0 pull --yes --environment=production
+      - name: Validar conexões efetivas do build
+        run: node scripts/pipeline/release.mjs build-environment
       - name: Conferir banco e compatibilidade das migrações
         run: node scripts/pipeline/release.mjs audit
       - name: Registrar recuperação antes da migração
@@ -81,8 +85,6 @@ jobs:
         run: pnpm exec prisma migrate deploy
       - name: Confirmar migrações aplicadas
         run: node scripts/pipeline/release.mjs audit --complete
-      - name: Carregar configuração Vercel Production
-        run: pnpm dlx vercel@62.2.0 pull --yes --environment=production
       - name: Construir o mesmo commit para Production
         run: pnpm dlx vercel@62.2.0 build --prod --yes
       - name: Publicar sem atribuir os domínios
@@ -95,9 +97,7 @@ jobs:
         id: deployment
         run: node scripts/pipeline/release.mjs production-deployment
       - name: Atribuir domínios ao deployment Production verificado
-        env:
-          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
-        run: pnpm dlx vercel@62.2.0 promote "$DEPLOYMENT_ID" --yes
+        run: node scripts/pipeline/release.mjs promote
       - name: Confirmar domínio e funcionamento
         run: node scripts/pipeline/release.mjs published
       - name: Guardar resultado sem secrets
@@ -108,5 +108,6 @@ jobs:
           path: |
             release/production.json
             release/database-production.json
+            release/runtime-production.json
           if-no-files-found: ignore
           retention-days: 30

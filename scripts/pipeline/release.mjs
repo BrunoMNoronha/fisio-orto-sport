@@ -3,6 +3,8 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, write
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { parse } from "dotenv";
+import { connectionIdentity, runtimeChallenge, verifyRuntimeProof } from "../../src/modules/release/runtime-proof.mjs";
 
 export const targets = JSON.parse(readFileSync(new URL("./targets.json", import.meta.url), "utf8"));
 export class ReleaseError extends Error {}
@@ -31,6 +33,7 @@ export function databaseTarget(env) {
     assert(decodeURIComponent(url.pathname.slice(1)) === target.database, `${name}: banco incorreto.`);
     assert(decodeURIComponent(url.username) === target.role && url.password.length > 0, `${name}: role incorreta ou senha ausente.`);
     assert(["require", "verify-full"].includes(url.searchParams.get("sslmode")), `${name}: TLS obrigatório.`);
+    try { connectionIdentity(env[name]); } catch { throw new ReleaseError(`${name}: parâmetros de conexão não permitidos.`); }
   }
   for (const name of ["SETUP_TOKEN", "DEMO_DATA_TARGET", "DEV_RESET_TARGET", "DEV_QUICK_LOGIN", "SEED_ADMIN_PASSWORD", "INTEGRATION_DATABASE_URL"]) {
     assert(!env[name], `${name} não permitida na release.`);
@@ -82,16 +85,78 @@ const writeJson = (file, value) => { mkdirSync("release", { recursive: true }); 
 const output = (name, value) => { if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`); };
 const summary = (message) => { if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, message + "\n"); };
 
-async function api(provider, path) {
+export async function api(provider, path, options = {}, request = fetch, env = process.env) {
   const vercel = provider === "vercel";
   const base = vercel ? "https://api.vercel.com" : "https://api.github.com";
   const suffix = vercel ? `${path.includes("?") ? "&" : "?"}teamId=${targets.vercelOrgId}` : "";
-  const response = await fetch(base + path + suffix, {
-    headers: { Authorization: `Bearer ${required(process.env, vercel ? "VERCEL_TOKEN" : "GITHUB_TOKEN")}`, Accept: "application/json" },
+  const response = await request(base + path + suffix, {
+    ...options,
+    headers: { Authorization: `Bearer ${required(env, vercel ? "VERCEL_TOKEN" : "GITHUB_TOKEN")}`, Accept: "application/json" },
     signal: AbortSignal.timeout(30000),
   });
   assert(response.ok, `${provider}: consulta recusada (HTTP ${response.status}).`);
-  return response.json();
+  const body = await response.text();
+  return body ? JSON.parse(body) : null;
+}
+
+export function verifyBuildEnvironment(env = process.env, directory = ".vercel") {
+  databaseTarget(env);
+  const file = `${directory}/.env.${env.RELEASE_ENV.toLowerCase()}.local`;
+  assert(existsSync(file), "Configuração Vercel não carregada.");
+  const loaded = parse(readFileSync(file));
+  assert(!loaded.RELEASE_ENV || loaded.RELEASE_ENV === env.RELEASE_ENV, "Ambiente de release sobrescrito no build.");
+  const effective = { ...env, ...loaded };
+  // Detecta overrides baixados pela CLI, além das URLs já conferidas no runner.
+  const target = databaseTarget(effective);
+  assert(!effective.VERCEL_ENV || effective.VERCEL_ENV === env.RELEASE_ENV.toLowerCase(), "Ambiente de build divergente.");
+  return target;
+}
+
+export async function verifyRuntimeConnection(host, env = process.env, request = fetch) {
+  databaseTarget(env);
+  assert(/^[a-z0-9-]+\.vercel\.app$/.test(host), "Host de runtime inválido.");
+  const challenge = runtimeChallenge(env.DATABASE_URL);
+  const response = await request(`https://${host}/api/release/verify`, {
+    headers: {
+      "x-vercel-protection-bypass": required(env, "VERCEL_AUTOMATION_BYPASS_SECRET"),
+      "x-release-timestamp": challenge.timestamp,
+      "x-release-nonce": challenge.nonce,
+      "x-release-signature": challenge.signature,
+    },
+    redirect: "manual",
+    cache: "no-store",
+    signal: AbortSignal.timeout(30000),
+  });
+  assert(response.status === 200, "Runtime não comprovou a conexão aprovada; promoção bloqueada.");
+  try {
+    return verifyRuntimeProof(env.DATABASE_URL, challenge, await response.json());
+  } catch { throw new ReleaseError("Runtime não comprovou a conexão aprovada; promoção bloqueada."); }
+}
+
+export async function promoteProduction({
+  env = process.env,
+  receipt = JSON.parse(readFileSync("release/production.json", "utf8")),
+  apiRequest = api,
+  runtimeCheck = verifyRuntimeConnection,
+  wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
+  releaseContext(env);
+  assert(receipt.sha === env.GITHUB_SHA && /^dpl_[A-Za-z0-9]+$/.test(receipt.deploymentId ?? ""), "Recibo de promoção inválido.");
+  const deployment = await apiRequest("vercel", `/v13/deployments/${receipt.deploymentId}`);
+  assertDeployment(deployment, "Production", env.GITHUB_SHA);
+  assert(deployment.id === receipt.deploymentId, "Deployment diverge do recibo de promoção.");
+  assert(receipt.url === `https://${deployment.url}`, "URL do recibo diverge do deployment.");
+  await runtimeCheck(deployment.url, env);
+  const ref = await apiRequest("github", `/repos/${targets.repository}/git/ref/heads/production`);
+  assert(ref.object.sha === env.GITHUB_SHA, "production avançou; promoção bloqueada.");
+  // API sempre inclui teamId e projectId; não depende da inferência de usuário da CLI.
+  await apiRequest("vercel", `/v10/projects/${targets.vercelProjectId}/promote/${deployment.id}`, { method: "POST" });
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const alias = await apiRequest("vercel", `/v4/aliases/${targets.productionDomain}`);
+    if ((alias.deploymentId ?? alias.deployment?.id) === deployment.id) return;
+    await wait(1000);
+  }
+  throw new ReleaseError("Promoção solicitada, mas o domínio ainda não confirmou o deployment.");
 }
 
 async function currentProductionSha() {
@@ -164,12 +229,14 @@ async function inspectedDeployment(file, environment) {
   assertDeployment(deployment, environment, process.env.GITHUB_SHA);
   assert(await currentProductionSha() === process.env.GITHUB_SHA, "production avançou durante o deploy; valide o Preview atual antes de publicar.");
   assert(deployment.url === url.hostname, "URL não corresponde ao deployment.");
+  const runtime = await verifyRuntimeConnection(deployment.url);
   await smoke(deployment.url);
-  return deployment;
+  return { deployment, runtime };
 }
 
 async function previewManifest() {
-  const deployment = await inspectedDeployment("release/preview-url.txt", "Preview");
+  const { deployment, runtime } = await inspectedDeployment("release/preview-url.txt", "Preview");
+  writeJson("release/runtime-preview.json", { ...runtime, verifiedAt: new Date().toISOString(), deploymentId: deployment.id });
   const manifest = { version:1, repository:targets.repository, environment:"Preview", sha:process.env.GITHUB_SHA,
     runId:process.env.GITHUB_RUN_ID, projectId:targets.vercelProjectId, deploymentId:deployment.id,
     url:`https://${deployment.url}`, migrationsDigest:migrationsDigest(), createdAt:new Date().toISOString() };
@@ -219,7 +286,8 @@ async function recoveryPoint() {
 }
 
 async function productionDeployment() {
-  const deployment = await inspectedDeployment("release/production-url.txt","Production");
+  const { deployment, runtime } = await inspectedDeployment("release/production-url.txt","Production");
+  writeJson("release/runtime-production.json", { ...runtime, verifiedAt: new Date().toISOString(), deploymentId: deployment.id });
   output("deployment_id",deployment.id);
   output("url",`https://${deployment.url}`);
   writeJson("release/production.json",{ sha:process.env.GITHUB_SHA, deploymentId:deployment.id, url:`https://${deployment.url}` });
@@ -229,6 +297,7 @@ async function published() {
   const receipt = JSON.parse(readFileSync("release/production.json","utf8"));
   const alias = await api("vercel",`/v4/aliases/${targets.productionDomain}`);
   assert((alias.deploymentId ?? alias.deployment?.id) === receipt.deploymentId, "Domínio não aponta para a release publicada.");
+  await verifyRuntimeConnection(targets.productionDomain);
   await smoke(targets.productionDomain);
   summary(`Production publicada: [${receipt.sha.slice(0,7)}](https://${targets.productionDomain}), deployment **${receipt.deploymentId}**. Validar sessão autenticada e logout conforme o procedimento de release.`);
 }
@@ -236,6 +305,8 @@ async function published() {
 async function main(command) {
   switch(command) {
     case "preflight": return preflight();
+    case "build-environment": { const target = verifyBuildEnvironment(); console.log(JSON.stringify({ environment: process.env.RELEASE_ENV, host: target.host, verified: "build" })); return; }
+    case "promote": return promoteProduction();
     case "audit": return audit(process.argv.includes("--complete"));
     case "preview-manifest": return previewManifest();
     case "candidate": return candidate();

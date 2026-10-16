@@ -77,6 +77,7 @@ export async function lockProfessionals(tx: Prisma.TransactionClient, ids: strin
 type LockedAppointment = {
   status: AppointmentStatus;
   startsAt: Date;
+  endsAt: Date;
   attendance: AppointmentAttendance | null;
 };
 
@@ -84,7 +85,7 @@ type LockedAppointment = {
 // atendimento (clinico/session-appointment.ts) passam por aqui, então não se intercalam.
 export async function lockAppointment(tx: Prisma.TransactionClient, id: string): Promise<LockedAppointment | null> {
   const [row] = await tx.$queryRaw<LockedAppointment[]>`
-    SELECT "status", "startsAt", "attendance" FROM "Appointment" WHERE "id" = ${id} FOR UPDATE`;
+    SELECT "status", "startsAt", "endsAt", "attendance" FROM "Appointment" WHERE "id" = ${id} FOR UPDATE`;
   return row ?? null;
 }
 
@@ -166,7 +167,13 @@ export async function moveAppointment(
     await assertNotBlocked(tx, slot);
     await assertNoConflict(tx, slot, id);
     if (!allowPatientConflict) await checkPatientConflict(tx, { ...slot, patientId: current.patientId }, id);
-    await tx.appointment.update({ where: { id }, data: { ...slot, updatedById: actorId }, select: { id: true } });
+    const timeChanged = locked.startsAt.getTime() !== slot.startsAt.getTime() ||
+      locked.endsAt.getTime() !== slot.endsAt.getTime();
+    await tx.appointment.update({
+      where: { id },
+      data: { ...slot, updatedById: actorId, ...(timeChanged ? { lastRescheduledAt: new Date() } : {}) },
+      select: { id: true },
+    });
     return null;
   });
 }

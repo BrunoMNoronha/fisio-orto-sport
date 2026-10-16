@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { OUTSIDE_BADGE, isOutsideBusinessHours } from "@/modules/agenda/business-hours";
 import type { AgendaItem } from "@/modules/agenda/queries";
-import { APPOINTMENT_STATUS_LABELS, toLocalDate } from "@/modules/agenda/validation";
+import { toLocalDate } from "@/modules/agenda/validation";
+import { AppointmentStatusBadge } from "./appointment-status-badge";
 import { formatDay, formatTime } from "./format";
 
 function groupByDay(items: AgendaItem[]) {
@@ -42,7 +43,7 @@ export function AgendaListView({ items, businessHours = null }: { items: AgendaI
                     {item.patient.fullName}
                   </Link>
                   <span className="text-muted-foreground">{item.professional.name}</span>
-                  {cancelled && <Badge variant="outline">{APPOINTMENT_STATUS_LABELS[item.status]}</Badge>}
+                  <AppointmentStatusBadge item={item} />
                   {isOutsideBusinessHours(businessHours, item) && <Badge variant="outline">{OUTSIDE_BADGE}</Badge>}
                 </li>
               );

@@ -227,6 +227,26 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
     }
   });
 
+  it("persiste marca apenas ao mudar horário e a preserva em envio idêntico e cancelamento", async () => {
+    const at = newDay();
+    const id = await insertAppointment(prisma, booking(fisioA, at(9), at(10)), actorId);
+    const read = () => prisma.appointment.findUniqueOrThrow({ where: { id } });
+    assert.equal((await read()).lastRescheduledAt, null);
+    const original = { professionalId: fisioA, startsAt: at(9), endsAt: at(10) };
+    assert.equal(await moveAppointment(prisma, id, original, actorId), null);
+    assert.equal((await read()).lastRescheduledAt, null);
+    assert.equal(await moveAppointment(prisma, id, { ...original, professionalId: fisioB }, actorId), null);
+    assert.equal((await read()).lastRescheduledAt, null);
+    const changed = { ...original, professionalId: fisioB, startsAt: at(10), endsAt: at(11) };
+    assert.equal(await moveAppointment(prisma, id, changed, actorId), null);
+    const marked = (await read()).lastRescheduledAt;
+    assert.ok(marked instanceof Date);
+    assert.equal(await moveAppointment(prisma, id, changed, actorId), null);
+    assert.equal((await read()).lastRescheduledAt?.getTime(), marked.getTime());
+    assert.equal(await cancelAppointmentRecord(prisma, id, null, actorId), null);
+    assert.equal((await read()).lastRescheduledAt?.getTime(), marked.getTime());
+  });
+
   it("reagendar para horário que sobrepõe só o próprio agendamento é permitido", async () => {
     const at = newDay();
     const id = await insertAppointment(prisma, booking(fisioA, at(9), at(10)), actorId);
@@ -236,6 +256,7 @@ describe("agenda no PostgreSQL", { skip: !url && "INTEGRATION_DATABASE_URL não 
     assert.deepEqual(result.failure, CONFLICT);
     const unchanged = await prisma.appointment.findUniqueOrThrow({ where: { id: occupied } });
     assert.equal(unchanged.startsAt.getTime(), at(13).getTime());
+    assert.equal(unchanged.lastRescheduledAt, null);
   });
 
   it("cancelamento libera o horário e não pode ser repetido nem reagendado", async () => {

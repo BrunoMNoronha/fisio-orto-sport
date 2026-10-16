@@ -11,6 +11,8 @@ export const APPOINTMENT_LIST_SELECT = {
   startsAt: true,
   endsAt: true,
   status: true,
+  attendance: true,
+  lastRescheduledAt: true,
   patient: { select: { id: true, fullName: true } },
   professional: PERSON,
 } as const;

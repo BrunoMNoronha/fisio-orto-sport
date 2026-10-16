@@ -15,6 +15,8 @@ Agenda por profissional e agendamentos (Fase 3, primeira fatia): listar por per�
 
 ## Regras
 
+- **Situação na visão Lista (#133):** badge com texto e ícone: Compareceu (verde), Faltou (vermelho, preservando avisou/sem aviso), Reagendada (azul), Cancelada (cinza) e Agendada (neutra). Prioridade: cancelamento, presença, reagendamento, agendada. Não há falta automática por passagem do tempo. `lastRescheduledAt` é gravado na mesma transação do reagendamento apenas quando início/fim mudam; troca exclusiva de profissional e envio idêntico não alteram a marca. Presença e cancelamento preservam a marca. Registros anteriores à migração ficam nulos, pois `updatedAt` não comprova reagendamento. Aplicar a migração antes de publicar a aplicação.
+
 - **Profissional** = usuário (`User`) **ativo** com perfil `FISIOTERAPEUTA`. Não há tabela própria de profissionais; o módulo `profissionais` segue sem implementação.
 - **Paciente** deve existir e estar `ATIVO` para ser agendado.
 - **Horário**: data, início e fim informados explicitamente (não há duração padrão). O fim deve ser posterior ao início, no mesmo dia, com no máximo 12 h (limite técnico contra erro de digitação, não regra de negócio). No banco há também `CHECK ("endsAt" > "startsAt")`.

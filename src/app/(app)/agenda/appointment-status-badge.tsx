@@ -32,9 +32,10 @@ const BADGE_CLASSES: Record<AppointmentTone, string> = {
 };
 
 // Cards das visões dia e semana: a borda esquerda de 4px é a pista principal, por isso usa tons 600/500.
-// "neutral" preserva o visual atual de agendada; "muted" preserva o visual atual de cancelada.
+// "neutral" (agendada) é o estado comum e fica calmo, sem fundo colorido: só as exceções ganham cor,
+// e "blue" (reagendada) passa a ser o único azul-claro. "muted" preserva o visual apagado de cancelada.
 export const APPOINTMENT_CARD_CLASSES: Record<AppointmentTone, string> = {
-  neutral: "border-primary bg-accent text-accent-foreground hover:bg-accent/70",
+  neutral: "border-primary bg-card text-card-foreground hover:bg-muted/60 dark:hover:bg-muted/40",
   green:
     "border-green-600 bg-green-100 text-green-900 hover:bg-green-200/70 dark:border-green-500 dark:bg-green-950 dark:text-green-200 dark:hover:bg-green-900/70",
   red: "border-red-600 bg-red-100 text-red-900 hover:bg-red-200/70 dark:border-red-500 dark:bg-red-950 dark:text-red-200 dark:hover:bg-red-900/70",

@@ -27,6 +27,10 @@ type Props = {
 };
 
 const pad = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
+const formatCount = (count: number) => `${count} ${count === 1 ? "agendamento" : "agendamentos"}`;
+// Altura mínima visual de um card (px): um atendimento de 15 min teria 16px, pequeno demais para o toque.
+// O card pode invadir até 10px do slot seguinte; em foco/hover ele sobe acima dos vizinhos.
+const MIN_CARD_HEIGHT_PX = 26;
 
 // Grade do dia: uma coluna por profissional, horários em linhas de 1 h.
 export function AgendaDayGrid({ date, items, blocks = [], professionals, canManage, range, now = new Date() }: Props) {
@@ -65,7 +69,7 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
             <div className="grid text-sm leading-tight">
               <span className="truncate font-medium">{professional.name}</span>
               <span className="text-xs text-muted-foreground">
-                {own.filter((item) => item.status === "AGENDADO").length} agendado(s)
+                {formatCount(own.filter((item) => item.status === "AGENDADO").length)}
               </span>
             </div>
           </div>
@@ -84,11 +88,12 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
         </div>
 
         {columns.map(({ professional, items: own }) => {
-          const { lanes, placed } = assignLanes(own);
+          const { placed } = assignLanes(own);
           const newQuery = (hour: number) =>
             new URLSearchParams({ date, professionalId: professional.id, start: pad(hour) });
           return (
-            <div key={professional.id} className="relative border-l" style={{ height }}>
+            // Container query: a densidade dos cards segue a largura da coluna, não do viewport.
+            <div key={professional.id} className="relative border-l @container/col" style={{ height }}>
               {hours.map((hour) =>
                 canManage ? (
                   <Link
@@ -136,7 +141,7 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
                   );
                 })}
 
-              {placed.map(({ item, lane }) => {
+              {placed.map(({ item, lane, lanes }) => {
                 const { top, height: boxHeight } = placeOnGrid(item, startHour);
                 const { label, Icon, tone } = appointmentPresentation(item);
                 const cancelled = item.status === "CANCELADO";
@@ -150,19 +155,19 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
                     aria-label={`${time}, ${item.patient.fullName}, ${label}`}
                     title={`${item.patient.fullName} · ${time} · ${label}`}
                     className={cn(
-                      "absolute z-[2] flex overflow-hidden rounded-md border-l-4 px-2 text-xs shadow-xs transition-colors",
+                      "absolute z-[2] flex overflow-hidden rounded-md border-l-4 px-2 text-xs shadow-xs transition-colors hover:z-[3] focus-visible:z-[3] @[22rem]/col:text-sm",
                       APPOINTMENT_CARD_CLASSES[tone],
                       compact ? "flex-row items-center gap-2 py-0 leading-tight" : "flex-col py-1",
                     )}
                     style={{
                       top: top + 1,
-                      height: boxHeight - 2,
+                      height: Math.max(boxHeight - 2, MIN_CARD_HEIGHT_PX),
                       left: `calc(${(lane * 100) / lanes}% + 4px)`,
                       width: `calc(${100 / lanes}% - 8px)`,
                     }}
                   >
                     <span className="flex min-w-0 items-center gap-1">
-                      <Icon aria-hidden="true" className="size-3 shrink-0" />
+                      <Icon aria-hidden="true" className="size-3 shrink-0 @[22rem]/col:size-3.5" />
                       <span className={cn("truncate font-medium", cancelled && "line-through")}>
                         {item.patient.fullName}
                       </span>
@@ -178,7 +183,8 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
               {showNow && (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 z-[3] border-t-2 border-destructive"
+                  // Cor primária, não destrutiva: o vermelho já significa "faltou" nos cards.
+                  className="pointer-events-none absolute inset-x-0 z-[3] border-t-2 border-primary"
                   style={{ top: nowTop }}
                 />
               )}

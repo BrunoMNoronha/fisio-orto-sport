@@ -47,6 +47,45 @@ describe("AgendaDayGrid — situações", () => {
     expect(within(link).getByText(`· ${label}`)).toBeInTheDocument();
   });
 
+  it("agendada fica neutra e reagendada é o único card azul-claro", () => {
+    render(
+      <AgendaDayGrid
+        date="2026-10-19"
+        items={[base, { ...base, id: "a2", lastRescheduledAt: new Date(), startsAt: new Date("2026-10-19T18:00:00Z"), endsAt: new Date("2026-10-19T19:00:00Z") }]}
+        professionals={professionals}
+        canManage
+      />,
+    );
+    const scheduled = screen.getByRole("link", { name: "14:00–15:00, Paciente Teste, Agendada" });
+    const rescheduled = screen.getByRole("link", { name: "15:00–16:00, Paciente Teste, Reagendada" });
+    expect(scheduled).toHaveClass("bg-card");
+    expect(scheduled).not.toHaveClass("bg-blue-100");
+    expect(rescheduled).toHaveClass("bg-blue-100");
+  });
+
+  it("cards só dividem a largura dentro do próprio grupo de sobreposição", () => {
+    render(
+      <AgendaDayGrid
+        date="2026-10-19"
+        items={[
+          base,
+          { ...base, id: "a2", startsAt: new Date("2026-10-19T17:30:00Z"), endsAt: new Date("2026-10-19T18:30:00Z") },
+          { ...base, id: "a3", startsAt: new Date("2026-10-19T20:00:00Z"), endsAt: new Date("2026-10-19T21:00:00Z") },
+        ]}
+        professionals={professionals}
+        canManage
+      />,
+    );
+    expect(screen.getByRole("link", { name: /^14:00–15:00/ })).toHaveStyle({ width: "calc(50% - 8px)" });
+    expect(screen.getByRole("link", { name: /^14:30–15:30/ })).toHaveStyle({ left: "calc(50% + 4px)" });
+    expect(screen.getByRole("link", { name: /^17:00–18:00/ })).toHaveStyle({ width: "calc(100% - 8px)" });
+  });
+
+  it("contagem do cabeçalho usa plural real", () => {
+    renderDay(base);
+    expect(screen.getByText("1 agendamento")).toBeInTheDocument();
+  });
+
   it("cancelada mantém o nome riscado e o visual apagado", () => {
     renderDay({ ...base, status: "CANCELADO" });
     const link = screen.getByRole("link", { name: "14:00–15:00, Paciente Teste, Cancelada" });

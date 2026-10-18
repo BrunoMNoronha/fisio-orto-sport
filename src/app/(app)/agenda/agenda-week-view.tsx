@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { AgendaItem, ScheduleBlockItem } from "@/modules/agenda/queries";
 import { addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
+import { APPOINTMENT_CARD_CLASSES, appointmentPresentation } from "./appointment-status-badge";
 import { agendaHref, formatDayMonth, formatTime, formatWeekdayShort } from "./format";
 
 type Props = {
@@ -67,21 +68,29 @@ export function AgendaWeekView({ from, today, items, blocks = [], professionalId
             ) : (
               <ul className="flex flex-col gap-1.5 p-2">
                 {dayItems.map((item) => {
+                  const { label, Icon, tone } = appointmentPresentation(item);
                   const cancelled = item.status === "CANCELADO";
+                  const time = formatTime(item.startsAt);
+                  // O profissional entra no nome acessível só quando também está visível.
+                  const professionalSuffix = professionalId ? "" : `, ${item.professional.name}`;
                   return (
                     <li key={item.id}>
                       <Link
                         href={`/agenda/${item.id}`}
+                        aria-label={`${time}, ${item.patient.fullName}, ${label}${professionalSuffix}`}
+                        title={`${item.patient.fullName} · ${time} · ${label}`}
                         className={cn(
                           "flex flex-col rounded-md border-l-4 px-2 py-1 text-xs transition-colors",
-                          cancelled
-                            ? "border-muted-foreground/40 bg-muted text-muted-foreground"
-                            : "border-primary bg-accent text-accent-foreground hover:bg-accent/70",
+                          APPOINTMENT_CARD_CLASSES[tone],
                         )}
                       >
-                        <span className="tabular-nums">{formatTime(item.startsAt)}</span>
+                        <span className="tabular-nums">{time}</span>
                         <span className={cn("truncate font-medium", cancelled && "line-through")}>
                           {item.patient.fullName}
+                        </span>
+                        <span className="flex items-center gap-1 opacity-80">
+                          <Icon aria-hidden="true" className="size-3 shrink-0" />
+                          <span className="truncate">{label}</span>
                         </span>
                         {!professionalId && <span className="truncate opacity-80">{item.professional.name}</span>}
                       </Link>

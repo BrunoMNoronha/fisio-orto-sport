@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, initials } from "@/lib/utils";
 import type { AgendaItem, ScheduleBlockItem } from "@/modules/agenda/queries";
-import { APPOINTMENT_STATUS_LABELS, addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
+import { addDays, toInstant, toLocalDate } from "@/modules/agenda/validation";
+import { APPOINTMENT_CARD_CLASSES, appointmentPresentation } from "./appointment-status-badge";
 import {
   HOUR_HEIGHT_PX,
   assignLanes,
@@ -137,20 +138,21 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
 
               {placed.map(({ item, lane }) => {
                 const { top, height: boxHeight } = placeOnGrid(item, startHour);
+                const { label, Icon, tone } = appointmentPresentation(item);
                 const cancelled = item.status === "CANCELADO";
+                // Card baixo: uma linha com ícone, nome e hora; a situação fica no aria-label e no title.
+                const compact = boxHeight < 40;
                 const time = `${formatTime(item.startsAt)}–${formatTime(item.endsAt)}`;
                 return (
                   <Link
                     key={item.id}
                     href={`/agenda/${item.id}`}
-                    aria-label={`${time}, ${item.patient.fullName}, ${APPOINTMENT_STATUS_LABELS[item.status]}`}
-                    title={`${item.patient.fullName} · ${time}`}
+                    aria-label={`${time}, ${item.patient.fullName}, ${label}`}
+                    title={`${item.patient.fullName} · ${time} · ${label}`}
                     className={cn(
-                      "absolute z-[2] flex flex-col overflow-hidden rounded-md border-l-4 px-2 py-1 text-xs shadow-xs transition-colors",
-                      cancelled
-                        ? "border-muted-foreground/40 bg-muted text-muted-foreground"
-                        : "border-primary bg-accent text-accent-foreground hover:bg-accent/70",
-                      boxHeight < 40 && "flex-row items-center gap-2",
+                      "absolute z-[2] flex overflow-hidden rounded-md border-l-4 px-2 text-xs shadow-xs transition-colors",
+                      APPOINTMENT_CARD_CLASSES[tone],
+                      compact ? "flex-row items-center gap-2 py-0 leading-tight" : "flex-col py-1",
                     )}
                     style={{
                       top: top + 1,
@@ -159,10 +161,16 @@ export function AgendaDayGrid({ date, items, blocks = [], professionals, canMana
                       width: `calc(${100 / lanes}% - 8px)`,
                     }}
                   >
-                    <span className={cn("truncate font-medium", cancelled && "line-through")}>
-                      {item.patient.fullName}
+                    <span className="flex min-w-0 items-center gap-1">
+                      <Icon aria-hidden="true" className="size-3 shrink-0" />
+                      <span className={cn("truncate font-medium", cancelled && "line-through")}>
+                        {item.patient.fullName}
+                      </span>
                     </span>
-                    <span className="shrink-0 tabular-nums opacity-80">{time}</span>
+                    <span className="flex min-w-0 items-center gap-1 tabular-nums opacity-80">
+                      <span className="shrink-0">{time}</span>
+                      {!compact && <span className="truncate">· {label}</span>}
+                    </span>
                   </Link>
                 );
               })}

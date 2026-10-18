@@ -1,5 +1,5 @@
 import { ActionLink } from "@/components/action-link";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
+import { Calendar, CalendarClock, ChevronLeftIcon, ChevronRightIcon, CircleCheck, CircleX, PlusIcon, UserX } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,14 +126,32 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
         <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
           Filtrar
         </Button>
-        <ul aria-label="Legenda" className="ml-auto flex items-center gap-4 text-xs text-muted-foreground">
+        {/* Mesmas cores e ícones dos cards (appointment-status-badge.tsx); bloqueio não é agendamento. */}
+        <ul aria-label="Legenda" className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="size-2.5 rounded-sm bg-primary" />
-            Agendado
+            <Calendar aria-hidden="true" className="size-3" />
+            Agendada
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2.5 rounded-sm bg-green-600 dark:bg-green-500" />
+            <CircleCheck aria-hidden="true" className="size-3" />
+            Compareceu
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2.5 rounded-sm bg-red-600 dark:bg-red-500" />
+            <UserX aria-hidden="true" className="size-3" />
+            Faltou
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden className="size-2.5 rounded-sm bg-blue-600 dark:bg-blue-500" />
+            <CalendarClock aria-hidden="true" className="size-3" />
+            Reagendada
           </li>
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="size-2.5 rounded-sm bg-muted-foreground/40" />
-            Cancelado
+            <CircleX aria-hidden="true" className="size-3" />
+            Cancelada
           </li>
           <li className="flex items-center gap-1.5">
             <span aria-hidden className="size-2.5 rounded-sm border border-dashed border-muted-foreground/60" />

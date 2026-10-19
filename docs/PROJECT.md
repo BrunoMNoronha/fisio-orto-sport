@@ -23,6 +23,7 @@ Roadmap, escopo e definição de pronto reconciliados em 2026-09-26 a partir do 
 | Stack, banco e infraestrutura | [`13-stack-infraestrutura.md`](project/13-stack-infraestrutura.md) |
 | Definição de pronto | [`14-definicao-pronto.md`](project/14-definicao-pronto.md) |
 | Planejamento financeiro e integrações após o MVP | [`16-financeiro-integracoes.md`](project/16-financeiro-integracoes.md) |
+| Preços da landing pública | [`19-precos-landing.md`](project/19-precos-landing.md) |
 
 ### Roadmap
 

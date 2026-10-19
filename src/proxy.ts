@@ -4,7 +4,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/modules/auth/cookie-name";
 
-const PUBLIC_PATHS = ["/login"];
+// /landing é a página pública do produto (grupo (marketing)); o resto exige sessão.
+const PUBLIC_PATHS = ["/login", "/landing"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

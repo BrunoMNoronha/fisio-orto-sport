@@ -133,12 +133,12 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
         )}
         {/* Com JS o select já envia ao trocar; sem JS o botão é o único caminho. Na lista, De/Até não auto-enviam. */}
         {view === "lista" ? (
-          <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
+          <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="outline">
             Filtrar
           </Button>
         ) : (
           <noscript>
-            <Button type="submit" variant="secondary">
+            <Button type="submit" variant="outline">
               Filtrar
             </Button>
           </noscript>

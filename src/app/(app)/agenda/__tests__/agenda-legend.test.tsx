@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { AgendaLegend, LEGEND } from "../agenda-legend";
 
 describe("AgendaLegend", () => {
-  it("lista as seis situações na versão ampla e na recolhida (mobile)", () => {
+  it("lista as sete situações na versão ampla e na recolhida (mobile)", () => {
     render(<AgendaLegend />);
     const lists = screen.getAllByRole("list", { name: "Legenda" });
     expect(lists).toHaveLength(2);
@@ -23,5 +23,6 @@ describe("AgendaLegend", () => {
   it("agendada é vazada e reagendada é azul, como nos cards", () => {
     expect(LEGEND.find((entry) => entry.label === "Agendada")?.swatch).toContain("ring-primary");
     expect(LEGEND.find((entry) => entry.label === "Reagendada")?.swatch).toContain("bg-blue-600");
+    expect(LEGEND.find((entry) => entry.label === "Faltou, avisou")?.swatch).toContain("repeating-linear-gradient");
   });
 });

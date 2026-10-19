@@ -7,6 +7,11 @@ export const LEGEND: { label: string; Icon?: LucideIcon; swatch: string }[] = [
   { label: "Agendada", Icon: Calendar, swatch: "bg-card ring-1 ring-inset ring-primary" },
   { label: "Compareceu", Icon: CircleCheck, swatch: "bg-green-600 dark:bg-green-500" },
   { label: "Faltou", Icon: UserX, swatch: "bg-red-600 dark:bg-red-500" },
+  {
+    label: "Faltou, avisou",
+    Icon: UserX,
+    swatch: "bg-[repeating-linear-gradient(135deg,var(--color-red-200)_0_2px,var(--color-red-600)_2px_4px)]",
+  },
   { label: "Reagendada", Icon: CalendarClock, swatch: "bg-blue-600 dark:bg-blue-500" },
   { label: "Cancelada", Icon: CircleX, swatch: "bg-muted-foreground/40" },
   { label: "Bloqueado", swatch: "border border-dashed border-muted-foreground/60" },

@@ -32,7 +32,7 @@ describe("AgendaDayGrid — situações", () => {
     [{}, "Agendada", "border-primary", "lucide-calendar"],
     [{ attendance: "COMPARECEU" }, "Compareceu", "border-green-600", "lucide-circle-check"],
     [{ attendance: "FALTA_AVISADA" }, "Faltou (avisou)", "border-red-600", "lucide-user-x"],
-    [{ attendance: "FALTA_NAO_AVISADA" }, "Faltou (sem aviso)", "border-red-600", "lucide-user-x"],
+    [{ attendance: "FALTA_NAO_AVISADA" }, "Faltou (sem aviso)", "bg-red-100", "lucide-user-x"],
     [{ lastRescheduledAt: new Date() }, "Reagendada", "border-blue-600", "lucide-calendar-clock"],
     [{ lastRescheduledAt: new Date(), attendance: "COMPARECEU" }, "Compareceu", "border-green-600", "lucide-circle-check"],
     [{ lastRescheduledAt: new Date(), status: "CANCELADO" }, "Cancelada", "bg-muted", "lucide-circle-x"],
@@ -63,6 +63,13 @@ describe("AgendaDayGrid — situações", () => {
     expect(rescheduled).toHaveClass("bg-blue-100");
   });
 
+  it("falta avisada tem fundo listrado; sem aviso, vermelho cheio", () => {
+    renderDay({ ...base, attendance: "FALTA_AVISADA" });
+    const notice = screen.getByRole("link", { name: /Faltou \(avisou\)$/ });
+    expect(notice.className).toContain("repeating-linear-gradient");
+    expect(notice).not.toHaveClass("bg-red-100");
+  });
+
   it("cards só dividem a largura dentro do próprio grupo de sobreposição", () => {
     render(
       <AgendaDayGrid
@@ -76,14 +83,61 @@ describe("AgendaDayGrid — situações", () => {
         canManage
       />,
     );
-    expect(screen.getByRole("link", { name: /^14:00–15:00/ })).toHaveStyle({ width: "calc(50% - 8px)" });
-    expect(screen.getByRole("link", { name: /^14:30–15:30/ })).toHaveStyle({ left: "calc(50% + 4px)" });
-    expect(screen.getByRole("link", { name: /^17:00–18:00/ })).toHaveStyle({ width: "calc(100% - 8px)" });
+    const first = screen.getByRole("link", { name: /^14:00–15:00/ });
+    const overlapping = screen.getByRole("link", { name: /^14:30–15:30/ });
+    const alone = screen.getByRole("link", { name: /^17:00–18:00/ });
+    expect(first.style.getPropertyValue("--lane")).toBe("0");
+    expect(first.style.getPropertyValue("--lanes")).toBe("2");
+    expect(overlapping.style.getPropertyValue("--lane")).toBe("1");
+    expect(alone.style.getPropertyValue("--lanes")).toBe("1");
   });
 
-  it("contagem do cabeçalho usa plural real", () => {
-    renderDay(base);
-    expect(screen.getByText("1 agendamento")).toBeInTheDocument();
+  it("em coluna estreita o card sobreposto fica em cascata, elevado e com largura cheia", () => {
+    render(
+      <AgendaDayGrid
+        date="2026-10-19"
+        items={[base, { ...base, id: "a2", startsAt: new Date("2026-10-19T17:30:00Z"), endsAt: new Date("2026-10-19T18:30:00Z") }]}
+        professionals={professionals}
+        canManage
+      />,
+    );
+    const overlapping = screen.getByRole("link", { name: /^14:30–15:30/ });
+    expect(overlapping).toHaveClass("right-1", "left-[calc(var(--lane)*1.5rem+4px)]", "ring-2", "@[22rem]/col:w-[calc(100%/var(--lanes)-8px)]");
+    expect(overlapping).toHaveStyle({ zIndex: "3" });
+    expect(screen.getByRole("link", { name: /^14:00–15:00/ })).not.toHaveClass("ring-2");
+  });
+
+  it("cabeçalho resume o dia por situação, sem canceladas e sem contagens zeradas", () => {
+    const at = (hour: number) => ({ startsAt: new Date(`2026-10-19T${hour}:00:00Z`), endsAt: new Date(`2026-10-19T${hour}:30:00Z`) });
+    render(
+      <AgendaDayGrid
+        date="2026-10-19"
+        items={[
+          base,
+          { ...base, id: "a2", ...at(18), attendance: "COMPARECEU" },
+          { ...base, id: "a3", ...at(19), attendance: "COMPARECEU" },
+          { ...base, id: "a4", ...at(20), attendance: "FALTA_AVISADA" },
+          { ...base, id: "a5", ...at(21), status: "CANCELADO" },
+        ]}
+        professionals={professionals}
+        canManage
+      />,
+    );
+    expect(screen.getByText("1 agendamento · 2 compareceram · 1 falta")).toBeInTheDocument();
+    expect(screen.getByText("1 agend. · 2 comp. · 1 falta")).toBeInTheDocument();
+  });
+
+  it("dia sem agendamentos mostra o aviso no cabeçalho", () => {
+    render(<AgendaDayGrid date="2026-10-19" items={[]} professionals={professionals} canManage />);
+    expect(screen.getByText("Nenhum agendamento")).toBeInTheDocument();
+  });
+
+  it("linha do agora traz a hora na calha só no dia de hoje", () => {
+    const now = new Date("2026-10-19T13:48:00Z");
+    const { rerender } = render(<AgendaDayGrid date="2026-10-19" items={[]} professionals={professionals} canManage now={now} />);
+    expect(screen.getByText("10:48")).toHaveAttribute("aria-hidden");
+    rerender(<AgendaDayGrid date="2026-10-20" items={[]} professionals={professionals} canManage now={now} />);
+    expect(screen.queryByText("10:48")).not.toBeInTheDocument();
   });
 
   it("cancelada mantém o nome riscado e o visual apagado", () => {

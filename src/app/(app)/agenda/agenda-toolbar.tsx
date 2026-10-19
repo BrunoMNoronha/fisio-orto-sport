@@ -1,11 +1,12 @@
 import { ActionLink } from "@/components/action-link";
-import { Calendar, CalendarClock, ChevronLeftIcon, ChevronRightIcon, CircleCheck, CircleX, PlusIcon, UserX } from "lucide-react";
+import { CalendarOff, ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelectOption } from "@/components/ui/native-select";
 import { cn } from "@/lib/utils";
 import { addDays, type AgendaFilter, type AgendaView } from "@/modules/agenda/validation";
+import { AgendaLegend } from "./agenda-legend";
 import { AutoSubmitSelect } from "./auto-submit-select";
 import { agendaHref, formatDateLabel, formatDayMonth } from "./format";
 
@@ -29,13 +30,32 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
   const newQuery = new URLSearchParams({ date: view === "lista" ? filter.from : date });
   if (professionalId) newQuery.set("professionalId", professionalId);
 
+  // Mobile-first: linha 1 = título + ações; linha 2 = navegação de data; linha 3 = visões (largura toda).
+  // A partir de `md` tudo cabe numa linha: título, data, visões, Bloqueios e Novo agendamento.
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="mr-2 text-2xl font-semibold tracking-tight">Agenda</h1>
 
+        {/* "Bloqueios" é navegação secundária (ghost, só ícone no mobile), longe das abas para não ler como quarta visão. */}
+        <div className="ml-auto flex items-center gap-2 md:order-last md:ml-0 md:gap-3">
+          <ActionLink help="Abre a consulta de indisponibilidades dos profissionais."
+            href={`/agenda/bloqueios${professionalId ? `?${new URLSearchParams({ professionalId })}` : ""}`}
+            className={buttonVariants({ variant: "ghost" })}
+          >
+            <CalendarOff aria-hidden="true" />
+            <span className="sr-only md:not-sr-only">Bloqueios</span>
+          </ActionLink>
+          {canManage && (
+            <ActionLink help="Abre o formulário para criar um agendamento; a marcação só ocorre ao confirmar." href={`/agenda/novo?${newQuery}`} className={buttonVariants()}>
+              <PlusIcon />
+              Novo agendamento
+            </ActionLink>
+          )}
+        </div>
+
         {view !== "lista" && (
-          <div className="flex items-center gap-1">
+          <div className="flex basis-full items-center gap-1 md:basis-auto">
             <ActionLink help="Exibe o período anterior da agenda, mantendo o profissional selecionado."
               href={agendaHref({ view, date: addDays(date, -step), professionalId })}
               aria-label={view === "semana" ? "Semana anterior" : "Dia anterior"}
@@ -61,35 +81,23 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
           </div>
         )}
 
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <nav aria-label="Visão da agenda" className="flex gap-1 rounded-lg bg-muted p-1">
-            {(Object.keys(VIEW_LABELS) as AgendaView[]).map((key) => (
-              <ActionLink help="Muda a forma de visualizar a agenda, preservando a data e o profissional."
-                key={key}
-                href={agendaHref({ view: key, date, professionalId })}
-                aria-current={key === view ? "page" : undefined}
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "sm" }),
-                  key === view && "bg-background text-foreground shadow-xs hover:bg-background",
-                )}
-              >
-                {VIEW_LABELS[key]}
-              </ActionLink>
-            ))}
-          </nav>
-          <ActionLink help="Abre a consulta de indisponibilidades dos profissionais."
-            href={`/agenda/bloqueios${professionalId ? `?${new URLSearchParams({ professionalId })}` : ""}`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            Bloqueios
-          </ActionLink>
-          {canManage && (
-            <ActionLink help="Abre o formulário para criar um agendamento; a marcação só ocorre ao confirmar." href={`/agenda/novo?${newQuery}`} className={buttonVariants()}>
-              <PlusIcon />
-              Novo agendamento
+        {/* Segmentado ocupa a largura toda no mobile, com 36px de altura para o toque. */}
+        <nav aria-label="Visão da agenda" className="flex w-full gap-1 rounded-lg bg-muted p-1 md:ml-auto md:w-auto">
+          {(Object.keys(VIEW_LABELS) as AgendaView[]).map((key) => (
+            <ActionLink help="Muda a forma de visualizar a agenda, preservando a data e o profissional."
+              key={key}
+              href={agendaHref({ view: key, date, professionalId })}
+              aria-current={key === view ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "h-9 flex-1 md:h-7 md:flex-none",
+                key === view && "bg-background text-foreground shadow-xs hover:bg-background",
+              )}
+            >
+              {VIEW_LABELS[key]}
             </ActionLink>
-          )}
-        </div>
+          ))}
+        </nav>
       </div>
 
       <form role="search" method="get" className="flex flex-wrap items-end gap-3">
@@ -123,41 +131,19 @@ export function AgendaToolbar({ view, date, today, filter, professionals, canMan
             </div>
           </>
         )}
-        <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="secondary">
-          Filtrar
-        </Button>
-        {/* Mesmas cores e ícones dos cards (appointment-status-badge.tsx); bloqueio não é agendamento. */}
-        <ul aria-label="Legenda" className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm bg-primary" />
-            <Calendar aria-hidden="true" className="size-3" />
-            Agendada
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm bg-green-600 dark:bg-green-500" />
-            <CircleCheck aria-hidden="true" className="size-3" />
-            Compareceu
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm bg-red-600 dark:bg-red-500" />
-            <UserX aria-hidden="true" className="size-3" />
-            Faltou
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm bg-blue-600 dark:bg-blue-500" />
-            <CalendarClock aria-hidden="true" className="size-3" />
-            Reagendada
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm bg-muted-foreground/40" />
-            <CircleX aria-hidden="true" className="size-3" />
-            Cancelada
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-sm border border-dashed border-muted-foreground/60" />
-            Bloqueado
-          </li>
-        </ul>
+        {/* Com JS o select já envia ao trocar; sem JS o botão é o único caminho. Na lista, De/Até não auto-enviam. */}
+        {view === "lista" ? (
+          <Button help="Atualiza a consulta usando os filtros informados, sem alterar os registros." type="submit" variant="outline">
+            Filtrar
+          </Button>
+        ) : (
+          <noscript>
+            <Button type="submit" variant="outline">
+              Filtrar
+            </Button>
+          </noscript>
+        )}
+        <AgendaLegend />
       </form>
     </div>
   );

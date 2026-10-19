@@ -16,7 +16,7 @@ describe("AgendaWeekView — situações", () => {
     [{}, "Agendada", "border-primary", "lucide-calendar"],
     [{ attendance: "COMPARECEU" }, "Compareceu", "border-green-600", "lucide-circle-check"],
     [{ attendance: "FALTA_AVISADA" }, "Faltou (avisou)", "border-red-600", "lucide-user-x"],
-    [{ attendance: "FALTA_NAO_AVISADA" }, "Faltou (sem aviso)", "border-red-600", "lucide-user-x"],
+    [{ attendance: "FALTA_NAO_AVISADA" }, "Faltou (sem aviso)", "bg-red-100", "lucide-user-x"],
     [{ lastRescheduledAt: new Date() }, "Reagendada", "border-blue-600", "lucide-calendar-clock"],
     [{ lastRescheduledAt: new Date(), attendance: "COMPARECEU" }, "Compareceu", "border-green-600", "lucide-circle-check"],
     [{ lastRescheduledAt: new Date(), status: "CANCELADO" }, "Cancelada", "bg-muted", "lucide-circle-x"],

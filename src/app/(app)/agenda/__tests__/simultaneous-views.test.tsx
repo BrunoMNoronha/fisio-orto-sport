@@ -13,6 +13,6 @@ it.each(['dia', 'semana', 'lista'])('visão %s mantém links individuais para tr
   items.forEach(item => expect(screen.getByRole('link', { name: new RegExp(item.patient.fullName) })).toHaveAttribute('href', `/agenda/${item.id}`));
   if (view === 'dia') {
     const boxes = items.map(item => screen.getByRole('link', { name: new RegExp(item.patient.fullName) }));
-    expect(new Set(boxes.map(box => box.style.left)).size).toBe(3);
+    expect(new Set(boxes.map(box => box.style.getPropertyValue('--lane'))).size).toBe(3);
   }
 });

@@ -52,6 +52,26 @@ describe("assignLanes", () => {
     expect(lanes).toBe(2);
     expect(placed.map((p) => p.lane)).toEqual([0, 1]);
   });
+
+  it("um cruzamento no início do dia não estreita um item isolado mais tarde", () => {
+    const { lanes, placed } = assignLanes([slot("02:06", "03:06"), slot("03:00", "04:01"), slot("08:00", "09:00")]);
+    expect(lanes).toBe(2);
+    expect(placed.map((p) => [p.lane, p.lanes])).toEqual([
+      [0, 2],
+      [1, 2],
+      [0, 1],
+    ]);
+  });
+
+  it("sobreposição encadeada (A∩B, B∩C, A∌C) forma um só grupo e reaproveita a faixa", () => {
+    const { lanes, placed } = assignLanes([slot("09:00", "10:00"), slot("09:30", "10:30"), slot("10:00", "11:00")]);
+    expect(lanes).toBe(2);
+    expect(placed.map((p) => [p.lane, p.lanes])).toEqual([
+      [0, 2],
+      [1, 2],
+      [0, 2],
+    ]);
+  });
 });
 
 describe("groupByProfessional", () => {

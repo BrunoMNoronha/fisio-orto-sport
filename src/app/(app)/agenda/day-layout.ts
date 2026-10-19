@@ -37,16 +37,30 @@ export function placeOnGrid(item: Timed, startHour: number) {
 }
 
 // Faixas lado a lado para itens sobrepostos na mesma coluna (ex.: cancelado no mesmo horário de um novo).
+// As faixas são contadas por grupo de sobreposição (itens encadeados por conflito), não pela coluna
+// inteira: um único cruzamento de minutos não deve estreitar os cards do dia todo. `lanes` de cada
+// item é a largura do seu grupo; `lanes` do retorno é o máximo, usado só na largura mínima da coluna.
 export function assignLanes<T extends Timed>(items: T[]) {
   const sorted = [...items].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-  const laneEnds: number[] = [];
-  const placed = sorted.map((item) => {
+  const placed: { item: T; lane: number; lanes: number }[] = [];
+  let laneEnds: number[] = [];
+  let cluster: { lane: number; item: T }[] = [];
+  let clusterEnd = -Infinity;
+  const closeCluster = () => {
+    for (const entry of cluster) placed.push({ ...entry, lanes: laneEnds.length });
+    cluster = [];
+    laneEnds = [];
+  };
+  for (const item of sorted) {
+    if (item.startsAt.getTime() >= clusterEnd) closeCluster();
     let lane = laneEnds.findIndex((end) => end <= item.startsAt.getTime());
     if (lane === -1) lane = laneEnds.push(0) - 1;
     laneEnds[lane] = item.endsAt.getTime();
-    return { item, lane };
-  });
-  return { lanes: Math.max(laneEnds.length, 1), placed };
+    clusterEnd = Math.max(clusterEnd, item.endsAt.getTime());
+    cluster.push({ item, lane });
+  }
+  closeCluster();
+  return { lanes: Math.max(1, ...placed.map((entry) => entry.lanes)), placed };
 }
 
 // Uma coluna por profissional, na ordem recebida. Agendamentos de profissional fora da lista

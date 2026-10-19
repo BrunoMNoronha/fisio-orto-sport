@@ -4,11 +4,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/modules/auth/cookie-name";
 
-// /landing é a página pública do produto (grupo (marketing)); o resto exige sessão.
-const PUBLIC_PATHS = ["/login", "/landing"];
+const PUBLIC_PATHS = ["/login"];
+
+// A landing pública do produto (src/app/(marketing)/landing) só existe no domínio comercial:
+// nele a raiz é reescrita para a landing e qualquer outro caminho volta à raiz. Fora dele,
+// /landing não é servida. Sobrescreva o host por LANDING_HOST (ex.: "localhost" em testes manuais).
+export const LANDING_HOST = (process.env.LANDING_HOST ?? "fisio.dev2bless.tech").toLowerCase();
+export const LANDING_PATH = "/landing";
+
+function requestHost(request: NextRequest) {
+  const host = request.headers.get("host") ?? request.nextUrl.host;
+  return host.split(":")[0].toLowerCase();
+}
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const isLandingPath = pathname === LANDING_PATH || pathname.startsWith(`${LANDING_PATH}/`);
+
+  if (requestHost(request) === LANDING_HOST) {
+    if (pathname === "/") return NextResponse.rewrite(new URL(LANDING_PATH, request.nextUrl));
+    return NextResponse.redirect(new URL("/", request.nextUrl));
+  }
+  if (isLandingPath) return NextResponse.redirect(new URL("/", request.nextUrl));
+
   // Esta rota não usa cookie: exige desafio HMAC próprio antes de consultar o banco.
   const isReleaseVerification = pathname === "/api/release/verify";
   const isPublic = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

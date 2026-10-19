@@ -23,6 +23,27 @@ import {
 // documentação do repositório registra: sem WhatsApp, aplicativo instalável, uso offline ou IA.
 // Trechos entre colchetes são placeholders comerciais a preencher antes da publicação.
 
+// A landing vive no domínio comercial (ver LANDING_HOST em src/proxy.ts); "Entrar" leva ao app.
+// NEXT_PUBLIC_APP_URL sobrescreve o endereço do app em outros ambientes.
+export const APP_LOGIN_URL = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://fisio-orto-sport.vercel.app"}/login`;
+
+// Demonstração e contato com a equipe abrem um e-mail pronto para o comercial (sem formulário nem
+// serviço de envio no servidor).
+export const CONTACT_EMAIL = "bruno.developer@pm.me";
+
+const mailto = (subject: string, body: string) =>
+  `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+export const DEMO_MAILTO = mailto(
+  "Demonstração do TechLab+ Fisio",
+  "Olá! Quero agendar uma demonstração do TechLab+ Fisio.\n\nClínica:\nCidade:\nFisioterapeutas na equipe:\nMelhores dias e horários:\n",
+);
+
+export const TEAM_MAILTO = mailto(
+  "Falar com a equipe do TechLab+ Fisio",
+  "Olá! Quero falar com a equipe sobre o TechLab+ Fisio.\n\nClínica:\nPlano de interesse:\nDúvida:\n",
+);
+
 export const NAV_LINKS = [
   { href: "#produto", label: "Produto" },
   { href: "#modulos", label: "Módulos" },
@@ -148,13 +169,16 @@ export type Plan = {
   description: string;
   features: readonly string[];
   cta: string;
+  href: string;
   recommended?: boolean;
 };
 
+// Valores mensais por clínica (até 3 fisioterapeutas). Cálculo e referências de mercado em
+// docs/project/19-precos-landing.md.
 export const PLANS: Plan[] = [
   {
     name: "Essencial",
-    price: "R$ [VALOR]",
+    price: "R$ 149",
     description: "Para a clínica que quer organizar a recepção.",
     features: [
       "Pacientes e documentos para impressão",
@@ -163,10 +187,11 @@ export const PLANS: Plan[] = [
       "Perfis Administrador e Recepção",
     ],
     cta: "Falar com a equipe",
+    href: TEAM_MAILTO,
   },
   {
     name: "Clínica",
-    price: "R$ [VALOR]",
+    price: "R$ 299",
     description: "Para a clínica que quer prontuário e financeiro no mesmo fluxo.",
     features: [
       "Tudo do Essencial",
@@ -175,11 +200,12 @@ export const PLANS: Plan[] = [
       "Perfil Fisioterapeuta com assinatura CREFITO",
     ],
     cta: "Agendar demonstração",
+    href: DEMO_MAILTO,
     recommended: true,
   },
   {
     name: "Convênios",
-    price: "R$ [VALOR]",
+    price: "R$ 449",
     description: "Para a clínica que fatura por operadora.",
     features: [
       "Tudo do Clínica",
@@ -188,6 +214,7 @@ export const PLANS: Plan[] = [
       "Conciliação de glosas e auditoria completa",
     ],
     cta: "Falar com a equipe",
+    href: TEAM_MAILTO,
   },
 ];
 
@@ -219,8 +246,6 @@ export const FAQ = [
   },
 ] as const;
 
-export const CONTACT_EMAIL = "[EMAIL-COMERCIAL]";
-
 export const FOOTER_COLUMNS = [
   {
     title: "Produto",
@@ -234,8 +259,8 @@ export const FOOTER_COLUMNS = [
     title: "Suporte",
     links: [
       { href: "#faq", label: "Perguntas frequentes" },
-      { href: "#contato", label: "Implantação" },
-      { href: "#contato", label: "Contato" },
+      { href: TEAM_MAILTO, label: "Implantação" },
+      { href: TEAM_MAILTO, label: "Contato" },
     ],
   },
   {

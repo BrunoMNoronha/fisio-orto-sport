@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { APP_LOGIN_URL, DEMO_MAILTO } from "../landing-content";
 import { LandingHeader } from "../landing-header";
 
 // No celular a navegação recolhe num botão; o painel fecha ao escolher um destino.
@@ -27,8 +28,10 @@ describe("LandingHeader", () => {
     expect(screen.queryByRole("navigation", { name: "Menu" })).not.toBeInTheDocument();
   });
 
-  it("aponta Entrar para o login do app", () => {
+  it("aponta Entrar para o login do app e a demonstração para o e-mail comercial", () => {
     render(<LandingHeader />);
-    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "Entrar" })).toHaveAttribute("href", APP_LOGIN_URL);
+    expect(screen.getByRole("link", { name: "Agendar demonstração" })).toHaveAttribute("href", DEMO_MAILTO);
+    expect(DEMO_MAILTO.startsWith("mailto:bruno.developer@pm.me?subject=")).toBe(true);
   });
 });

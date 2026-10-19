@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { AgendaMock } from "./agenda-mock";
 import {
   CONTACT_EMAIL,
+  DEMO_MAILTO,
   FAQ,
   FOOTER_COLUMNS,
   HERO_PROOF,
@@ -33,7 +34,7 @@ export function HeroSection() {
             rotina de recepção e fisioterapeutas.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <LandingButton href="#contato">
+            <LandingButton href={DEMO_MAILTO}>
               Agendar demonstração
               <ArrowRightIcon aria-hidden="true" className="size-5" />
             </LandingButton>
@@ -215,11 +216,11 @@ export function PlansSection() {
       <Container className="flex flex-col gap-12">
         <SectionIntro label="Planos" title="Comece pela agenda. Cresça para convênios.">
           <p className="leading-relaxed text-muted-foreground">
-            Valores ilustrativos. Os preços finais serão definidos na proposta comercial.
+            Valores mensais por clínica, com até 3 fisioterapeutas. Para equipes maiores, proposta sob medida.
           </p>
         </SectionIntro>
         <div className="grid items-stretch gap-6 md:grid-cols-3">
-          {PLANS.map(({ name, price, description, features, cta, recommended }) => (
+          {PLANS.map(({ name, price, description, features, cta, href, recommended }) => (
             <article
               key={name}
               className={cn(
@@ -248,7 +249,7 @@ export function PlansSection() {
                   </CheckItem>
                 ))}
               </ul>
-              <LandingButton href="#contato" variant={recommended ? "primary" : "outline"} className="mt-auto">
+              <LandingButton href={href} variant={recommended ? "primary" : "outline"} className="mt-auto">
                 {cta}
               </LandingButton>
             </article>
@@ -297,7 +298,7 @@ export function CtaSection() {
             migração e convênios.
           </p>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
-            <LandingButton href="#contato" variant="inverted">
+            <LandingButton href={DEMO_MAILTO} variant="inverted">
               Agendar demonstração
             </LandingButton>
             <LandingButton href={`mailto:${CONTACT_EMAIL}`} variant="ghost">

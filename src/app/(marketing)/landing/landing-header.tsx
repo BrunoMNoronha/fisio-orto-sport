@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MenuIcon, XIcon } from "lucide-react";
-import { NAV_LINKS } from "./landing-content";
+import { APP_LOGIN_URL, DEMO_MAILTO, NAV_LINKS } from "./landing-content";
 import { BrandName, Container, LandingButton } from "./landing-ui";
 
 const NAV_LINK = "text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground";
@@ -32,10 +32,10 @@ export function LandingHeader() {
         </nav>
 
         <div className="hidden gap-2.5 md:flex">
-          <LandingButton href="/login" variant="outline">
+          <LandingButton href={APP_LOGIN_URL} variant="outline">
             Entrar
           </LandingButton>
-          <LandingButton href="#contato">Agendar demonstração</LandingButton>
+          <LandingButton href={DEMO_MAILTO}>Agendar demonstração</LandingButton>
         </div>
 
         <button
@@ -61,10 +61,10 @@ export function LandingHeader() {
               ))}
             </nav>
             <div className="flex flex-col gap-2.5">
-              <LandingButton href="/login" variant="outline" onClick={close}>
+              <LandingButton href={APP_LOGIN_URL} variant="outline" onClick={close}>
                 Entrar
               </LandingButton>
-              <LandingButton href="#contato" onClick={close}>
+              <LandingButton href={DEMO_MAILTO} onClick={close}>
                 Agendar demonstração
               </LandingButton>
             </div>

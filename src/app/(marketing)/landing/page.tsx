@@ -14,7 +14,10 @@ import {
   TissSection,
 } from "./sections";
 
+// A página é servida na raiz do domínio comercial (reescrita em src/proxy.ts).
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fisio.dev2bless.tech"),
+  alternates: { canonical: "/" },
   title: "TechLab+ Fisio — Gestão para clínicas de fisioterapia",
   description:
     "Pacientes, agenda, prontuário clínico, financeiro e faturamento de convênios TISS em uma única plataforma, com LGPD por padrão e hospedagem em São Paulo.",

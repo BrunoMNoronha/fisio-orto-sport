@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { APP_LOGIN_URL, CONTACT_EMAIL } from "../landing-content";
 import LandingPage, { metadata } from "../page";
 
 // Landing pública do produto: fiel ao mockup e restrita ao que a documentação descreve.
@@ -21,6 +22,21 @@ describe("Landing page", () => {
     expect(within(main).getByRole("link", { name: "Ver os módulos" })).toHaveAttribute("href", "#modulos");
   });
 
+  it("demonstração e contato com a equipe abrem um e-mail para o comercial", () => {
+    render(<LandingPage />);
+    const demo = screen.getAllByRole("link", { name: /Agendar demonstração/ });
+    const team = screen.getAllByRole("link", { name: "Falar com a equipe" });
+    expect(demo.length).toBeGreaterThanOrEqual(3);
+    expect(team).toHaveLength(2);
+    for (const link of [...demo, ...team]) {
+      const href = link.getAttribute("href") ?? "";
+      expect(href.startsWith(`mailto:${CONTACT_EMAIL}?subject=`)).toBe(true);
+    }
+    expect(demo[0]).toHaveAttribute("href", expect.stringContaining(encodeURIComponent("Demonstração do TechLab+ Fisio")));
+    expect(team[0]).toHaveAttribute("href", expect.stringContaining(encodeURIComponent("Falar com a equipe")));
+    expect(screen.getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", `mailto:${CONTACT_EMAIL}`);
+  });
+
   it("navega pelas seções e leva ao login do app", () => {
     render(<LandingPage />);
     const nav = screen.getByRole("navigation", { name: "Principal" });
@@ -32,7 +48,8 @@ describe("Landing page", () => {
       "#faq",
     ]);
     const header = screen.getByRole("banner");
-    expect(within(header).getAllByRole("link", { name: "Entrar" })[0]).toHaveAttribute("href", "/login");
+    expect(within(header).getAllByRole("link", { name: "Entrar" })[0]).toHaveAttribute("href", APP_LOGIN_URL);
+    expect(APP_LOGIN_URL).toBe("https://fisio-orto-sport.vercel.app/login");
   });
 
   it("mostra todas as seções do mockup com os mocks das telas", () => {
@@ -54,7 +71,7 @@ describe("Landing page", () => {
     expect(screen.getByRole("contentinfo")).toHaveTextContent("© 2026 TechLab+ · Fisio");
   });
 
-  it("lista os seis módulos e os três planos com valores ainda em placeholder", () => {
+  it("lista os seis módulos e os três planos com os valores calculados", () => {
     render(<LandingPage />);
     for (const name of ["Pacientes", "Agenda", "Prontuário clínico", "Financeiro", "Convênios TISS", "Administração"]) {
       expect(screen.getByRole("heading", { level: 3, name })).toBeInTheDocument();
@@ -62,7 +79,10 @@ describe("Landing page", () => {
     for (const plan of ["Essencial", "Clínica", "Convênios"]) {
       expect(screen.getByRole("heading", { level: 3, name: plan })).toBeInTheDocument();
     }
-    expect(screen.getAllByText(/R\$ \[VALOR\]/)).toHaveLength(3);
+    for (const price of ["R$ 149", "R$ 299", "R$ 449"]) {
+      expect(screen.getByText(price)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/\[VALOR\]/)).not.toBeInTheDocument();
     expect(screen.getByText("Recomendado")).toBeInTheDocument();
   });
 

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated/
+
+# database dumps (never commit real data)
+*.dump

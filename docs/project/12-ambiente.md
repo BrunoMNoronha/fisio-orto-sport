@@ -79,8 +79,8 @@ O desbloqueio exige, no mínimo:
 
 ## LINHA DE BASE DE DESENVOLVIMENTO — 2026-09-19
 
-Desenvolvimento usa PostgreSQL 17 local via Docker Compose e `.env` local não
-versionado. O banco local foi verificado saudável e sem migrações pendentes.
+Desenvolvimento usa PostgreSQL 18 local via Docker Compose (17 até 2026-11-06) e
+`.env` local não versionado. O banco local foi verificado saudável e sem migrações pendentes.
 
 Checks reproduzíveis:
 
@@ -96,3 +96,39 @@ Checks reproduzíveis:
 Resultado registrado: typecheck, lint, Jest (311 testes em 25 suítes), build e
 estado das migrações locais passaram. A integração foi apenas pulada por falta
 de `INTEGRATION_DATABASE_URL`; isso não equivale a uma homologação de produção.
+
+## CÓPIA DE PRODUÇÃO PARA DESENVOLVIMENTO — 2026-11-06
+
+Decisão (Bruno, 2026-11-06): o banco local de desenvolvimento passa a ser uma cópia
+exata do banco de produção (Neon `falling-star-59523600`, branch `production`,
+`neondb`). O Docker local foi migrado de `postgres:17-alpine` para
+`postgres:18-alpine`, a mesma versão major da produção e do CI; o volume
+`db-data` foi recriado nessa troca.
+
+Comando: `pnpm db:copiar-producao` (simulação) e `pnpm db:copiar-producao --executar`
+(`scripts/db/copiar-producao-local.mjs`).
+
+Guardas do script:
+
+- produção é só lida: `pg_dump` e as conferências rodam numa sessão com
+  `default_transaction_read_only=on`, sem nenhuma chamada à API do Neon;
+- a credencial fica fora do repositório, em `%USERPROFILE%\.secrets\fisio-prod.env`
+  (linha `PGURL=`, endpoint direto `ep-plain-cherry-...`, não o pooler), e nunca é
+  impressa; o script recusa qualquer outro host ou banco;
+- o destino é sempre o serviço `db` do `docker-compose.yml`, em PostgreSQL 18, e o
+  mesmo banco da `DATABASE_URL` do `.env`; ele é apagado e recriado;
+- copia tudo de `public`, inclusive `_prisma_migrations`; o schema `neon_auth`
+  (Neon Auth, não usado pela aplicação) fica de fora;
+- ao final compara, tabela por tabela, contagem e hash das linhas, além de
+  constraints, triggers, funções, enums, colunas, índices e extensões; confere
+  `prisma migrate status`; apaga o dump temporário.
+
+Consequências:
+
+- o banco local contém dados reais de saúde (LGPD): a máquina de desenvolvimento
+  passa a guardar uma cópia, decisão registrada em
+  `15-retencao-rastreabilidade-recuperacao.md` (B5);
+- o login local usa os usuários e senhas de produção; `pnpm db:admin` redefine a
+  senha de um ADMIN apenas no banco local;
+- as ferramentas de dados fictícios e limpeza continuam desligadas
+  (`DEMO_DATA_TARGET`/`DEV_RESET_TARGET` ausentes do `.env`).

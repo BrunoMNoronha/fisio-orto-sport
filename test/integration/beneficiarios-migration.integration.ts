@@ -19,6 +19,8 @@ describe("migração de coberturas preserva legado (#98)",{skip:!base},()=>{
         if(dir===migration)break;await db.query(readFileSync(`prisma/migrations/${dir}/migration.sql`,"utf8"));
       }
       await db.query(readFileSync("prisma/migrations/20261015120000_administrativo_parametros/migration.sql","utf8"));
+      // Colunas aditivas posteriores de que o Prisma Client atual precisa (iguais no snapshot antes/depois, alheias à migração sob teste).
+      await db.query(readFileSync("prisma/migrations/20261108120000_onboarding_tour_financeiro/migration.sql","utf8"));
       prisma=new PrismaClient({adapter:new PrismaPg({connectionString:url.toString()})});
       const actor=await prisma.user.create({data:{name:"ADMIN LEGADO",email:"adm98-migration@example.test",passwordHash:"x",role:"ADMIN"}});
       const patient=await prisma.patient.create({data:{fullName:"PACIENTE LEGADO SINTETICO",birthDate:new Date("1990-01-01"),phone:"11999999999",createdById:actor.id,updatedById:actor.id,

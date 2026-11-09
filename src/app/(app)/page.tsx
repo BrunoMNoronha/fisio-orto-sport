@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ActionLink } from "@/components/action-link";
 import Link from "next/link";
 import { ArrowRightIcon, CalendarCheckIcon, CalendarRangeIcon, UsersIcon } from "lucide-react";
@@ -16,18 +17,25 @@ import { listAgenda } from "@/modules/agenda/queries";
 import { parseAgendaFilter, toLocalDate } from "@/modules/agenda/validation";
 import { listPatients } from "@/modules/pacientes/queries";
 import { listPatientsSchema } from "@/modules/pacientes/validation";
+import { hasSeenFinanceTour } from "@/modules/onboarding/queries";
 import { formatTime } from "./agenda/format";
+import { FinanceKpis, FinanceKpisSkeleton } from "./finance-kpis";
+import { HomeTourLoader } from "./home-tour-loader";
 
 export default async function Home() {
   const user = await requireUser();
   const canPatients = can(user.role, "pacientes:ler");
   const canAgenda = can(user.role, "agenda:ler");
+  const canFinance = can(user.role, "financeiro:ler");
 
   const week = parseAgendaFilter({});
-  const [patients, agenda] = await Promise.all([
+  // O tour fica fora do Suspense: decidido no primeiro HTML, sem aparecer e sumir na hidratação.
+  const [patients, agenda, financeTourSeen] = await Promise.all([
     canPatients ? listPatients(listPatientsSchema.parse({ status: "ATIVO" })) : null,
     canAgenda ? listAgenda(week) : null,
+    canFinance ? hasSeenFinanceTour(user.id) : true,
   ]);
+  const showTour = canFinance && !financeTourSeen;
   const scheduled = agenda?.filter((item) => item.status !== "CANCELADO") ?? [];
   const today = scheduled.filter((item) => toLocalDate(item.startsAt) === week.from);
 
@@ -87,6 +95,12 @@ export default async function Home() {
         </div>
       )}
 
+      {canFinance && (
+        <Suspense fallback={<FinanceKpisSkeleton />}>
+          <FinanceKpis />
+        </Suspense>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3">
         {canAgenda && (
           <Card className="lg:col-span-3">
@@ -128,6 +142,8 @@ export default async function Home() {
           </Card>
         )}
       </div>
+
+      <HomeTourLoader showTour={showTour} />
     </div>
   );
 }

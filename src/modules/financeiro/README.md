@@ -86,6 +86,31 @@ Evidências e limites em [87-fin-02-pagamentos.md](../../../docs/project/evidenc
 
 Evidências, checks finais e limites em [88-fin-03-relatorios.md](../../../docs/project/evidencias/88-fin-03-relatorios.md). O candidato ainda não foi integrado ou publicado; validação local não comprova migração nem funcionamento em Preview/Production.
 
+## Indicadores da página inicial
+
+Resumo financeiro do mês na página inicial autenticada (`/`), sem abrir o módulo. Mesma semântica de
+saldo e estorno da FIN-03, agregada.
+
+- **Peças:** `kpi-math.ts` (puro: janelas de mês civil, variação e rótulos; sem servidor),
+  `kpi-read.ts` (uma única `$queryRaw` com as mesmas regras de `report-read.ts` — cobranças ATIVAS,
+  pagamentos sem estorno agregados por cobrança antes do saldo; totais em `bigint`) e `kpi-queries.ts`
+  (`server-only`). A apresentação está em `src/app/(app)/finance-kpis.tsx`.
+- **Quatro indicadores:** cobrado no mês (cobranças ATIVAS com vencimento no mês), recebido no mês
+  (pagamentos válidos por `receivedOn`), a receber (saldo em aberto das cobranças ATIVAS, sem recorte
+  de mês) e vencido (saldo com vencimento anterior a hoje em `America/Sao_Paulo`). Cobrado e recebido
+  trazem a variação em relação ao mês anterior, calculada em pontos-base inteiros em `bigint`; mês
+  anterior zerado mostra "Sem movimento no mês anterior" e dois meses zerados "Sem comparação"; a
+  exibição é limitada a ±999%. Cada card leva ao relatório correspondente com os filtros preenchidos.
+- **Permissão:** diferente das demais leituras do módulo, `getFinanceKpis` usa `getCurrentUser()` +
+  `can(role, "financeiro:ler")` e devolve `null` — a seção some, **sem redirecionar nem auditar**,
+  porque é um resumo na página inicial, não a entrada no módulo. Os três perfis têm `financeiro:ler`.
+- **Fronteira servidor→cliente:** os cards são Server Component e entregam os valores já formatados
+  com `formatBRL`; nenhum `bigint` cruza para o cliente.
+- **Testes:** `__tests__/kpi-math.test.ts`, `__tests__/kpi-read.test.ts` (SQL, conversão, datas),
+  `__tests__/kpi-queries.test.ts` (permissão) e `src/app/(app)/__tests__/finance-kpis.test.tsx`.
+
+O tour de primeiro acesso que apresenta estes indicadores fica no módulo `onboarding`.
+
 ## Fora do escopo
 
 Exportação, PDF/impressão de relatórios, indicadores clínicos, relatórios contábeis/fiscais, meios de pagamento, despesas, repasses, pacotes, convênios, descontos, juros, créditos, emissão fiscal, cobrança bancária, gateways e integrações.

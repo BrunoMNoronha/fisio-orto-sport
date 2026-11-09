@@ -145,14 +145,25 @@ try {
   assert.equal(after.metadata, before.metadata, 'Metadados (constraints, triggers, funções, enums, colunas, índices, extensões) diferentes de produção.');
   assert.equal(after.rows, before.rows, 'Linhas ou hashes por tabela diferentes de produção.');
 
-  const status = run(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'status']);
-  assert.match(status, /Database schema is up to date/, `prisma migrate status inesperado:\n${status}`);
+  // prisma migrate status sai com código != 0 quando há migração local ainda não aplicada no banco.
+  // Copiar produção, que fica atrás do desenvolvimento, deixa exatamente esse estado: é esperado, não
+  // um erro. Só migração com falha ou registrada no banco mas ausente do repositório reprovam.
+  let status;
+  try {
+    status = run(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'status'], {stdio: ['pipe', 'pipe', 'pipe']});
+  } catch (error) {
+    status = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+  }
+  const upToDate = /Database schema is up to date/.test(status);
+  const pending = !upToDate && /have not yet been applied/.test(status);
+  assert(upToDate || pending, `prisma migrate status inesperado (migração com falha ou ausente do repositório?):\n${status}`);
 
   for (const line of after.rows.trim().split('\n')) {
     const [table, rows] = line.split('|');
     if (Number(rows) > 0) console.log(`  ${table}: ${rows}`);
   }
-  console.log(`PASS: ${after.tables.length} tabelas idênticas a produção (${totalRows} linhas); migrações em dia. Dump apagado.`);
+  const migracoes = upToDate ? 'migrações em dia' : 'produção atrás do repositório em migrações ainda não publicadas (esperado)';
+  console.log(`PASS: ${after.tables.length} tabelas idênticas a produção (${totalRows} linhas); ${migracoes}. Dump apagado.`);
 } finally {
   rmSync(folder, {recursive: true, force: true});
 }

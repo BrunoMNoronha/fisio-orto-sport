@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { Prisma, PrismaClient, BillingGuide } from "@/generated/prisma/client";
 import { lockBeneficiary } from "./beneficiary-service";
 import { revalidateProductionTx } from "./production-service";
+import {withLockedReadCache} from './locked-read-cache';
 import { AdministrativeConfigError, CONFIG_CONFLICT } from "./service";
 import { guideRulesSchema, guideProfileSchema, type GuideInput, type GuidePending } from "./guide-validation";
 import type { z } from "zod";
@@ -91,7 +92,7 @@ export async function saveGuide(db: Pick<PrismaClient, '$transaction'>, actorId:
         for (const productionId of input.productionIds) if (!oldLinks.some(l => l.productionId === productionId)) await tx.billingGuideItem.create({ data: { guideId: input.id, productionId, snapshot: {} } });
       } else if (input.operation === 'CANCELAR') for (const l of oldLinks) await tx.billingGuideItem.update({ where: { id: l.id }, data: { active: false } });
       if (['SALVAR', 'CONFERIR'].includes(input.operation)) {
-        const guide = await tx.billingGuide.findUniqueOrThrow({ where: { id: input.id } }); const result = await readGuideSourcesTx(tx, guide);
+        const guide = await tx.billingGuide.findUniqueOrThrow({ where: { id: input.id } }); const result = await withLockedReadCache(tx,cached=>readGuideSourcesTx(cached, guide));
         if (result.total > BigInt("9223372036854775807")) fail("O total excede a capacidade em centavos. Divida os itens em guias menores; nenhuma alteração foi confirmada.");
         for (const item of result.items) await tx.billingGuideItem.update({ where: { id: item.id }, data: { snapshot: json(item) } });
         await tx.billingGuide.update({ where: { id: input.id }, data: { pending: result.pending, snapshot: result.snapshot, sourceDigest: result.sourceDigest, totalCents: result.total, state: input.operation === 'CONFERIR' && !result.pending.length ? 'APTA' : 'RASCUNHO' } });

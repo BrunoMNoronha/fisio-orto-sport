@@ -393,3 +393,15 @@ Roteiro por perfil, treinamento, correções e limites em
 docs/project/18-administrativo-operacao-validacao.md. Homologação externa permanece
 pendente por decisão do usuário; fixture de produção técnica local não comprova aceite
 de operadora e não deve ser enviada. Não há migração ou alteração da política de deploy.
+
+## Capacidade — ADM-11 (#131)
+
+`capacity-local.mjs 10` exercita dez lotes sintéticos de 100 guias/1.000 itens pelos
+serviços reais; `capacity-verify-local.mjs release/131-<timestamp>` confere CSV/fonte
+de impressão com 10.000 itens, cria o item adicional e verifica recusa de 10.001.
+XML grande usa XSD real em memória; recusa no limite atual é também exercitada no banco
+preservando bytes/contagens anteriores. Roteiro em docs/project/19-administrativo-capacidade.md.
+Fechamento mantém ordem de travas e limite transacional de 60 s; bloqueios em conjunto
+e cache local à fase de revalidação reduzem consultas repetidas. Nada é cacheado entre
+transações, durante consumo/devolução ou escrita de saldo. Revalidar a mesma guia após
+mudança de fonte continua obrigatório. Não há nova migração ou homologação externa.

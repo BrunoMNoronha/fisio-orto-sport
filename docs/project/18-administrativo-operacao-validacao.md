@@ -6,7 +6,7 @@
 |---|---|---|
 | Código implementado | Contratos #96 e funcionalidades #97–#105 | Integrados em main e Preview até a #105 |
 | Validado localmente | Massa fictícia, XSD, quantidades, dinheiro, acesso, concorrência e restore | Evidências da #106 em `evidencias/106-ciclo.md` |
-| Publicado | SHA e workflow da implantação | #105: `17f9c47`, Preview run `38814245719`; #106 ainda local |
+| Publicado | SHA e workflow da implantação | #106: `cd6af5c`, Preview run `38819050146`; ADM-11 (#131) em validação local |
 | Homologado na operadora | Piloto/manual/versão, protocolo e aceite externo verificável | **PENDENTE**, sem canal e sem autorização de envio |
 
 Bruno determinou em 15/10/2026 manter a homologação externa pendente e validar com

@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {before,after,describe,it} from 'node:test';
+import {PrismaPg} from '@prisma/adapter-pg';
+import {PrismaClient} from '@/generated/prisma/client';
+import {runAdministrativeCycle} from './administrative-cycle-fixture';
+import {verifyCapacityReports,verifyExportRefusal,addCapacityItem,verifyXmlPersistenceRefusal} from './capacity-report-scenarios';
+import {saveAdministrativeConfig} from '@/modules/administrativo/service';
+import {saveBatch} from '@/modules/administrativo/batch-service';
+import {seedXmlCycle} from './xml-cycle-fixture';
+import {saveProduction} from '@/modules/administrativo/production-service';
+import {saveGuide} from '@/modules/administrativo/guide-service';
+const url=process.env.INTEGRATION_DATABASE_URL;if(process.env.CI&&!url)throw new Error('Banco obrigatório');
+describe('capacidade administrativa: contratos e rollback (#131)',{skip:!url},()=>{
+  let db:PrismaClient;
+  before(()=>{db=new PrismaClient({adapter:new PrismaPg({connectionString:url!})});});
+  after(async()=>{await db?.$disconnect();});
+  it('executor de exportação concilia fonte de impressão, CSV e limite+1 com itens reais',async()=>{
+    const f=await runAdministrativeCycle(db,1,2),scope={contractId:f.contractId};
+    await verifyCapacityReports(db,[f],2,scope);await verifyXmlPersistenceRefusal(db,f);
+    await addCapacityItem(db,f);
+    const contract=await db.operatorContract.findUniqueOrThrow({where:{id:f.contractId}});
+    await saveAdministrativeConfig(db,f.users.admin,{kind:'contract',values:{...contract,id:contract.id,requestId:randomUUID(),expectedVersion:contract.version,reason:'Teto sintético de regressão',active:true,maxExportRows:2}});
+    await verifyExportRefusal(db,3,scope);
+  });
+  it('excesso de itens é recusado antes de criar lote/histórico e preserva guias/produção aptas',async()=>{
+    const admin=await db.user.create({data:{name:'ADMIN CAPACIDADE',email:randomUUID()+'@example.test',passwordHash:'x',role:'ADMIN'}});
+    const professional=await db.user.create({data:{name:'FISIO CAPACIDADE',email:randomUUID()+'@example.test',passwordHash:'x',role:'FISIOTERAPEUTA'}});
+    const f=await seedXmlCycle(db,admin.id,professional.id),session=await f.session(),p={...f.p,id:randomUUID(),requestId:randomUUID(),expectedVersion:0,sessionId:session.id};
+    await saveProduction(db,admin.id,p);
+    await saveGuide(db,admin.id,{...f.g,operation:'DEVOLVER',expectedVersion:1,requestId:randomUUID()},true);
+    await saveGuide(db,admin.id,{...f.g,expectedVersion:2,requestId:randomUUID(),productionIds:[f.p.id,p.id]},true);
+    const c=await db.operatorContract.findUniqueOrThrow({where:{id:f.contractId}});
+    await saveAdministrativeConfig(db,admin.id,{kind:'contract',values:{...c,id:c.id,requestId:randomUUID(),expectedVersion:c.version,reason:'Teto sintético de itens',active:true,maxItems:1}});
+    const input=f.input();await assert.rejects(saveBatch(db,admin.id,input),/limites/);
+    assert.equal(await db.billingBatch.count({where:{id:input.id}}),0);assert.equal(await db.batchChange.count({where:{batchId:input.id}}),0);
+    assert.equal((await db.billingGuide.findUniqueOrThrow({where:{id:f.g.id}})).state,'APTA');
+    assert.equal(await db.productionItem.count({where:{id:{in:[f.p.id,p.id]},state:'APTO'}}),2);
+  });
+});
